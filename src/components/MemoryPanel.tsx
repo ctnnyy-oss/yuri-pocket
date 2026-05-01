@@ -11,6 +11,7 @@ import {
   Link2,
   Palette,
   Pencil,
+  RefreshCw,
   RotateCcw,
   Save,
   Settings2,
@@ -74,6 +75,12 @@ interface MemoryPanelProps {
   onExport: () => void
   onImport: (file: File) => void
   onReset: () => void
+  cloudStatus: string
+  cloudSyncConfigured: boolean
+  cloudTokenSet: boolean
+  onConnectCloud: () => void
+  onPullCloud: () => void
+  onPushCloud: () => void
 }
 
 interface MemoryDraft {
@@ -156,6 +163,12 @@ export function MemoryPanel({
   onExport,
   onImport,
   onReset,
+  cloudStatus,
+  cloudSyncConfigured,
+  cloudTokenSet,
+  onConnectCloud,
+  onPullCloud,
+  onPushCloud,
 }: MemoryPanelProps) {
   const [editingMemoryId, setEditingMemoryId] = useState<string | null>(null)
   const [memoryDraft, setMemoryDraft] = useState<MemoryDraft | null>(null)
@@ -782,6 +795,35 @@ export function MemoryPanel({
                 }
               />
             </label>
+
+            <div className="settings-section">
+              <div className="settings-section-title">
+                <Database size={18} />
+                <span>云端同步</span>
+              </div>
+              <p className="section-note">
+                {cloudSyncConfigured
+                  ? cloudTokenSet
+                    ? '云端后端已配置，口令已保存在这台设备。'
+                    : '云端后端已配置，第一次使用需要填写云端口令。'
+                  : '当前构建还没有配置云端后端地址。'}
+              </p>
+              <small>{cloudStatus}</small>
+              <div className="settings-actions">
+                <button disabled={!cloudSyncConfigured} onClick={onConnectCloud} type="button">
+                  <Link2 size={15} />
+                  连接云端
+                </button>
+                <button disabled={!cloudSyncConfigured || !cloudTokenSet} onClick={onPushCloud} type="button">
+                  <Save size={15} />
+                  保存到云端
+                </button>
+                <button disabled={!cloudSyncConfigured || !cloudTokenSet} onClick={onPullCloud} type="button">
+                  <RefreshCw size={15} />
+                  从云端读取
+                </button>
+              </div>
+            </div>
 
             <div className="settings-actions">
               <button onClick={onExport} type="button">

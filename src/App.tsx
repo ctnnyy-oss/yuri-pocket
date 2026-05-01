@@ -9,6 +9,13 @@ import { createSeedState } from './data/seed'
 import type { AccentTheme, AppSettings, AppState, LongTermMemory, WorldNode } from './domain/types'
 import { requestAssistantReply } from './services/chatApi'
 import {
+  getSavedCloudToken,
+  isCloudSyncConfigured,
+  pullCloudState,
+  pushCloudState,
+  saveCloudToken,
+} from './services/cloudSync'
+import {
   attachAssistantToMemoryUsageLog,
   buildPromptBundle,
   consolidateMemoryGarden,
@@ -94,6 +101,11 @@ function App() {
   const [isReady, setIsReady] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [activeView, setActiveView] = useState<AppView>(() => readViewFromLocation())
+  const [cloudToken, setCloudToken] = useState(() => getSavedCloudToken())
+  const [cloudStatus, setCloudStatus] = useState(() => {
+    if (!isCloudSyncConfigured()) return '云端后端未配置'
+    return getSavedCloudToken() ? '云端口令已保存' : '云端待连接'
+  })
   const [notice, setNotice] = useState('花园已就绪')
 
   useEffect(() => {
@@ -465,6 +477,47 @@ function App() {
     setNotice('已回到初始状态')
   }
 
+  async function handleConnectCloud() {
+    if (!isCloudSyncConfigured()) {
+      setCloudStatus('云端后端还没有配置')
+      return
+    }
+
+    const token = window.prompt('输入姐姐给妹妹保存的云端口令')
+    if (token === null) return
+
+    const cleanedToken = token.trim()
+    saveCloudToken(cleanedToken)
+    setCloudToken(cleanedToken)
+    setCloudStatus(cleanedToken ? '云端口令已保存' : '云端口令已清除')
+  }
+
+  async function handlePullCloud() {
+    try {
+      const snapshot = await pullCloudState(cloudToken)
+      if (!snapshot.state) {
+        setCloudStatus('云端还没有数据，可以先保存一次')
+        return
+      }
+
+      setState(migrateAppState(snapshot.state))
+      setCloudStatus(`已读取云端数据 v${snapshot.revision}`)
+      setNotice('云端数据已读取')
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : '读取云端失败')
+    }
+  }
+
+  async function handlePushCloud() {
+    try {
+      const result = await pushCloudState(applyTrashRetention(state), cloudToken)
+      setCloudStatus(`已保存到云端 v${result.revision}`)
+      setNotice('云端数据已保存')
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : '保存云端失败')
+    }
+  }
+
   return (
     <div className="app-shell" style={appStyle}>
       <CharacterRail
@@ -512,6 +565,12 @@ function App() {
           onUpdateMemory={handleUpdateMemory}
           onUpdateSettings={handleUpdateSettings}
           onUpdateWorldNode={handleUpdateWorldNode}
+          cloudStatus={cloudStatus}
+          cloudSyncConfigured={isCloudSyncConfigured()}
+          cloudTokenSet={Boolean(cloudToken)}
+          onConnectCloud={handleConnectCloud}
+          onPullCloud={handlePullCloud}
+          onPushCloud={handlePushCloud}
           settings={state.settings}
           trash={state.trash}
           worldNodes={state.worldNodes}
