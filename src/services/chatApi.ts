@@ -2,9 +2,10 @@ import type { AppSettings, PromptBundle } from '../domain/types'
 
 export async function requestAssistantReply(bundle: PromptBundle, settings: AppSettings): Promise<string> {
   let response: Response
+  const apiBaseUrl = getApiBaseUrl()
 
   try {
-    response = await fetch('/api/chat', {
+    response = await fetch(`${apiBaseUrl}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -26,9 +27,15 @@ export async function requestAssistantReply(bundle: PromptBundle, settings: AppS
   return data.reply
 }
 
+function getApiBaseUrl(): string {
+  const configuredUrl = import.meta.env.VITE_API_BASE_URL
+  if (!configuredUrl) return ''
+  return stripTrailingSlash(configuredUrl)
+}
+
 function isStaticPreviewHost(): boolean {
   if (typeof window === 'undefined') return false
-  return window.location.hostname.endsWith('github.io')
+  return window.location.hostname.endsWith('github.io') && !getApiBaseUrl()
 }
 
 function createBrowserDemoReply(bundle: PromptBundle): string {
@@ -39,9 +46,13 @@ function createBrowserDemoReply(bundle: PromptBundle): string {
     .join(' / ')
 
   return [
-    '这是 GitHub Pages 静态预览模式：页面、角色、记忆和三端适配都能体验，但不会连接妹妹本机的模型密钥。',
+    '这是 GitHub Pages 静态预览模式：页面、角色、记忆和三端适配都能体验，但还没有连接云端模型后端。',
     lastUserMessage ? `妹妹刚才说：${lastUserMessage.content}` : '妹妹可以先随便发一句话试试界面。',
     memoryHint ? `本轮准备调用的记忆：${memoryHint}` : '这轮没有命中长期记忆。',
-    '要真正调用 DeepSeek V4 Free，还是打开电脑本机的开发版，它会走本机中转，不会把密钥放到网页上。',
+    '要让手机也真正调用模型，需要把云服务器配置成安全后端，再用 VITE_API_BASE_URL 指向它。',
   ].join('\n\n')
+}
+
+function stripTrailingSlash(value: string): string {
+  return value.replace(/\/+$/, '')
 }

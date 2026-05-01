@@ -7,8 +7,9 @@ dotenv.config()
 
 const app = express()
 const port = Number(process.env.YURI_POCKET_API_PORT || 8787)
+const corsOrigin = process.env.YURI_POCKET_CORS_ORIGIN || true
 
-app.use(cors({ origin: true }))
+app.use(cors({ origin: corsOrigin }))
 app.use(express.json({ limit: '2mb' }))
 
 app.get('/api/health', (_request, response) => {
