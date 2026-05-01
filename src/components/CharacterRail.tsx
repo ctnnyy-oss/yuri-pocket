@@ -1,0 +1,116 @@
+import type { CSSProperties } from 'react'
+import {
+  Bot,
+  Brain,
+  ArchiveRestore,
+  HeartHandshake,
+  MessageCircle,
+  Palette,
+  Signal,
+  SlidersHorizontal,
+  Sprout,
+  type LucideIcon,
+} from 'lucide-react'
+import type { CharacterCard } from '../domain/types'
+
+export type AppView = 'chat' | 'memory' | 'world' | 'model' | 'settings' | 'trash'
+
+interface CharacterRailProps {
+  characters: CharacterCard[]
+  activeCharacterId: string
+  activeView: AppView
+  onViewChange: (view: AppView) => void
+  onSelect: (characterId: string) => void
+}
+
+const navigationItems: Array<{ id: AppView; label: string; description: string; icon: LucideIcon }> = [
+  { id: 'chat', label: '聊天', description: '和当前角色对话', icon: MessageCircle },
+  { id: 'memory', label: '记忆', description: '长期记忆和摘要', icon: Brain },
+  { id: 'world', label: '世界树', description: '世界观和触发词', icon: Sprout },
+  { id: 'trash', label: '回收', description: '误删后找回', icon: ArchiveRestore },
+  { id: 'model', label: '模型', description: '模型与数据管理', icon: SlidersHorizontal },
+  { id: 'settings', label: '设置', description: '输入、字体和主题', icon: Palette },
+]
+
+export function CharacterRail({
+  characters,
+  activeCharacterId,
+  activeView,
+  onViewChange,
+  onSelect,
+}: CharacterRailProps) {
+  return (
+    <aside className="left-panel">
+      <header className="brand-block">
+        <div className="brand-mark">
+          <HeartHandshake size={22} />
+        </div>
+        <div>
+          <h1>百合小手机</h1>
+          <span>Sakura Pocket 0.1</span>
+        </div>
+      </header>
+
+      <nav className="primary-nav" aria-label="主要功能">
+        {navigationItems.map((item) => {
+          const Icon = item.icon
+          return (
+            <button
+              className={`nav-button ${activeView === item.id ? 'active' : ''}`}
+              key={item.id}
+              onClick={() => onViewChange(item.id)}
+              type="button"
+            >
+              <Icon size={18} />
+              <span>
+                <strong>{item.label}</strong>
+                <small>{item.description}</small>
+              </span>
+            </button>
+          )
+        })}
+      </nav>
+
+      <section className="panel-section">
+        <div className="section-title">
+          <Bot size={16} />
+          <span>聊天角色</span>
+        </div>
+        <div className="character-list">
+          {characters.map((character) => (
+            <button
+              className={`character-button ${character.id === activeCharacterId ? 'active' : ''}`}
+              key={character.id}
+              onClick={() => {
+                onSelect(character.id)
+                onViewChange('chat')
+              }}
+              type="button"
+            >
+              <span className="avatar" style={{ '--avatar-accent': character.accent } as CSSProperties}>
+                {character.avatar}
+              </span>
+              <span>
+                <strong>{character.name}</strong>
+                <small>{character.title}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="status-card">
+        <div className="mini-row">
+          <span className="mini-dot" aria-hidden="true" />
+          <span>
+            <strong>DeepSeek V4 Free</strong>
+            <small>本机中转已接入</small>
+          </span>
+        </div>
+        <Signal size={17} />
+      </section>
+
+      <p className="sidebar-footnote">桌面版采用固定工作台：左边切功能，右边专心使用。</p>
+    </aside>
+  )
+}

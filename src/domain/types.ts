@@ -1,0 +1,220 @@
+export type MessageRole = 'user' | 'assistant'
+
+export interface ChatMessage {
+  id: string
+  role: MessageRole
+  content: string
+  createdAt: string
+  memoryCaptured?: boolean
+}
+
+export interface CharacterCard {
+  id: string
+  name: string
+  title: string
+  subtitle: string
+  avatar: string
+  accent: string
+  relationship: string
+  mood: string
+  tags: string[]
+  systemPrompt: string
+  greeting: string
+}
+
+export interface ConversationState {
+  id: string
+  characterId: string
+  messages: ChatMessage[]
+  summary: string
+  updatedAt: string
+}
+
+export type MemoryKind =
+  | 'profile'
+  | 'preference'
+  | 'relationship'
+  | 'project'
+  | 'event'
+  | 'procedure'
+  | 'world'
+  | 'character'
+  | 'taboo'
+  | 'safety'
+  | 'reflection'
+export type MemoryOrigin = 'seed' | 'manual' | 'auto' | 'system' | 'imported'
+export type MemorySourceKind = 'message' | 'manual' | 'summary' | 'system'
+export type MemoryStatus = 'candidate' | 'active' | 'archived' | 'trashed' | 'permanently_deleted'
+export type MemorySensitivity = 'low' | 'medium' | 'high' | 'critical'
+export type MemoryMentionPolicy = 'proactive' | 'contextual' | 'explicit' | 'silent'
+
+export type MemoryScope =
+  | { kind: 'global_user' }
+  | { kind: 'character_private'; characterId: string }
+  | { kind: 'relationship'; characterId: string }
+  | { kind: 'world'; worldId: string }
+  | { kind: 'world_branch'; worldId: string; branchId: string }
+  | { kind: 'project'; projectId: string }
+  | { kind: 'conversation'; conversationId: string }
+  | { kind: 'temporary' }
+
+export interface MemorySource {
+  id: string
+  kind: MemorySourceKind
+  excerpt: string
+  createdAt: string
+  conversationId?: string
+  characterId?: string
+  messageId?: string
+  role?: MessageRole
+}
+
+export interface MemorySnapshot {
+  title: string
+  body: string
+  tags: string[]
+  priority: number
+  pinned: boolean
+  kind: MemoryKind
+  confidence: number
+  status: MemoryStatus
+  scope: MemoryScope
+  sensitivity: MemorySensitivity
+  mentionPolicy: MemoryMentionPolicy
+  cooldownUntil?: string
+}
+
+export interface MemoryRevision {
+  id: string
+  createdAt: string
+  reason: string
+  editor: MemoryOrigin
+  snapshot: MemorySnapshot
+  sourceIds: string[]
+}
+
+export interface LongTermMemory {
+  id: string
+  title: string
+  body: string
+  tags: string[]
+  priority: number
+  pinned: boolean
+  kind: MemoryKind
+  status: MemoryStatus
+  scope: MemoryScope
+  sensitivity: MemorySensitivity
+  mentionPolicy: MemoryMentionPolicy
+  cooldownUntil?: string
+  confidence: number
+  origin: MemoryOrigin
+  sources: MemorySource[]
+  accessCount: number
+  lastAccessedAt?: string
+  revisions: MemoryRevision[]
+  createdAt: string
+  updatedAt: string
+  userEdited?: boolean
+  aiGenerated?: boolean
+}
+
+export interface WorldNode {
+  id: string
+  title: string
+  keywords: string[]
+  content: string
+  priority: number
+  enabled: boolean
+}
+
+export interface TrashedMemory extends LongTermMemory {
+  deletedAt: string
+}
+
+export interface TrashedWorldNode extends WorldNode {
+  deletedAt: string
+}
+
+export interface AppTrash {
+  memories: TrashedMemory[]
+  worldNodes: TrashedWorldNode[]
+}
+
+export interface MemoryTombstone {
+  id: string
+  memoryFingerprint: string
+  scope: MemoryScope
+  deletedAt: string
+  reason: 'user_permanent_delete' | 'trash_retention' | 'empty_trash'
+  blockReExtraction: boolean
+}
+
+export type MemoryConflictType = 'value' | 'scope' | 'duplicate' | 'safety'
+export type MemoryConflictStatus = 'unresolved' | 'resolved' | 'ignored'
+
+export interface MemoryConflict {
+  id: string
+  memoryIds: string[]
+  conflictType: MemoryConflictType
+  status: MemoryConflictStatus
+  title: string
+  description: string
+  suggestedResolution: string
+  requiresUserConfirmation: boolean
+  createdAt: string
+}
+
+export interface MemoryUsageLog {
+  id: string
+  conversationId: string
+  characterId: string
+  userMessageId: string
+  assistantMessageId?: string
+  memoryIds: string[]
+  contextBlockTitles: string[]
+  createdAt: string
+}
+
+export type AccentTheme = 'sakura' | 'peach' | 'lavender' | 'mint'
+export type TrashRetentionMode = 'forever' | 'default' | 'custom'
+
+export interface AppSettings {
+  model: string
+  temperature: number
+  maxContextMessages: number
+  enterToSend: boolean
+  fontSize: number
+  accentTheme: AccentTheme
+  trashRetentionMode: TrashRetentionMode
+  trashRetentionDays: number
+  autoMemoryEnabled: boolean
+  memoryConfidenceFloor: number
+}
+
+export interface AppState {
+  version: number
+  activeCharacterId: string
+  characters: CharacterCard[]
+  conversations: ConversationState[]
+  memories: LongTermMemory[]
+  worldNodes: WorldNode[]
+  trash: AppTrash
+  memoryTombstones: MemoryTombstone[]
+  memoryUsageLogs: MemoryUsageLog[]
+  settings: AppSettings
+}
+
+export interface PromptContextBlock {
+  title: string
+  content: string
+  memoryIds?: string[]
+  category?: 'boundary' | 'stable' | 'relationship' | 'project' | 'event' | 'world' | 'summary'
+  reason?: string
+}
+
+export interface PromptBundle {
+  characterName: string
+  systemPrompt: string
+  contextBlocks: PromptContextBlock[]
+  messages: ChatMessage[]
+}
