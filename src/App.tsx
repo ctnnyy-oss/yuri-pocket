@@ -67,13 +67,48 @@ const themeVariables: Record<AccentTheme, CSSProperties> = {
   } as CSSProperties,
 }
 
+const appViews: AppView[] = ['chat', 'memory', 'world', 'model', 'settings', 'trash']
+
+function readViewFromLocation(): AppView {
+  if (typeof window === 'undefined') return 'chat'
+
+  const hashView = window.location.hash.replace(/^#\/?/, '')
+  if (appViews.includes(hashView as AppView)) return hashView as AppView
+
+  const queryView = new URLSearchParams(window.location.search).get('view')
+  if (queryView && appViews.includes(queryView as AppView)) return queryView as AppView
+
+  return 'chat'
+}
+
+function buildViewUrl(view: AppView): string {
+  const url = new URL(window.location.href)
+  url.searchParams.delete('view')
+  url.hash = view === 'chat' ? '' : view
+  return `${url.pathname}${url.search}${url.hash}`
+}
+
 function App() {
   const [state, setState] = useState<AppState>(() => createSeedState())
   const [draft, setDraft] = useState('')
   const [isReady, setIsReady] = useState(false)
   const [isSending, setIsSending] = useState(false)
-  const [activeView, setActiveView] = useState<AppView>('chat')
+  const [activeView, setActiveView] = useState<AppView>(() => readViewFromLocation())
   const [notice, setNotice] = useState('花园已就绪')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const initialView = readViewFromLocation()
+    window.history.replaceState({ ...(window.history.state ?? {}), yuriPocketView: initialView }, '', buildViewUrl(initialView))
+
+    function handlePopState() {
+      setActiveView(readViewFromLocation())
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
 
   useEffect(() => {
     loadAppState().then((savedState) => {
@@ -96,6 +131,20 @@ function App() {
     ...themeVariables[state.settings.accentTheme],
     '--app-font-size': `${state.settings.fontSize}px`,
   } as CSSProperties
+
+  function navigateView(view: AppView, mode: 'push' | 'replace' = 'push') {
+    setActiveView(view)
+    if (typeof window === 'undefined') return
+    if (readViewFromLocation() === view) return
+
+    const url = buildViewUrl(view)
+    const statePayload = { ...(window.history.state ?? {}), yuriPocketView: view }
+    if (mode === 'replace') {
+      window.history.replaceState(statePayload, '', url)
+      return
+    }
+    window.history.pushState(statePayload, '', url)
+  }
 
   async function handleSend() {
     const content = draft.trim()
@@ -423,7 +472,7 @@ function App() {
         activeView={activeView}
         characters={state.characters}
         onSelect={handleSelectCharacter}
-        onViewChange={setActiveView}
+        onViewChange={navigateView}
       />
 
       {activeView === 'chat' ? (
@@ -435,7 +484,7 @@ function App() {
           messages={conversation.messages}
           onDraftChange={setDraft}
           onSend={handleSend}
-          onSettingsClick={() => setActiveView('settings')}
+          onSettingsClick={() => navigateView('settings')}
           settings={state.settings}
         />
       ) : (
