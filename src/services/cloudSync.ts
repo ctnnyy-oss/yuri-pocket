@@ -2,10 +2,14 @@ import type { AppState } from '../domain/types'
 
 const cloudTokenStorageKey = 'yuri-pocket-cloud-token'
 
-export interface CloudSnapshot {
-  state: AppState | null
+export interface CloudMetadata {
+  hasState: boolean
   updatedAt: string | null
   revision: number
+}
+
+export interface CloudSnapshot extends CloudMetadata {
+  state: AppState | null
 }
 
 export function isCloudSyncConfigured(): boolean {
@@ -25,6 +29,11 @@ export function saveCloudToken(token: string): void {
   } else {
     window.localStorage.removeItem(cloudTokenStorageKey)
   }
+}
+
+export async function checkCloudHealth(token: string): Promise<CloudMetadata> {
+  const response = await cloudFetch('/api/cloud/health', token)
+  return response.json()
 }
 
 export async function pullCloudState(token: string): Promise<CloudSnapshot> {
@@ -57,11 +66,30 @@ async function cloudFetch(path: string, token: string, init: RequestInit = {}): 
   })
 
   if (!response.ok) {
-    const detail = await response.text()
-    throw new Error(detail || `云端请求失败：${response.status}`)
+    const detail = await readCloudError(response)
+    throw new Error(formatCloudError(response.status, detail))
   }
 
   return response
+}
+
+async function readCloudError(response: Response): Promise<string> {
+  const detail = await response.text()
+  if (!detail) return ''
+
+  try {
+    const parsed = JSON.parse(detail) as { error?: string; message?: string }
+    return parsed.error || parsed.message || detail
+  } catch {
+    return detail
+  }
+}
+
+function formatCloudError(status: number, detail: string): string {
+  if (status === 401) return '云端口令不对，或者服务器口令已经更换'
+  if (status === 503) return '云端同步还没有在服务器启用'
+  if (status >= 500) return `云端服务暂时没接住：${detail || status}`
+  return detail || `云端请求失败：${status}`
 }
 
 function getApiBaseUrl(): string {

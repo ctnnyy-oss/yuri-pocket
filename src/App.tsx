@@ -1,14 +1,25 @@
 import type { CSSProperties } from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { CharacterRail, type AppView } from './components/CharacterRail'
 import { ChatPhone } from './components/ChatPhone'
 import { MemoryPanel } from './components/MemoryPanel'
-import { loadAppState, migrateAppState, resetAppState, saveAppState } from './data/database'
+import {
+  createLocalBackup,
+  deleteLocalBackup,
+  listLocalBackups,
+  loadAppState,
+  loadLocalBackup,
+  migrateAppState,
+  resetAppState,
+  saveAppState,
+} from './data/database'
 import { createSeedState } from './data/seed'
-import type { AccentTheme, AppSettings, AppState, LongTermMemory, WorldNode } from './domain/types'
+import type { AccentTheme, AppSettings, AppState, LocalBackupSummary, LongTermMemory, WorldNode } from './domain/types'
 import { requestAssistantReply } from './services/chatApi'
 import {
+  checkCloudHealth,
+  type CloudMetadata,
   getSavedCloudToken,
   isCloudSyncConfigured,
   pullCloudState,
@@ -75,6 +86,7 @@ const themeVariables: Record<AccentTheme, CSSProperties> = {
 }
 
 const appViews: AppView[] = ['chat', 'memory', 'world', 'model', 'settings', 'trash']
+type CloudBusyTask = 'checking' | 'pulling' | 'pushing'
 
 function readViewFromLocation(): AppView {
   if (typeof window === 'undefined') return 'chat'
@@ -106,7 +118,45 @@ function App() {
     if (!isCloudSyncConfigured()) return '云端后端未配置'
     return getSavedCloudToken() ? '云端口令已保存' : '云端待连接'
   })
+  const [cloudMeta, setCloudMeta] = useState<CloudMetadata | null>(null)
+  const [cloudBusy, setCloudBusy] = useState<CloudBusyTask | null>(null)
+  const [localBackups, setLocalBackups] = useState<LocalBackupSummary[]>([])
   const [notice, setNotice] = useState('花园已就绪')
+
+  const refreshLocalBackups = useCallback(async () => {
+    const backups = await listLocalBackups()
+    setLocalBackups(backups)
+  }, [])
+
+  const refreshCloudMetadata = useCallback(async (token: string) => {
+    if (!isCloudSyncConfigured()) {
+      setCloudMeta(null)
+      setCloudStatus('云端后端还没有配置')
+      return null
+    }
+
+    const cleanedToken = token.trim()
+    if (!cleanedToken) {
+      setCloudMeta(null)
+      setCloudStatus('云端待连接')
+      return null
+    }
+
+    setCloudBusy('checking')
+    setCloudStatus('正在检查云端状态...')
+    try {
+      const metadata = await checkCloudHealth(cleanedToken)
+      setCloudMeta(metadata)
+      setCloudStatus(formatCloudStatus(metadata))
+      return metadata
+    } catch (error) {
+      setCloudMeta(null)
+      setCloudStatus(error instanceof Error ? error.message : '检查云端失败')
+      return null
+    } finally {
+      setCloudBusy((currentTask) => (currentTask === 'checking' ? null : currentTask))
+    }
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -126,8 +176,9 @@ function App() {
     loadAppState().then((savedState) => {
       setState(savedState)
       setIsReady(true)
+      void refreshLocalBackups()
     })
-  }, [])
+  }, [refreshLocalBackups])
 
   useEffect(() => {
     if (isReady) {
@@ -447,6 +498,53 @@ function App() {
     )
   }
 
+  async function makeLocalBackup(reason: string) {
+    const backup = await createLocalBackup(applyTrashRetention(state), reason)
+    await refreshLocalBackups()
+    return backup
+  }
+
+  async function handleCreateLocalBackup() {
+    try {
+      const backup = await makeLocalBackup('妹妹手动创建')
+      setNotice(`已创建本机备份：${formatShortDateTime(backup.createdAt)}`)
+    } catch {
+      setNotice('本机备份创建失败')
+    }
+  }
+
+  async function handleRestoreLocalBackup(backupId: string) {
+    const backup = localBackups.find((item) => item.id === backupId)
+    const label = backup ? `${backup.label} / ${formatShortDateTime(backup.createdAt)}` : '这份备份'
+    if (!window.confirm(`恢复 ${label} 会覆盖当前本机数据。姐姐会先给当前状态再留一份备份，确定恢复吗？`)) {
+      setNotice('已取消恢复备份')
+      return
+    }
+
+    try {
+      await makeLocalBackup('恢复本机备份前自动备份')
+      const restoredState = await loadLocalBackup(backupId)
+      if (!restoredState) {
+        setNotice('这份本机备份没有找到')
+        await refreshLocalBackups()
+        return
+      }
+
+      setState(restoredState)
+      setNotice('已恢复本机备份')
+    } catch {
+      setNotice('恢复本机备份失败')
+    }
+  }
+
+  async function handleDeleteLocalBackup(backupId: string) {
+    if (!window.confirm('这只会删除这份本机备份，不影响当前数据。确定删除吗？')) return
+
+    await deleteLocalBackup(backupId)
+    await refreshLocalBackups()
+    setNotice('本机备份已删除')
+  }
+
   function handleExport() {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -464,17 +562,28 @@ function App() {
       if (!Array.isArray(importedState.characters) || !Array.isArray(importedState.conversations)) {
         throw new Error('Invalid state file')
       }
+      await makeLocalBackup('导入文件前自动备份')
       setState(migrateAppState(importedState))
       setNotice('数据已导入')
     } catch {
-      setNotice('导入文件不对')
+      setNotice('导入失败，文件格式或本机备份没有通过')
     }
   }
 
   async function handleReset() {
-    const nextState = await resetAppState()
-    setState(nextState)
-    setNotice('已回到初始状态')
+    if (!window.confirm('重置会回到初始状态。姐姐会先创建本机备份，确定继续吗？')) {
+      setNotice('已取消重置')
+      return
+    }
+
+    try {
+      await makeLocalBackup('重置前自动备份')
+      const nextState = await resetAppState()
+      setState(nextState)
+      setNotice('已回到初始状态，本机旧数据已备份')
+    } catch {
+      setNotice('重置失败，本机备份没有通过')
+    }
   }
 
   async function handleConnectCloud() {
@@ -489,32 +598,86 @@ function App() {
     const cleanedToken = token.trim()
     saveCloudToken(cleanedToken)
     setCloudToken(cleanedToken)
-    setCloudStatus(cleanedToken ? '云端口令已保存' : '云端口令已清除')
+    if (!cleanedToken) {
+      setCloudMeta(null)
+      setCloudStatus('云端口令已清除')
+      return
+    }
+
+    setCloudStatus('云端口令已保存')
+    void refreshCloudMetadata(cleanedToken)
   }
 
   async function handlePullCloud() {
+    if (cloudBusy) return
+
     try {
-      const snapshot = await pullCloudState(cloudToken)
-      if (!snapshot.state) {
+      const metadata = cloudMeta ?? (await refreshCloudMetadata(cloudToken))
+      if (!metadata?.hasState) {
         setCloudStatus('云端还没有数据，可以先保存一次')
         return
       }
 
+      const confirmed = window.confirm(
+        [
+          '从云端读取会覆盖这台设备当前数据。',
+          `云端版本：v${metadata.revision}`,
+          `最后保存：${formatCloudTime(metadata.updatedAt)}`,
+          '姐姐会先给当前本机状态创建一份备份，再读取云端。确定继续吗？',
+        ].join('\n'),
+      )
+      if (!confirmed) {
+        setCloudStatus('已取消云端读取')
+        return
+      }
+
+      setCloudBusy('pulling')
+      setCloudStatus('正在从云端读取...')
+      const snapshot = await pullCloudState(cloudToken)
+      if (!snapshot.state) {
+        setCloudMeta({
+          hasState: false,
+          revision: snapshot.revision,
+          updatedAt: snapshot.updatedAt,
+        })
+        setCloudStatus('云端还没有数据，可以先保存一次')
+        return
+      }
+
+      await makeLocalBackup('从云端读取前自动备份')
       setState(migrateAppState(snapshot.state))
-      setCloudStatus(`已读取云端数据 v${snapshot.revision}`)
+      setCloudMeta({
+        hasState: true,
+        revision: snapshot.revision,
+        updatedAt: snapshot.updatedAt,
+      })
+      setCloudStatus(`已读取云端数据 v${snapshot.revision}，本机旧数据已备份`)
       setNotice('云端数据已读取')
     } catch (error) {
       setCloudStatus(error instanceof Error ? error.message : '读取云端失败')
+    } finally {
+      setCloudBusy((currentTask) => (currentTask === 'pulling' ? null : currentTask))
     }
   }
 
   async function handlePushCloud() {
+    if (cloudBusy) return
+
     try {
+      setCloudBusy('pushing')
+      setCloudStatus('正在保存到云端...')
       const result = await pushCloudState(applyTrashRetention(state), cloudToken)
-      setCloudStatus(`已保存到云端 v${result.revision}`)
+      setCloudMeta({
+        hasState: true,
+        revision: result.revision,
+        updatedAt: result.updatedAt,
+      })
+      setCloudStatus(`已保存到云端 v${result.revision}，时间 ${formatCloudTime(result.updatedAt)}`)
       setNotice('云端数据已保存')
     } catch (error) {
       setCloudStatus(error instanceof Error ? error.message : '保存云端失败')
+    } finally {
+      setCloudBusy((currentTask) => (currentTask === 'pushing' ? null : currentTask))
     }
   }
 
@@ -566,11 +729,18 @@ function App() {
           onUpdateSettings={handleUpdateSettings}
           onUpdateWorldNode={handleUpdateWorldNode}
           cloudStatus={cloudStatus}
+          cloudMeta={cloudMeta}
+          cloudBusy={cloudBusy}
           cloudSyncConfigured={isCloudSyncConfigured()}
           cloudTokenSet={Boolean(cloudToken)}
           onConnectCloud={handleConnectCloud}
           onPullCloud={handlePullCloud}
           onPushCloud={handlePushCloud}
+          onRefreshCloud={() => void refreshCloudMetadata(cloudToken)}
+          localBackups={localBackups}
+          onCreateLocalBackup={handleCreateLocalBackup}
+          onDeleteLocalBackup={handleDeleteLocalBackup}
+          onRestoreLocalBackup={handleRestoreLocalBackup}
           settings={state.settings}
           trash={state.trash}
           worldNodes={state.worldNodes}
@@ -580,6 +750,27 @@ function App() {
       <div className="status-pill">{notice}</div>
     </div>
   )
+}
+
+function formatCloudStatus(metadata: CloudMetadata): string {
+  if (!metadata.hasState) return '云端已连接，暂时还没有保存过数据'
+  return `云端有数据 v${metadata.revision}，最后保存 ${formatCloudTime(metadata.updatedAt)}`
+}
+
+function formatCloudTime(value: string | null): string {
+  if (!value) return '暂无记录'
+  return formatShortDateTime(value)
+}
+
+function formatShortDateTime(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '时间未知'
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 export default App

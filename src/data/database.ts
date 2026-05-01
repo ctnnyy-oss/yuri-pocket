@@ -1,5 +1,5 @@
 import { openDB } from 'idb'
-import type { AppState, LongTermMemory } from '../domain/types'
+import type { AppState, LocalBackup, LocalBackupSummary, LongTermMemory } from '../domain/types'
 import { normalizeMemories } from '../services/memoryEngine'
 import { applyTrashRetention, normalizeTrashRetentionSettings } from '../services/trashRetention'
 import { createSeedState } from './seed'
@@ -7,6 +7,8 @@ import { createSeedState } from './seed'
 const databaseName = 'yuri-pocket'
 const storeName = 'app'
 const stateKey = 'state'
+const backupKeyPrefix = 'backup:'
+const maxLocalBackups = 12
 
 async function getDatabase() {
   return openDB(databaseName, 1, {
@@ -31,6 +33,31 @@ export async function resetAppState(): Promise<AppState> {
   const nextState = createSeedState()
   await saveAppState(nextState)
   return nextState
+}
+
+export async function createLocalBackup(state: AppState, reason: string): Promise<LocalBackupSummary> {
+  const database = await getDatabase()
+  const backup = buildLocalBackup(applyTrashRetention(state), reason)
+  await database.put(storeName, backup, backupKey(backup.id))
+  await pruneLocalBackups()
+  return toBackupSummary(backup)
+}
+
+export async function listLocalBackups(): Promise<LocalBackupSummary[]> {
+  const database = await getDatabase()
+  const backups = await readLocalBackups(database)
+  return backups.map(toBackupSummary)
+}
+
+export async function loadLocalBackup(backupId: string): Promise<AppState | null> {
+  const database = await getDatabase()
+  const backup = (await database.get(storeName, backupKey(backupId))) as LocalBackup | undefined
+  return backup?.state ? migrateAppState(backup.state) : null
+}
+
+export async function deleteLocalBackup(backupId: string): Promise<void> {
+  const database = await getDatabase()
+  await database.delete(storeName, backupKey(backupId))
 }
 
 export function migrateAppState(state: AppState): AppState {
@@ -70,4 +97,55 @@ function mergeMissingSeedMemories(memories: LongTermMemory[], seedMemories: Long
   const existingIds = new Set(memories.map((memory) => memory.id))
   const missingSeeds = normalizeMemories(seedMemories).filter((memory) => !existingIds.has(memory.id))
   return [...missingSeeds, ...memories]
+}
+
+function buildLocalBackup(state: AppState, reason: string): LocalBackup {
+  const createdAt = new Date().toISOString()
+  const suffix = createdAt.slice(0, 19).replace(/[T:]/g, '-')
+  return {
+    id: `local-${suffix}-${Math.random().toString(36).slice(2, 8)}`,
+    label: `本机备份 ${createdAt.slice(0, 10)}`,
+    reason,
+    createdAt,
+    stateVersion: state.version,
+    counts: {
+      conversations: state.conversations.length,
+      memories: state.memories.length,
+      worldNodes: state.worldNodes.length,
+      trashedItems: state.trash.memories.length + state.trash.worldNodes.length,
+    },
+    state,
+  }
+}
+
+function toBackupSummary(backup: LocalBackup): LocalBackupSummary {
+  return {
+    id: backup.id,
+    label: backup.label,
+    reason: backup.reason,
+    createdAt: backup.createdAt,
+    stateVersion: backup.stateVersion,
+    counts: backup.counts,
+  }
+}
+
+function backupKey(backupId: string): string {
+  return `${backupKeyPrefix}${backupId}`
+}
+
+async function readLocalBackups(database: Awaited<ReturnType<typeof getDatabase>>): Promise<LocalBackup[]> {
+  const keys = await database.getAllKeys(storeName)
+  const backupKeys = keys.filter((key): key is string => typeof key === 'string' && key.startsWith(backupKeyPrefix))
+  const backups = await Promise.all(
+    backupKeys.map(async (key) => (await database.get(storeName, key)) as LocalBackup | undefined),
+  )
+  return backups
+    .filter((backup): backup is LocalBackup => Boolean(backup?.state))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+}
+
+async function pruneLocalBackups(): Promise<void> {
+  const database = await getDatabase()
+  const backups = await readLocalBackups(database)
+  await Promise.all(backups.slice(maxLocalBackups).map((backup) => database.delete(storeName, backupKey(backup.id))))
 }

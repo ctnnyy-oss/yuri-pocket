@@ -204,6 +204,24 @@ export interface AppState {
   settings: AppSettings
 }
 
+export interface LocalBackupSummary {
+  id: string
+  label: string
+  reason: string
+  createdAt: string
+  stateVersion: number
+  counts: {
+    conversations: number
+    memories: number
+    worldNodes: number
+    trashedItems: number
+  }
+}
+
+export interface LocalBackup extends LocalBackupSummary {
+  state: AppState
+}
+
 export interface PromptContextBlock {
   title: string
   content: string

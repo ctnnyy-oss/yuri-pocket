@@ -29,6 +29,7 @@ import type {
   AppSettings,
   AppTrash,
   CharacterCard,
+  LocalBackupSummary,
   LongTermMemory,
   MemoryConflict,
   MemoryKind,
@@ -39,6 +40,7 @@ import type {
   MemoryUsageLog,
   WorldNode,
 } from '../domain/types'
+import type { CloudMetadata } from '../services/cloudSync'
 import {
   formatMemoryScopeLabel,
   memoryKindLabels,
@@ -76,11 +78,18 @@ interface MemoryPanelProps {
   onImport: (file: File) => void
   onReset: () => void
   cloudStatus: string
+  cloudMeta: CloudMetadata | null
+  cloudBusy: 'checking' | 'pulling' | 'pushing' | null
   cloudSyncConfigured: boolean
   cloudTokenSet: boolean
   onConnectCloud: () => void
   onPullCloud: () => void
   onPushCloud: () => void
+  onRefreshCloud: () => void
+  localBackups: LocalBackupSummary[]
+  onCreateLocalBackup: () => void
+  onRestoreLocalBackup: (backupId: string) => void
+  onDeleteLocalBackup: (backupId: string) => void
 }
 
 interface MemoryDraft {
@@ -164,11 +173,18 @@ export function MemoryPanel({
   onImport,
   onReset,
   cloudStatus,
+  cloudMeta,
+  cloudBusy,
   cloudSyncConfigured,
   cloudTokenSet,
   onConnectCloud,
   onPullCloud,
   onPushCloud,
+  onRefreshCloud,
+  localBackups,
+  onCreateLocalBackup,
+  onRestoreLocalBackup,
+  onDeleteLocalBackup,
 }: MemoryPanelProps) {
   const [editingMemoryId, setEditingMemoryId] = useState<string | null>(null)
   const [memoryDraft, setMemoryDraft] = useState<MemoryDraft | null>(null)
@@ -808,20 +824,91 @@ export function MemoryPanel({
                     : '云端后端已配置，第一次使用需要填写云端口令。'
                   : '当前构建还没有配置云端后端地址。'}
               </p>
-              <small>{cloudStatus}</small>
+              <div className="cloud-meta-strip" aria-label="云端同步状态">
+                <span>
+                  <strong>版本</strong>
+                  {cloudMeta ? `v${cloudMeta.revision}` : '未检查'}
+                </span>
+                <span>
+                  <strong>最后保存</strong>
+                  {cloudMeta ? formatCloudTime(cloudMeta.updatedAt) : '未检查'}
+                </span>
+                <span>
+                  <strong>云端数据</strong>
+                  {cloudMeta ? (cloudMeta.hasState ? '已有快照' : '空') : '未检查'}
+                </span>
+              </div>
+              <small className="cloud-status-line">{cloudBusy ? getCloudBusyLabel(cloudBusy) : cloudStatus}</small>
               <div className="settings-actions">
-                <button disabled={!cloudSyncConfigured} onClick={onConnectCloud} type="button">
+                <button disabled={!cloudSyncConfigured || Boolean(cloudBusy)} onClick={onConnectCloud} type="button">
                   <Link2 size={15} />
                   连接云端
                 </button>
-                <button disabled={!cloudSyncConfigured || !cloudTokenSet} onClick={onPushCloud} type="button">
-                  <Save size={15} />
-                  保存到云端
-                </button>
-                <button disabled={!cloudSyncConfigured || !cloudTokenSet} onClick={onPullCloud} type="button">
+                <button
+                  disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
+                  onClick={onRefreshCloud}
+                  type="button"
+                >
                   <RefreshCw size={15} />
-                  从云端读取
+                  检查云端
                 </button>
+                <button
+                  disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
+                  onClick={onPushCloud}
+                  type="button"
+                >
+                  <Save size={15} />
+                  {cloudBusy === 'pushing' ? '保存中' : '保存到云端'}
+                </button>
+                <button
+                  disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
+                  onClick={onPullCloud}
+                  type="button"
+                >
+                  <RefreshCw size={15} />
+                  {cloudBusy === 'pulling' ? '读取中' : '从云端读取'}
+                </button>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <div className="settings-section-title">
+                <ArchiveRestore size={18} />
+                <span>本机保险箱</span>
+              </div>
+              <p className="section-note">
+                从云端读取、导入文件、重置之前会自动留一份本机备份；妹妹也可以手动创建。
+              </p>
+              <div className="settings-actions">
+                <button onClick={onCreateLocalBackup} type="button">
+                  <Save size={15} />
+                  创建本机备份
+                </button>
+              </div>
+              <div className="backup-list">
+                {localBackups.length === 0 ? (
+                  <small>还没有本机备份。做一次读取、导入或重置前，姐姐会自动留底。</small>
+                ) : (
+                  localBackups.slice(0, 6).map((backup) => (
+                    <article className="backup-item" key={backup.id}>
+                      <div>
+                        <strong>{backup.label}</strong>
+                        <span>
+                          {formatShortTime(backup.createdAt)} / {backup.reason}
+                        </span>
+                        <small>{formatBackupCounts(backup)}</small>
+                      </div>
+                      <div className="backup-actions">
+                        <button onClick={() => onRestoreLocalBackup(backup.id)} type="button">
+                          恢复
+                        </button>
+                        <button className="danger-button" onClick={() => onDeleteLocalBackup(backup.id)} type="button">
+                          删除
+                        </button>
+                      </div>
+                    </article>
+                  ))
+                )}
               </div>
             </div>
 
@@ -1805,6 +1892,26 @@ function formatShortTime(value: string): string {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function formatCloudTime(value: string | null): string {
+  if (!value) return '暂无记录'
+  return formatShortTime(value)
+}
+
+function getCloudBusyLabel(cloudBusy: 'checking' | 'pulling' | 'pushing'): string {
+  if (cloudBusy === 'checking') return '正在检查云端...'
+  if (cloudBusy === 'pulling') return '正在读取云端，当前本机数据会先自动备份'
+  return '正在保存到云端...'
+}
+
+function formatBackupCounts(backup: LocalBackupSummary): string {
+  return [
+    `${backup.counts.memories} 条记忆`,
+    `${backup.counts.worldNodes} 个世界树节点`,
+    `${backup.counts.conversations} 个会话`,
+    `${backup.counts.trashedItems} 个回收项`,
+  ].join(' / ')
 }
 
 function formatDeletedAt(value: string): string {
