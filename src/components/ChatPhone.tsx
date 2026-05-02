@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useRef } from 'react'
-import { LoaderCircle, Send, SlidersHorizontal, Sparkles } from 'lucide-react'
+import { Send, SlidersHorizontal, Sparkles } from 'lucide-react'
 import type {
   AppSettings,
   CharacterCard,
@@ -125,8 +125,12 @@ export function ChatPhone({
             />
           ))}
           {isSending && (
-            <article className="message message-assistant pending">
-              <LoaderCircle size={16} />
+            <article className="message message-assistant pending" aria-label="姐姐正在打字">
+              <span className="typing-dots" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </span>
               <p>正在想怎么回妹妹</p>
             </article>
           )}

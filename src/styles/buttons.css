@@ -1,0 +1,72 @@
+/* ═══════════════════════════════════════════════════
+   百合小窝 — Button System
+   ═══════════════════════════════════════════════════ */
+
+/* ── Buttons ── */
+
+.secondary-action,
+.quiet-action,
+.settings-actions button,
+.file-button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: rgba(255, 252, 253, 0.9);
+  color: var(--ink);
+  padding: var(--space-sm) var(--space-lg);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.secondary-action {
+  background: linear-gradient(135deg, var(--mint), #5e9682);
+  color: #fff;
+  border-color: transparent;
+  font-weight: 700;
+  box-shadow: 0 2px 10px rgba(111, 165, 146, 0.22);
+}
+
+.secondary-action:hover {
+  background: linear-gradient(135deg, #5e9682, #508a74);
+  box-shadow: 0 4px 16px rgba(111, 165, 146, 0.3);
+  transform: translateY(-1px);
+}
+
+.quiet-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-secondary);
+  font-weight: 700;
+}
+
+.quiet-action svg {
+  color: var(--rose-strong);
+}
+
+.quiet-action:hover {
+  background: var(--surface-hover);
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.secondary-danger {
+  border: 1px solid rgba(188, 84, 98, 0.18);
+  border-radius: var(--radius-full);
+  background: rgba(255, 242, 244, 0.9);
+  color: #9b2f3b;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  padding: var(--space-sm) var(--space-lg);
+  transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.secondary-danger:hover {
+  background: rgba(255, 232, 236, 0.95);
+  border-color: rgba(188, 84, 98, 0.3);
+  transform: translateY(-1px);
+}

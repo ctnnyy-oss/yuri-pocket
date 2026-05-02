@@ -1,0 +1,214 @@
+/* ═══════════════════════════════════════════════════
+   百合小窝 — App Shell & Layout
+   ═══════════════════════════════════════════════════ */
+
+.app-shell {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 130% 90% at 5% 15%, rgba(255, 228, 238, 0.45), transparent 55%),
+    radial-gradient(ellipse 80% 70% at 95% 85%, rgba(232, 245, 238, 0.3), transparent 50%),
+    radial-gradient(ellipse 60% 50% at 50% 50%, rgba(240, 232, 255, 0.15), transparent 60%),
+    var(--page-bg);
+  color: var(--ink);
+  font-size: var(--app-font-size, 15px);
+}
+
+.app-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 50% 40% at 30% 70%, rgba(255, 215, 230, 0.22), transparent 60%),
+    radial-gradient(ellipse 40% 35% at 80% 25%, rgba(220, 240, 230, 0.18), transparent 60%);
+  animation: shell-breathe 24s ease-in-out infinite;
+}
+
+.app-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes shell-breathe {
+  0%, 100% {
+    opacity: 0.65;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate3d(2%, -1.5%, 0) scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell::before {
+    animation: none;
+  }
+  .typing-dots span,
+  .empty-state::before {
+    animation: none;
+  }
+}
+
+/* ── Panels ── */
+
+.left-panel,
+.workspace {
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(24px) saturate(1.3);
+  -webkit-backdrop-filter: blur(24px) saturate(1.3);
+}
+
+.workspace {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ── Detail / Non-chat Workspace ── */
+
+.detail-workspace {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-xl);
+  padding-bottom: 72px;
+  background: rgba(255, 254, 255, 0.9);
+  overflow-y: auto;
+  animation: workspace-fade-in var(--duration-slow) var(--ease-out) both;
+}
+
+.chat-workspace {
+  animation: workspace-fade-in var(--duration-slow) var(--ease-out) both;
+}
+
+@keyframes workspace-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detail-workspace,
+  .chat-workspace {
+    animation: none;
+  }
+}
+
+.workspace-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.workspace-title-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--rose-soft), rgba(255, 229, 236, 0.8));
+  color: var(--rose-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.workspace-title h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.workspace-title p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.detail-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-xl);
+}
+
+/* ── Panel Stack / Settings Stack ── */
+
+.panel-stack,
+.settings-stack {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  flex: 1 1 auto;
+  gap: var(--space-md);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.detail-workspace .panel-stack,
+.detail-workspace .settings-stack {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+/* ── Empty State ── */
+
+.empty-state {
+  position: relative;
+  border: 1.5px dashed var(--line);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255, 229, 236, 0.45), transparent 70%),
+    linear-gradient(135deg, rgba(255, 252, 253, 0.7), rgba(255, 248, 251, 0.5));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    var(--shadow-xs);
+  color: var(--muted);
+  padding: var(--space-2xl) var(--space-xl);
+  line-height: 1.7;
+  font-size: 14px;
+  text-align: center;
+}
+
+.empty-state::before {
+  content: '✿';
+  display: block;
+  margin-bottom: 6px;
+  color: var(--rose);
+  font-size: 22px;
+  opacity: 0.7;
+  animation: empty-bloom 4s var(--ease-spring) infinite;
+}
+
+@keyframes empty-bloom {
+  0%, 100% {
+    transform: rotate(-6deg) scale(1);
+    opacity: 0.55;
+  }
+  50% {
+    transform: rotate(6deg) scale(1.08);
+    opacity: 0.85;
+  }
+}
+
+/* ── Keyframes ── */
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

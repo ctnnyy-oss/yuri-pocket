@@ -1,0 +1,300 @@
+/* ═══════════════════════════════════════════════════
+   百合小窝 — Left Panel / Sidebar
+   ═══════════════════════════════════════════════════ */
+
+.left-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-lg) var(--space-lg) var(--space-md);
+  overflow: hidden;
+}
+
+/* Brand Block */
+
+.brand-block {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+}
+
+.brand-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, #f0a6bc 0%, #d06e92 50%, #c05880 100%);
+  box-shadow:
+    0 4px 14px rgba(208, 110, 146, 0.35),
+    inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  transition: transform var(--duration-normal) var(--ease-spring);
+}
+
+.brand-mark:hover {
+  transform: scale(1.08) rotate(-3deg);
+}
+
+.brand-block h1 {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.2;
+  margin: 0;
+  letter-spacing: 0.3px;
+  background: linear-gradient(135deg, var(--ink) 0%, var(--rose-strong) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.brand-block span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Primary Nav */
+
+.primary-nav {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-md) 0;
+  border-top: 1px solid var(--line-light);
+  border-bottom: 1px solid var(--line-light);
+}
+
+.nav-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  padding: 8px var(--space-md);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.nav-button:hover {
+  background: var(--surface-hover);
+  border-color: var(--line-light);
+}
+
+.nav-button.active {
+  background: linear-gradient(135deg, rgba(255, 242, 246, 0.95), rgba(255, 237, 243, 0.85));
+  border-color: var(--line);
+  box-shadow: inset 3px 0 0 var(--rose), var(--shadow-xs);
+}
+
+.nav-button svg {
+  color: var(--rose-strong);
+  flex: 0 0 auto;
+  transition: transform var(--duration-normal) var(--ease-spring);
+}
+
+.nav-button:hover svg {
+  transform: scale(1.12);
+}
+
+.nav-button strong,
+.nav-button small {
+  display: block;
+}
+
+.nav-button strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.nav-button small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+  margin-top: 1px;
+}
+
+/* Character Section */
+
+.panel-section {
+  min-height: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+  border-top: 1px solid var(--line-light);
+  padding-top: var(--space-md);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 1;
+  font-weight: 700;
+  font-size: 11px;
+  margin-bottom: var(--space-sm);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.section-title svg {
+  color: var(--rose-strong);
+}
+
+.character-list {
+  min-height: 0;
+  display: grid;
+  flex: 1 1 auto;
+  align-content: start;
+  gap: 2px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.character-button {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.character-button:hover {
+  background: var(--surface-hover);
+  border-color: var(--line-light);
+}
+
+.character-button.active {
+  background: linear-gradient(135deg, rgba(255, 242, 246, 0.95), rgba(255, 237, 243, 0.85));
+  border-color: var(--line);
+  box-shadow: inset 3px 0 0 var(--rose), var(--shadow-xs);
+}
+
+.character-button strong,
+.character-button small {
+  display: block;
+}
+
+.character-button strong {
+  font-weight: 600;
+}
+
+.character-button small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Avatar */
+
+.avatar {
+  --avatar-accent: var(--rose);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-sm);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--avatar-accent) 15%, #fff),
+    color-mix(in srgb, var(--avatar-accent) 8%, #fff)
+  );
+  color: color-mix(in srgb, var(--avatar-accent) 80%, #614457);
+  font-weight: 800;
+  font-size: 15px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    0 2px 8px color-mix(in srgb, var(--avatar-accent) 15%, transparent);
+  transition: transform var(--duration-normal) var(--ease-spring);
+}
+
+.avatar.large {
+  width: 46px;
+  height: 46px;
+  font-size: 18px;
+  border-radius: var(--radius-md);
+}
+
+.character-button:hover .avatar {
+  transform: scale(1.08);
+}
+
+/* Status Card */
+
+.status-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin: var(--space-md) 0;
+  border: 1px solid var(--line-light);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, rgba(255, 249, 251, 0.8), rgba(244, 250, 247, 0.6));
+  padding: var(--space-sm) var(--space-md);
+}
+
+.mini-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.mini-row strong {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mini-row span {
+  color: var(--muted);
+}
+
+.mini-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #7bc4a5, var(--mint));
+  box-shadow: 0 0 0 3px rgba(111, 165, 146, 0.15);
+  animation: pulse-dot 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(111, 165, 146, 0.15); }
+  50% { box-shadow: 0 0 0 6px rgba(111, 165, 146, 0.06); }
+}
+
+.mini-row small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.sidebar-footnote {
+  flex: 0 0 auto;
+  margin: var(--space-md) 0 0;
+  color: var(--muted-light);
+  font-size: 11px;
+  line-height: 1.7;
+  pointer-events: none;
+  opacity: 0.7;
+}

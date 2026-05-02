@@ -1,0 +1,326 @@
+/* ═══════════════════════════════════════════════════
+   百合小窝 — Modal / Archive Dialog Styles
+   ═══════════════════════════════════════════════════ */
+
+/* ── Archive Modal ── */
+
+.archive-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgba(50, 35, 44, 0.3);
+  backdrop-filter: blur(16px) saturate(1.2);
+  padding: var(--space-xl);
+  animation: fade-in var(--duration-normal) var(--ease-out) both;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
+.archive-modal {
+  width: min(920px, calc(100vw - 36px));
+  max-height: min(820px, calc(100dvh - 36px));
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background:
+    linear-gradient(180deg, rgba(255, 254, 255, 0.99), rgba(255, 250, 252, 0.98));
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+  animation: modal-in var(--duration-slow) var(--ease-out) both;
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+}
+
+.archive-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-lg);
+  border-bottom: 1px solid var(--line-light);
+  padding: var(--space-xl) var(--space-2xl);
+}
+
+.archive-head span {
+  color: var(--rose-strong);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.archive-head h2 {
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.archive-close {
+  flex: 0 0 auto;
+}
+
+.archive-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-sm);
+  border-bottom: 1px solid var(--line-light);
+  padding: var(--space-md) var(--space-2xl);
+}
+
+.archive-metric {
+  border: 1px solid var(--line-light);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.65);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.archive-metric span,
+.archive-metric strong {
+  display: block;
+}
+
+.archive-metric span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.archive-metric strong {
+  overflow: hidden;
+  color: var(--ink-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 2px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.archive-body {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(260px, 0.95fr);
+  gap: var(--space-md);
+  overflow-y: auto;
+  padding: var(--space-lg) var(--space-2xl);
+}
+
+.archive-section {
+  min-width: 0;
+  border: 1px solid var(--line-light);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.65);
+  padding: var(--space-lg);
+}
+
+.archive-main-text {
+  grid-column: 1 / -1;
+}
+
+.archive-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 var(--space-sm);
+  color: var(--ink-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.archive-section h3 svg {
+  color: var(--rose-strong);
+}
+
+.archive-section p {
+  margin: 0;
+  line-height: 1.75;
+  font-size: 14px;
+}
+
+.archive-section footer,
+.archive-muted {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.archive-section footer {
+  margin-top: var(--space-sm);
+  font-size: 11px;
+}
+
+.archive-timeline {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.archive-timeline article {
+  border-left: 3px solid var(--line-strong);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: rgba(255, 251, 253, 0.8);
+  padding: var(--space-sm) var(--space-md);
+  transition: background var(--duration-fast) var(--ease-smooth);
+}
+
+.archive-timeline article:hover {
+  background: rgba(255, 248, 251, 0.95);
+}
+
+.archive-timeline strong,
+.archive-timeline span {
+  display: block;
+}
+
+.archive-timeline strong {
+  color: var(--ink-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.archive-timeline span {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.archive-timeline p {
+  margin-top: 5px;
+  font-size: 13px;
+}
+
+.archive-timeline button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: rgba(255, 249, 251, 0.9);
+  color: var(--rose-strong);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: var(--space-sm);
+  padding: 4px 10px;
+  transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.archive-timeline button:hover {
+  background: var(--rose-soft);
+  transform: translateY(-1px);
+}
+
+.archive-actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+  border-top: 1px solid var(--line-light);
+  padding: var(--space-md) var(--space-2xl);
+}
+
+/* ── Edit Form ── */
+
+.edit-form {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.edit-form label {
+  display: grid;
+  gap: 5px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink-secondary);
+}
+
+.edit-form input:not([type='checkbox']),
+.edit-form select,
+.edit-form textarea {
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.95);
+  font: inherit;
+  font-size: 14px;
+  transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.edit-form input:not([type='checkbox']):focus,
+.edit-form select:focus,
+.edit-form textarea:focus {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px var(--rose-glow);
+  background: #fff;
+}
+
+.edit-form textarea {
+  resize: vertical;
+  min-height: 88px;
+  line-height: 1.7;
+}
+
+/* Scope Editor */
+
+.scope-editor {
+  display: grid;
+  gap: var(--space-md);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(135deg, rgba(255, 250, 252, 0.9), rgba(244, 250, 247, 0.5));
+  padding: var(--space-lg);
+}
+
+.scope-editor-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.scope-editor-head strong {
+  flex: 0 0 auto;
+  color: var(--ink-secondary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.scope-editor-head span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+  text-align: right;
+}
+
+.scope-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.edit-row {
+  display: grid;
+  grid-template-columns: 150px minmax(120px, 1fr);
+  gap: var(--space-md);
+  align-items: end;
+}
+
+.compact-check {
+  display: flex !important;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-bottom: var(--space-sm);
+}
+
+.compact-check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--rose);
+}

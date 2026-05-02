@@ -1,0 +1,28 @@
+/* ═══════════════════════════════════════════════════
+   百合小窝 — Status Pill
+   ═══════════════════════════════════════════════════ */
+
+/* ── Status Pill ── */
+
+.status-pill {
+  position: fixed;
+  right: 20px;
+  bottom: 18px;
+  background: linear-gradient(135deg, rgba(55, 38, 48, 0.92), rgba(70, 50, 62, 0.88));
+  color: #fff;
+  border-radius: var(--radius-full);
+  padding: var(--space-sm) var(--space-xl);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(12px);
+  animation: pill-in var(--duration-slow) var(--ease-out) both;
+}
+
+@keyframes pill-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+}
