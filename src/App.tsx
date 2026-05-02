@@ -322,11 +322,21 @@ function App() {
         }`,
       )
       setState(
-        upsertConversation(nextStateWithUsage, {
-          ...nextConversation,
-          messages: [...nextConversation.messages, fallbackMessage],
-          updatedAt: nowIso(),
-        }),
+        upsertConversation(
+          {
+            ...nextStateWithUsage,
+            memoryUsageLogs: attachAssistantToMemoryUsageLog(
+              nextStateWithUsage.memoryUsageLogs,
+              usageLog.id,
+              fallbackMessage.id,
+            ),
+          },
+          {
+            ...nextConversation,
+            messages: [...nextConversation.messages, fallbackMessage],
+            updatedAt: nowIso(),
+          },
+        ),
       )
       setNotice('模型代理未接通')
     } finally {
@@ -952,6 +962,8 @@ function App() {
           contextBlocks={promptBundle.contextBlocks}
           draft={draft}
           isSending={isSending}
+          memories={state.memories}
+          memoryUsageLogs={state.memoryUsageLogs}
           messages={conversation.messages}
           onDraftChange={setDraft}
           onSend={handleSend}

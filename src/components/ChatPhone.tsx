@@ -1,13 +1,23 @@
 import type { CSSProperties } from 'react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { LoaderCircle, Send, SlidersHorizontal, Sparkles } from 'lucide-react'
-import type { AppSettings, CharacterCard, ChatMessage, PromptContextBlock } from '../domain/types'
+import type {
+  AppSettings,
+  CharacterCard,
+  ChatMessage,
+  LongTermMemory,
+  MemoryUsageLog,
+  PromptContextBlock,
+} from '../domain/types'
+import { buildMessageMemoryTrace } from '../services/memoryTrace'
 import { MessageBubble } from './MessageBubble'
 
 interface ChatPhoneProps {
   character: CharacterCard
   messages: ChatMessage[]
   contextBlocks: PromptContextBlock[]
+  memories: LongTermMemory[]
+  memoryUsageLogs: MemoryUsageLog[]
   draft: string
   isSending: boolean
   settings: AppSettings
@@ -20,6 +30,8 @@ export function ChatPhone({
   character,
   messages,
   contextBlocks,
+  memories,
+  memoryUsageLogs,
   draft,
   isSending,
   settings,
@@ -30,6 +42,13 @@ export function ChatPhone({
   const messageListRef = useRef<HTMLDivElement>(null)
   const memoryBlocks = contextBlocks.filter((block) => block.memoryIds?.length)
   const memoryCount = new Set(memoryBlocks.flatMap((block) => block.memoryIds ?? [])).size
+  const traceByAssistantMessageId = useMemo(() => {
+    return new Map(
+      memoryUsageLogs
+        .filter((log) => log.assistantMessageId)
+        .map((log) => [log.assistantMessageId as string, buildMessageMemoryTrace(log, memories)]),
+    )
+  }, [memories, memoryUsageLogs])
 
   function insertLineBreak(textarea: HTMLTextAreaElement) {
     const start = textarea.selectionStart
@@ -95,7 +114,11 @@ export function ChatPhone({
       <div className="message-list" ref={messageListRef}>
         <div className="message-column">
           {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
+            <MessageBubble
+              key={message.id}
+              memoryTrace={message.role === 'assistant' ? traceByAssistantMessageId.get(message.id) : undefined}
+              message={message}
+            />
           ))}
           {isSending && (
             <article className="message message-assistant pending">
