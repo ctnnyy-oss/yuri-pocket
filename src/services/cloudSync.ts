@@ -1,6 +1,5 @@
+import { storageConfig } from '../config/storage'
 import type { AppState } from '../domain/types'
-
-const cloudTokenStorageKey = 'yuri-pocket-cloud-token'
 
 export interface CloudMetadata {
   hasState: boolean
@@ -18,16 +17,16 @@ export function isCloudSyncConfigured(): boolean {
 
 export function getSavedCloudToken(): string {
   if (typeof window === 'undefined') return ''
-  return window.localStorage.getItem(cloudTokenStorageKey) ?? ''
+  return window.localStorage.getItem(storageConfig.cloudTokenStorageKey) ?? ''
 }
 
 export function saveCloudToken(token: string): void {
   if (typeof window === 'undefined') return
   const cleanedToken = token.trim()
   if (cleanedToken) {
-    window.localStorage.setItem(cloudTokenStorageKey, cleanedToken)
+    window.localStorage.setItem(storageConfig.cloudTokenStorageKey, cleanedToken)
   } else {
-    window.localStorage.removeItem(cloudTokenStorageKey)
+    window.localStorage.removeItem(storageConfig.cloudTokenStorageKey)
   }
 }
 

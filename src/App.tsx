@@ -11,10 +11,10 @@ import {
   listLocalBackups,
   loadAppState,
   loadLocalBackup,
-  migrateAppState,
   resetAppState,
   saveAppState,
 } from './data/database'
+import { migrateAppState } from './data/migrations'
 import { createSeedState } from './data/seed'
 import type { AccentTheme, AppSettings, AppState, LocalBackupSummary, LongTermMemory, WorldNode } from './domain/types'
 import { requestAssistantReply } from './services/chatApi'

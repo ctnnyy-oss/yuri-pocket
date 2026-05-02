@@ -43,11 +43,13 @@ import type {
 } from '../domain/types'
 import type { CloudMetadata } from '../services/cloudSync'
 import {
-  formatMemoryScopeLabel,
   memoryKindLabels,
   memoryMentionPolicyLabels,
   memorySensitivityLabels,
   memoryStatusLabels,
+} from '../domain/memoryLabels'
+import {
+  formatMemoryScopeLabel,
 } from '../services/memoryEngine'
 import type { AppView } from './CharacterRail'
 
