@@ -21,7 +21,12 @@ import type {
   WorldNode,
 } from '../domain/types'
 import { brand } from '../config/brand'
-import { memoryKindLabels, memoryMentionPolicyLabels, memorySensitivityLabels } from '../domain/memoryLabels'
+import {
+  formatMemoryScopeLabel,
+  memoryKindLabels,
+  memoryMentionPolicyLabels,
+  memorySensitivityLabels,
+} from '../domain/memoryLabels'
 
 export interface MemoryMaintenanceReport {
   memories: LongTermMemory[]
@@ -889,29 +894,6 @@ function isMemoryRelevantEnough(memory: LongTermMemory, query: string): boolean 
 
   const text = `${memory.title} ${memory.body} ${memory.tags.join(' ')}`
   return memory.priority >= 4 || getKeywordOverlap(text, query) > 0 || normalizeComparable(query).includes(normalizeComparable(memory.title))
-}
-
-export function formatMemoryScopeLabel(scope: MemoryScope): string {
-  switch (scope.kind) {
-    case 'global_user':
-      return '全局用户'
-    case 'character_private':
-      return '角色私有'
-    case 'relationship':
-      return '当前关系'
-    case 'world':
-      return '世界'
-    case 'world_branch':
-      return '世界分支'
-    case 'project':
-      return '项目'
-    case 'conversation':
-      return '当前会话'
-    case 'temporary':
-      return '临时'
-    default:
-      return '未知空间'
-  }
 }
 
 function inferMemoryScope(

@@ -1,4 +1,4 @@
-import type { MemoryKind, MemoryMentionPolicy, MemorySensitivity, MemoryStatus } from './types'
+import type { MemoryKind, MemoryMentionPolicy, MemoryScope, MemorySensitivity, MemoryStatus } from './types'
 
 export const memoryKindLabels: Record<MemoryKind, string> = {
   profile: '用户画像',
@@ -36,3 +36,25 @@ export const memoryMentionPolicyLabels: Record<MemoryMentionPolicy, string> = {
   silent: '只做边界',
 }
 
+export function formatMemoryScopeLabel(scope: MemoryScope): string {
+  switch (scope.kind) {
+    case 'global_user':
+      return '全局用户'
+    case 'character_private':
+      return '角色私有'
+    case 'relationship':
+      return '当前关系'
+    case 'world':
+      return '世界'
+    case 'world_branch':
+      return '世界分支'
+    case 'project':
+      return '项目'
+    case 'conversation':
+      return '当前会话'
+    case 'temporary':
+      return '临时'
+    default:
+      return '未知空间'
+  }
+}

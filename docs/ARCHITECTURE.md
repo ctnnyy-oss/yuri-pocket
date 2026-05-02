@@ -7,6 +7,7 @@
 ## 分层
 
 - `src/components`：只负责界面，不直接决定角色、记忆和模型规则。
+- `src/components/memory`：记忆面板的子组件、草稿类型和 UI 工具函数。`MemoryPanel.tsx` 只负责组装页面，不继续堆所有细节。
 - `src/config`：集中放品牌名、默认项目空间、本地存储 key 等跨模块配置。改名或调整存储策略时先看这里。
 - `src/domain`：类型定义，是项目的共同语言。
 - `src/domain/memoryLabels.ts`：记忆类型、状态、敏感度、提及时机的中文标签。UI 可以读标签，但不要反向依赖记忆引擎。
@@ -26,6 +27,7 @@
 - 品牌名、技术路径和存储 key 分开管理：面向用户叫“百合小窝 / Yuri Nest”，但仓库、Pages 路径、服务器服务名暂时仍可保留 `yuri-pocket` 作为兼容技术名。
 - 旧数据升级只能走 `migrations.ts`，不要在界面组件里临时判断旧字段；这样妹妹本机、云端快照和未来多设备同步都能复用同一条升级路径。
 - 超过 500 行的文件默认进入“需要继续拆分观察区”。现在最胖的是 `MemoryPanel.tsx`、`memoryEngine.ts` 和 `App.tsx`，后续应优先按视图、prompt packer、memory writer/retriever 继续拆。
+- 拆大文件优先按“可验证的小模块”推进：先拆纯工具、配置、迁移、独立 UI，再拆带状态流的核心逻辑；每次拆完必须跑 lint/build 和浏览器回归。
 
 ## 记忆系统分层
 
