@@ -102,6 +102,10 @@ export function ModelAndDataPanel({
     () => modelProfiles.filter((profile) => profile.id !== 'server-env'),
     [modelProfiles],
   )
+  const visibleCloudBackups = cloudBackups.slice(0, 3)
+  const hiddenCloudBackupCount = Math.max(0, cloudBackups.length - visibleCloudBackups.length)
+  const visibleLocalBackups = localBackups.slice(0, 4)
+  const hiddenLocalBackupCount = Math.max(0, localBackups.length - visibleLocalBackups.length)
 
   function loadProfileIntoDraft(profile: ModelProfileSummary) {
     setDraft({
@@ -434,22 +438,27 @@ export function ModelAndDataPanel({
                   {cloudBackups.length === 0 ? (
                     <small>还没有读取到云端备份。保存云端或手动创建后，这里会出现下载入口。</small>
                   ) : (
-                    cloudBackups.slice(0, 5).map((backup) => (
-                      <article className="backup-item" key={backup.fileName}>
-                        <div>
-                          <strong>{backup.label}</strong>
-                          <span>
-                            {formatShortTime(backup.createdAt)} / {formatBytes(backup.sizeBytes)}
-                          </span>
-                          <small>{backup.fileName}</small>
-                        </div>
-                        <div className="backup-actions">
-                          <button onClick={() => onDownloadCloudBackup(backup.fileName)} type="button">
-                            下载
-                          </button>
-                        </div>
-                      </article>
-                    ))
+                    <>
+                      {visibleCloudBackups.map((backup) => (
+                        <article className="backup-item" key={backup.fileName}>
+                          <div>
+                            <strong>{backup.label}</strong>
+                            <span>
+                              {formatShortTime(backup.createdAt)} / {formatBytes(backup.sizeBytes)}
+                            </span>
+                            <small>{backup.fileName}</small>
+                          </div>
+                          <div className="backup-actions">
+                            <button onClick={() => onDownloadCloudBackup(backup.fileName)} type="button">
+                              下载
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                      {hiddenCloudBackupCount > 0 && (
+                        <small className="backup-more">还有 {hiddenCloudBackupCount} 份旧备份已收起，避免列表太吵。</small>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -473,25 +482,30 @@ export function ModelAndDataPanel({
                 {localBackups.length === 0 ? (
                   <small>还没有本机备份。做一次读取、导入或重置前，姐姐会自动留底。</small>
                 ) : (
-                  localBackups.slice(0, 6).map((backup) => (
-                    <article className="backup-item" key={backup.id}>
-                      <div>
-                        <strong>{backup.label}</strong>
-                        <span>
-                          {formatShortTime(backup.createdAt)} / {backup.reason}
-                        </span>
-                        <small>{formatBackupCounts(backup)}</small>
-                      </div>
-                      <div className="backup-actions">
-                        <button onClick={() => onRestoreLocalBackup(backup.id)} type="button">
-                          恢复
-                        </button>
-                        <button className="danger-button" onClick={() => onDeleteLocalBackup(backup.id)} type="button">
-                          删除
-                        </button>
-                      </div>
-                    </article>
-                  ))
+                  <>
+                    {visibleLocalBackups.map((backup) => (
+                      <article className="backup-item" key={backup.id}>
+                        <div>
+                          <strong>{backup.label}</strong>
+                          <span>
+                            {formatShortTime(backup.createdAt)} / {backup.reason}
+                          </span>
+                          <small>{formatBackupCounts(backup)}</small>
+                        </div>
+                        <div className="backup-actions">
+                          <button onClick={() => onRestoreLocalBackup(backup.id)} type="button">
+                            恢复
+                          </button>
+                          <button className="danger-button" onClick={() => onDeleteLocalBackup(backup.id)} type="button">
+                            删除
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                    {hiddenLocalBackupCount > 0 && (
+                      <small className="backup-more">还有 {hiddenLocalBackupCount} 份旧备份已收起，需要时仍然保留在本机。</small>
+                    )}
+                  </>
                 )}
               </div>
             </section>

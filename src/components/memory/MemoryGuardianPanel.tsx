@@ -53,6 +53,11 @@ export function MemoryGuardianPanel({
   const report = buildMemoryGuardianReport({ memories, conflicts, memoryEvents, usageLogs, trash })
   const memoryById = new Map(memories.map((memory) => [memory.id, memory]))
   const currentCharacter = characters.find((character) => character.id === activeCharacterId)
+  const visibleReviewItems = report.reviewItems.slice(0, 3)
+  const hiddenReviewCount = Math.max(0, report.reviewItems.length - visibleReviewItems.length)
+  const visibleTimelineItems = report.timelineItems.slice(0, 5)
+  const hiddenTimelineCount = Math.max(0, report.timelineItems.length - visibleTimelineItems.length)
+  const hasReviewItems = report.reviewItems.length > 0
 
   function updateMemory(memoryId: string, patch: Partial<LongTermMemory>) {
     const memory = memoryById.get(memoryId)
@@ -65,7 +70,7 @@ export function MemoryGuardianPanel({
   }
 
   return (
-    <section className="memory-guardian" aria-label="记忆守护台">
+    <section className={`memory-guardian ${hasReviewItems ? 'has-review' : 'no-review'}`} aria-label="记忆守护台">
       <div className="memory-guardian-head">
         <div>
           <strong>记忆守护台</strong>
@@ -89,13 +94,13 @@ export function MemoryGuardianPanel({
         ))}
       </div>
 
+      {!hasReviewItems && <p className="guardian-empty guardian-empty-inline">没有需要立刻复查的记忆。</p>}
+
       <div className="guardian-columns">
-        <div className="guardian-column">
+        {hasReviewItems && (
+          <div className="guardian-column">
           <GuardianColumnTitle icon={<ListChecks size={15} />} title="复查队列" />
-          {report.reviewItems.length === 0 ? (
-            <p className="guardian-empty">没有需要立刻复查的记忆。</p>
-          ) : (
-            report.reviewItems.map((item) => {
+            {visibleReviewItems.map((item) => {
               const memory = memoryById.get(item.memoryId)
               return (
                 <article className={`guardian-review ${item.severity}`} key={item.id}>
@@ -131,9 +136,10 @@ export function MemoryGuardianPanel({
                   )}
                 </article>
               )
-            })
-          )}
-        </div>
+            })}
+            {hiddenReviewCount > 0 && <p className="guardian-more">还有 {hiddenReviewCount} 项复查留在后面。</p>}
+          </div>
+        )}
 
         <div className="guardian-column">
           <GuardianColumnTitle icon={<History size={15} />} title="记忆事件账本" />
@@ -141,7 +147,7 @@ export function MemoryGuardianPanel({
             <p className="guardian-empty">还没有记忆活动。</p>
           ) : (
             <div className="guardian-timeline">
-              {report.timelineItems.map((item) => {
+              {visibleTimelineItems.map((item) => {
                 const memory = item.memoryId ? memoryById.get(item.memoryId) : null
                 return (
                   <article className="guardian-timeline-item" key={item.id}>
@@ -162,6 +168,7 @@ export function MemoryGuardianPanel({
                   </article>
                 )
               })}
+              {hiddenTimelineCount > 0 && <p className="guardian-more">还有 {hiddenTimelineCount} 条更早的事件已自动收起。</p>}
             </div>
           )}
         </div>
