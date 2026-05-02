@@ -1,5 +1,6 @@
 import type {
   MemoryKind,
+  MemoryLayer,
   MemoryMentionPolicy,
   MemoryScope,
   MemorySensitivity,
@@ -15,6 +16,7 @@ export interface MemoryDraft {
   kind: MemoryKind
   confidence: number
   status: MemoryStatus
+  layer: MemoryLayer
   sensitivity: MemorySensitivity
   mentionPolicy: MemoryMentionPolicy
   cooldownUntil: string
@@ -33,4 +35,3 @@ export interface WorldDraft {
   priority: number
   enabled: boolean
 }
-

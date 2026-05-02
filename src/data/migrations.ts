@@ -3,7 +3,7 @@ import { normalizeMemories } from '../services/memoryEngine'
 import { normalizeTrashRetentionSettings } from '../services/trashRetention'
 import { createSeedState } from './seed'
 
-const currentStateVersion = 11
+const currentStateVersion = 12
 
 export function migrateAppState(state: AppState): AppState {
   const defaults = createSeedState()

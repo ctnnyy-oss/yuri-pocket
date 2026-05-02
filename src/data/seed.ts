@@ -96,6 +96,7 @@ export const memories: LongTermMemory[] = [
     pinned: true,
     kind: 'project',
     status: 'active',
+    layer: 'stable',
     scope: { kind: 'project', projectId: brand.defaultProjectId },
     sensitivity: 'low',
     mentionPolicy: 'proactive',
@@ -123,6 +124,7 @@ export const memories: LongTermMemory[] = [
     pinned: true,
     kind: 'relationship',
     status: 'active',
+    layer: 'stable',
     scope: { kind: 'relationship', characterId: 'sister-architect' },
     sensitivity: 'medium',
     mentionPolicy: 'contextual',
@@ -150,6 +152,7 @@ export const memories: LongTermMemory[] = [
     pinned: true,
     kind: 'character',
     status: 'active',
+    layer: 'stable',
     scope: { kind: 'character_private', characterId: 'aogirei-lady' },
     sensitivity: 'medium',
     mentionPolicy: 'contextual',
@@ -177,6 +180,7 @@ export const memories: LongTermMemory[] = [
     pinned: true,
     kind: 'character',
     status: 'active',
+    layer: 'stable',
     scope: { kind: 'character_private', characterId: 'lin-qiushi' },
     sensitivity: 'medium',
     mentionPolicy: 'contextual',
@@ -204,6 +208,7 @@ export const memories: LongTermMemory[] = [
     pinned: true,
     kind: 'procedure',
     status: 'active',
+    layer: 'stable',
     scope: { kind: 'global_user' },
     sensitivity: 'low',
     mentionPolicy: 'proactive',
@@ -241,7 +246,7 @@ export function createSeedState(): AppState {
   }))
 
   return {
-    version: 11,
+    version: 12,
     activeCharacterId: characters[0].id,
     characters,
     conversations,

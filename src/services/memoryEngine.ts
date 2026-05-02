@@ -6,6 +6,7 @@ import type {
   LongTermMemory,
   MemoryConflict,
   MemoryKind,
+  MemoryLayer,
   MemoryMentionPolicy,
   MemoryOrigin,
   MemoryRevision,
@@ -24,6 +25,7 @@ import { brand } from '../config/brand'
 import {
   formatMemoryScopeLabel,
   memoryKindLabels,
+  memoryLayerLabels,
   memoryMentionPolicyLabels,
   memorySensitivityLabels,
 } from '../domain/memoryLabels'
@@ -126,6 +128,7 @@ export function buildPromptBundle(state: AppState): PromptBundle {
       '优先保持连续性、情绪承接和可执行性；当用户做项目时给清晰下一步，当用户情绪不好时先接住再处理问题。',
       '如果长期记忆和当前用户明确表达冲突，以当前用户表达为准，并在合适时提醒用户可以修改旧记忆。',
       '使用记忆时不要机械复述，也不要炫耀你记得很多。低可信记忆只能温和确认，敏感记忆只能在用户主动相关提及时谨慎使用。',
+      '区分记忆层级：稳定事实可以作为长期背景；阶段事件只能当作发生过的脉络，不能升级成永久偏好；临时工作只在当前任务强相关时使用。',
       '遵守每条记忆的提及策略：只做边界的记忆只能保护对话，不要主动说出；问起再提的记忆只有用户明确询问旧事或记忆时才可提起。',
     ].join('\n'),
     contextBlocks: [
@@ -284,6 +287,7 @@ export function createManualMemory(input: {
   priority: number
   pinned?: boolean
   kind?: MemoryKind
+  layer?: MemoryLayer
   confidence?: number
   status?: MemoryStatus
   scope?: MemoryScope
@@ -302,6 +306,7 @@ export function createManualMemory(input: {
     priority: input.priority,
     pinned: input.pinned ?? false,
     kind,
+    layer: input.layer ?? inferMemoryLayer(kind, input.scope),
     confidence: input.confidence ?? 0.92,
     status: input.status ?? 'active',
     scope: input.scope ?? inferMemoryScope(kind),
@@ -419,12 +424,14 @@ export function normalizeMemory(memory: LongTermMemory): LongTermMemory {
   const sources = Array.isArray(memory.sources) ? memory.sources : []
   const scope = normalizeMemoryScope(memory.scope ?? inferMemoryScope(kind))
   const status = memory.status ?? 'active'
+  const layer = memory.layer ?? inferMemoryLayer(kind, scope)
   const sensitivity = memory.sensitivity ?? inferSensitivity(kind, `${memory.title} ${memory.body}`)
   const mentionPolicy = memory.mentionPolicy ?? inferMentionPolicy(kind, sensitivity)
   const normalized: LongTermMemory = {
     ...memory,
     kind,
     status,
+    layer,
     scope,
     sensitivity,
     mentionPolicy,
@@ -555,6 +562,7 @@ function createLongTermMemory(input: {
   priority: number
   pinned: boolean
   kind: MemoryKind
+  layer?: MemoryLayer
   confidence: number
   status: MemoryStatus
   scope: MemoryScope
@@ -575,6 +583,7 @@ function createLongTermMemory(input: {
     pinned: input.pinned,
     kind: input.kind,
     status: input.status,
+    layer: input.layer ?? inferMemoryLayer(input.kind, input.scope),
     scope: normalizeMemoryScope(input.scope),
     sensitivity: input.sensitivity,
     mentionPolicy: input.mentionPolicy ?? inferMentionPolicy(input.kind, input.sensitivity),
@@ -625,6 +634,7 @@ function snapshotMemory(memory: LongTermMemory): MemorySnapshot {
     kind: memory.kind,
     confidence: memory.confidence,
     status: memory.status,
+    layer: memory.layer,
     scope: memory.scope,
     sensitivity: memory.sensitivity,
     mentionPolicy: memory.mentionPolicy,
@@ -637,6 +647,7 @@ function formatMemoryForPrompt(memory: LongTermMemory): string {
   return [
     memory.body,
     `标签：${memory.tags.join(' / ') || '无'}`,
+    `层级：${memoryLayerLabels[memory.layer]}`,
     `空间：${formatMemoryScopeLabel(memory.scope)}；敏感度：${memorySensitivityLabels[memory.sensitivity]}`,
     `提及策略：${memoryMentionPolicyLabels[memory.mentionPolicy]}${memory.cooldownUntil ? `；冷却到：${new Date(memory.cooldownUntil).toLocaleString('zh-CN')}` : ''}`,
     `权重：${memory.priority}；可信度：${Math.round(memory.confidence * 100)}%；来源：${source || '手动整理'}`,
@@ -724,10 +735,12 @@ function scoreMemory(memory: LongTermMemory, query: string): number {
   const mentionPenalty =
     normalized.mentionPolicy === 'explicit' ? 18 : normalized.mentionPolicy === 'silent' ? 60 : normalized.mentionPolicy === 'contextual' ? 4 : 0
   const typePriority = normalized.kind === 'taboo' || normalized.kind === 'safety' ? 45 : normalized.kind === 'relationship' ? 18 : 0
+  const layerPriority = normalized.layer === 'stable' ? 12 : normalized.layer === 'episode' ? 2 : -10
 
   return (
     Number(normalized.pinned) * 60 +
     typePriority +
+    layerPriority +
     normalized.priority * 11 +
     normalized.confidence * 18 +
     tagHits * 18 +
@@ -764,6 +777,7 @@ function mergeMemories(primary: LongTermMemory, incoming: LongTermMemory, reason
     confidence: Math.max(primary.confidence, incoming.confidence),
     sensitivity: maxSensitivity(primary.sensitivity, incoming.sensitivity),
     status: primary.status === 'active' || incoming.status === 'active' ? 'active' : primary.status,
+    layer: mergeMemoryLayer(primary.layer, incoming.layer),
     sources: mergeSources(primary.sources, incoming.sources),
     accessCount: primary.accessCount + incoming.accessCount,
     lastAccessedAt: primary.lastAccessedAt ?? incoming.lastAccessedAt,
@@ -790,28 +804,32 @@ function buildMemoryContextBlocks(
       title: '用户稳定记忆',
       category: 'stable',
       reason: '全局偏好和长期规则，帮助减少重复说明',
-      items: memories.filter((memory) => memory.kind === 'profile' || memory.kind === 'preference' || memory.kind === 'procedure'),
+      items: memories.filter(
+        (memory) =>
+          memory.layer === 'stable' &&
+          (memory.kind === 'profile' || memory.kind === 'preference' || memory.kind === 'procedure'),
+      ),
       limit: 3,
     },
     {
       title: options.characterName ? `当前关系：${options.characterName}` : '关系与角色记忆',
       category: 'relationship',
       reason: '只取当前角色可见的关系和私有设定，避免串戏',
-      items: memories.filter((memory) => memory.kind === 'relationship' || memory.kind === 'character'),
+      items: memories.filter((memory) => memory.layer === 'stable' && (memory.kind === 'relationship' || memory.kind === 'character')),
       limit: 3,
     },
     {
       title: '项目与世界记忆',
       category: 'project',
       reason: '当前话题相关的项目决策和世界观规则',
-      items: memories.filter((memory) => memory.kind === 'project' || memory.kind === 'world'),
+      items: memories.filter((memory) => memory.layer !== 'working' && (memory.kind === 'project' || memory.kind === 'world')),
       limit: 3,
     },
     {
       title: '相关事件与反思',
       category: 'event',
       reason: '当前会话附近的经历、阶段进展和反思',
-      items: memories.filter((memory) => memory.kind === 'event' || memory.kind === 'reflection'),
+      items: memories.filter((memory) => memory.layer === 'episode' || memory.kind === 'event' || memory.kind === 'reflection'),
       limit: 3,
     },
   ]
@@ -848,7 +866,9 @@ function buildMemoryRetrievalGroups(memories: LongTermMemory[], query: string): 
       category: 'stable',
       reason: '全局偏好和长期规则，帮助减少重复说明',
       items: relevantMemories.filter(
-        (memory) => memory.kind === 'profile' || memory.kind === 'preference' || memory.kind === 'procedure',
+        (memory) =>
+          memory.layer === 'stable' &&
+          (memory.kind === 'profile' || memory.kind === 'preference' || memory.kind === 'procedure'),
       ),
       limit: 4,
     },
@@ -856,21 +876,25 @@ function buildMemoryRetrievalGroups(memories: LongTermMemory[], query: string): 
       title: '关系与角色记忆',
       category: 'relationship',
       reason: '只取当前角色可见的关系和私有设定，避免串戏',
-      items: relevantMemories.filter((memory) => memory.kind === 'relationship' || memory.kind === 'character'),
+      items: relevantMemories.filter(
+        (memory) => memory.layer === 'stable' && (memory.kind === 'relationship' || memory.kind === 'character'),
+      ),
       limit: 3,
     },
     {
       title: '项目与世界记忆',
       category: 'project',
       reason: '当前话题相关的项目决策和世界观规则',
-      items: relevantMemories.filter((memory) => memory.kind === 'project' || memory.kind === 'world'),
+      items: relevantMemories.filter((memory) => memory.layer !== 'working' && (memory.kind === 'project' || memory.kind === 'world')),
       limit: 4,
     },
     {
       title: '相关事件与反思',
       category: 'event',
       reason: '当前会话附近的经历、阶段进展和反思',
-      items: relevantMemories.filter((memory) => memory.kind === 'event' || memory.kind === 'reflection'),
+      items: relevantMemories.filter(
+        (memory) => memory.layer === 'episode' || memory.kind === 'event' || memory.kind === 'reflection' || memory.layer === 'working',
+      ),
       limit: 3,
     },
   ]
@@ -878,6 +902,7 @@ function buildMemoryRetrievalGroups(memories: LongTermMemory[], query: string): 
 
 function getMemoryGroupRank(memory: LongTermMemory): number {
   if (memory.kind === 'taboo' || memory.kind === 'safety') return 0
+  if (memory.layer === 'working') return 5
   if (memory.kind === 'profile' || memory.kind === 'preference' || memory.kind === 'procedure') return 1
   if (memory.kind === 'relationship' || memory.kind === 'character') return 2
   if (memory.kind === 'project' || memory.kind === 'world') return 3
@@ -886,6 +911,14 @@ function getMemoryGroupRank(memory: LongTermMemory): number {
 
 function isMemoryRelevantEnough(memory: LongTermMemory, query: string): boolean {
   if (memory.pinned) return true
+  if (memory.layer === 'working') {
+    return Boolean(
+      query.trim() &&
+        (memory.priority >= 4 ||
+          getKeywordOverlap(`${memory.title} ${memory.body} ${memory.tags.join(' ')}`, query) > 0 ||
+          normalizeComparable(query).includes(normalizeComparable(memory.title))),
+    )
+  }
   if (!query.trim()) return memory.priority >= 4
   if (memory.kind === 'relationship' || memory.kind === 'character') return true
   if (memory.kind === 'profile' || memory.kind === 'preference' || memory.kind === 'procedure') {
@@ -907,6 +940,13 @@ function inferMemoryScope(
   if (kind === 'project') return { kind: 'project', projectId: brand.defaultProjectId }
   if (kind === 'event' && conversation) return { kind: 'conversation', conversationId: conversation.id }
   return { kind: 'global_user' }
+}
+
+function inferMemoryLayer(kind: MemoryKind, scope?: MemoryScope): MemoryLayer {
+  if (scope?.kind === 'temporary') return 'working'
+  if (kind === 'event' || kind === 'reflection') return 'episode'
+  if (scope?.kind === 'conversation') return 'working'
+  return 'stable'
 }
 
 function normalizeMemoryScope(scope: MemoryScope): MemoryScope {
@@ -1012,6 +1052,15 @@ function maxSensitivity(a: MemorySensitivity, b: MemorySensitivity): MemorySensi
     medium: 2,
     high: 3,
     critical: 4,
+  }
+  return rank[a] >= rank[b] ? a : b
+}
+
+function mergeMemoryLayer(a: MemoryLayer, b: MemoryLayer): MemoryLayer {
+  const rank: Record<MemoryLayer, number> = {
+    stable: 3,
+    episode: 2,
+    working: 1,
   }
   return rank[a] >= rank[b] ? a : b
 }

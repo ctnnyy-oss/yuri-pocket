@@ -11,6 +11,13 @@ export interface CloudSnapshot extends CloudMetadata {
   state: AppState | null
 }
 
+export interface CloudBackupSummary {
+  fileName: string
+  label: string
+  createdAt: string
+  sizeBytes: number
+}
+
 export function isCloudSyncConfigured(): boolean {
   return Boolean(getApiBaseUrl())
 }
@@ -49,6 +56,24 @@ export async function pushCloudState(state: AppState, token: string): Promise<Pi
     body: JSON.stringify({ state }),
   })
   return response.json()
+}
+
+export async function listCloudBackups(token: string): Promise<CloudBackupSummary[]> {
+  const response = await cloudFetch('/api/cloud/backups', token)
+  const payload = (await response.json()) as { backups?: CloudBackupSummary[] }
+  return payload.backups ?? []
+}
+
+export async function createCloudBackup(token: string): Promise<CloudBackupSummary[]> {
+  const response = await cloudFetch('/api/cloud/backups', token, { method: 'POST' })
+  const payload = (await response.json()) as { backups?: CloudBackupSummary[] }
+  return payload.backups ?? []
+}
+
+export async function downloadCloudBackup(token: string, fileName: string): Promise<Blob> {
+  const safeName = encodeURIComponent(fileName)
+  const response = await cloudFetch(`/api/cloud/backups/${safeName}`, token)
+  return response.blob()
 }
 
 async function cloudFetch(path: string, token: string, init: RequestInit = {}): Promise<Response> {

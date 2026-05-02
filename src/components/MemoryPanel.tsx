@@ -33,6 +33,7 @@ import type {
   LongTermMemory,
   MemoryConflict,
   MemoryKind,
+  MemoryLayer,
   MemoryMentionPolicy,
   MemoryScope,
   MemorySensitivity,
@@ -40,9 +41,10 @@ import type {
   MemoryUsageLog,
   WorldNode,
 } from '../domain/types'
-import type { CloudMetadata } from '../services/cloudSync'
+import type { CloudBackupSummary, CloudMetadata } from '../services/cloudSync'
 import {
   memoryKindLabels,
+  memoryLayerLabels,
   memoryMentionPolicyLabels,
   memorySensitivityLabels,
   memoryStatusLabels,
@@ -56,6 +58,7 @@ import {
   defaultProjectId,
   draftToScope,
   formatBackupCounts,
+  formatBytes,
   formatCloudTime,
   formatDeletedAt,
   formatScopeDisplay,
@@ -99,13 +102,17 @@ interface MemoryPanelProps {
   onReset: () => void
   cloudStatus: string
   cloudMeta: CloudMetadata | null
-  cloudBusy: 'checking' | 'pulling' | 'pushing' | null
+  cloudBusy: 'checking' | 'pulling' | 'pushing' | 'backing-up' | null
+  cloudBackups: CloudBackupSummary[]
   cloudSyncConfigured: boolean
   cloudTokenSet: boolean
   onConnectCloud: () => void
   onPullCloud: () => void
   onPushCloud: () => void
   onRefreshCloud: () => void
+  onCreateCloudBackup: () => void
+  onDownloadCloudBackup: (fileName: string) => void
+  onRefreshCloudBackups: () => void
   localBackups: LocalBackupSummary[]
   onCreateLocalBackup: () => void
   onRestoreLocalBackup: (backupId: string) => void
@@ -120,6 +127,7 @@ const accentThemes: Array<{ id: AccentTheme; label: string; color: string }> = [
 ]
 
 const memoryKindOptions = Object.keys(memoryKindLabels) as MemoryKind[]
+const memoryLayerOptions = Object.keys(memoryLayerLabels) as MemoryLayer[]
 const memoryStatusOptions = Object.keys(memoryStatusLabels).filter(
   (status) => status !== 'trashed' && status !== 'permanently_deleted',
 ) as MemoryStatus[]
@@ -155,12 +163,16 @@ export function MemoryPanel({
   cloudStatus,
   cloudMeta,
   cloudBusy,
+  cloudBackups,
   cloudSyncConfigured,
   cloudTokenSet,
   onConnectCloud,
   onPullCloud,
   onPushCloud,
   onRefreshCloud,
+  onCreateCloudBackup,
+  onDownloadCloudBackup,
+  onRefreshCloudBackups,
   localBackups,
   onCreateLocalBackup,
   onRestoreLocalBackup,
@@ -182,6 +194,7 @@ export function MemoryPanel({
       priority: memory.priority,
       pinned: memory.pinned,
       kind: memory.kind,
+      layer: memory.layer,
       confidence: memory.confidence,
       status: memory.status,
       sensitivity: memory.sensitivity,
@@ -202,6 +215,7 @@ export function MemoryPanel({
       priority: clamp(memoryDraft.priority, 1, 5),
       pinned: memoryDraft.pinned,
       kind: memoryDraft.kind,
+      layer: memoryDraft.layer,
       confidence: clamp(memoryDraft.confidence, 0.1, 1),
       status: memoryDraft.status,
       sensitivity: memoryDraft.sensitivity,
@@ -370,6 +384,23 @@ export function MemoryPanel({
                         </select>
                       </label>
                       <label>
+                        <span>层级</span>
+                        <select
+                          onChange={(event) =>
+                            setMemoryDraft({ ...memoryDraft, layer: event.target.value as MemoryLayer })
+                          }
+                          value={memoryDraft.layer}
+                        >
+                          {memoryLayerOptions.map((layer) => (
+                            <option key={layer} value={layer}>
+                              {memoryLayerLabels[layer]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                    <div className="edit-row">
+                      <label>
                         <span>可信度</span>
                         <input
                           max="1"
@@ -382,8 +413,6 @@ export function MemoryPanel({
                           value={memoryDraft.confidence}
                         />
                       </label>
-                    </div>
-                    <div className="edit-row">
                       <label>
                         <span>状态</span>
                         <select
@@ -486,6 +515,7 @@ export function MemoryPanel({
                     </div>
                     <div className="memory-meta">
                       <span>{memoryKindLabels[memory.kind]}</span>
+                      <span>{memoryLayerLabels[memory.layer]}</span>
                       <span>{memoryStatusLabels[memory.status]}</span>
                       <span>{formatScopeDisplay(memory.scope, characters)}</span>
                       <span>{memorySensitivityLabels[memory.sensitivity]}</span>
@@ -571,6 +601,7 @@ export function MemoryPanel({
                         memory={memory}
                         onUpdateMemory={onUpdateMemory}
                       />
+                      <MemoryLayerQuickActions memory={memory} onUpdateMemory={onUpdateMemory} />
                       <MemoryMentionQuickActions memory={memory} onUpdateMemory={onUpdateMemory} />
                       <IconTextButton icon={<Trash2 size={16} />} label="删除" onClick={() => onTrashMemory(memory.id)} />
                     </div>
@@ -860,6 +891,54 @@ export function MemoryPanel({
                   {cloudBusy === 'pulling' ? '读取中' : '从云端读取'}
                 </button>
               </div>
+              <div className="cloud-backup-panel">
+                <div className="cloud-backup-head">
+                  <div>
+                    <strong>云端保险箱</strong>
+                    <span>服务器会在每次覆盖云端快照前自动留一份 SQLite 备份，也可以手动创建。</span>
+                  </div>
+                  <div className="settings-actions compact-actions">
+                    <button
+                      disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
+                      onClick={onCreateCloudBackup}
+                      type="button"
+                    >
+                      <Save size={15} />
+                      {cloudBusy === 'backing-up' ? '备份中' : '创建备份'}
+                    </button>
+                    <button
+                      disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
+                      onClick={onRefreshCloudBackups}
+                      type="button"
+                    >
+                      <RefreshCw size={15} />
+                      刷新备份
+                    </button>
+                  </div>
+                </div>
+                <div className="backup-list">
+                  {cloudBackups.length === 0 ? (
+                    <small>还没有读取到云端备份。保存云端或手动创建后，这里会出现下载入口。</small>
+                  ) : (
+                    cloudBackups.slice(0, 5).map((backup) => (
+                      <article className="backup-item" key={backup.fileName}>
+                        <div>
+                          <strong>{backup.label}</strong>
+                          <span>
+                            {formatShortTime(backup.createdAt)} / {formatBytes(backup.sizeBytes)}
+                          </span>
+                          <small>{backup.fileName}</small>
+                        </div>
+                        <div className="backup-actions">
+                          <button onClick={() => onDownloadCloudBackup(backup.fileName)} type="button">
+                            下载
+                          </button>
+                        </div>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
 
             <div className="settings-section">
@@ -1086,6 +1165,9 @@ function buildMemoryInsight(memories: LongTermMemory[]) {
   const sourced = memories.filter((memory) => memory.sources.length > 0).length
   const pending = memories.filter((memory) => memory.status === 'candidate').length
   const boundary = memories.filter((memory) => memory.kind === 'taboo' || memory.kind === 'safety').length
+  const stable = memories.filter((memory) => memory.layer === 'stable').length
+  const episode = memories.filter((memory) => memory.layer === 'episode').length
+  const working = memories.filter((memory) => memory.layer === 'working').length
   const lowConfidence = memories.filter((memory) => memory.confidence < 0.72).length
   const missingSource = total - sourced
   const stale = memories.filter((memory) => !memory.pinned && memory.lastAccessedAt && daysSince(memory.lastAccessedAt) > 30).length
@@ -1129,8 +1211,11 @@ function buildMemoryInsight(memories: LongTermMemory[]) {
     summary: total > 0 ? `共 ${total} 条记忆，主色调是${topKind}。` : '还在等第一条长期记忆。',
     stats: [
       { label: '总数', value: `${total}` },
-      { label: '待确认', value: `${pending}` },
+      { label: '稳定', value: `${stable}` },
+      { label: '事件', value: `${episode}` },
+      { label: '临时', value: `${working}` },
       { label: '平均可信', value: `${averageConfidence}%` },
+      { label: '待确认', value: `${pending}` },
       { label: '边界', value: `${boundary}` },
     ],
     suggestions: suggestions.slice(0, 3),
@@ -1487,6 +1572,7 @@ function MemoryArchiveModal({
 
         <div className="archive-meta-grid">
           <ArchiveMetric label="类型" value={memoryKindLabels[memory.kind]} />
+          <ArchiveMetric label="层级" value={memoryLayerLabels[memory.layer]} />
           <ArchiveMetric label="状态" value={memoryStatusLabels[memory.status]} />
           <ArchiveMetric label="空间" value={formatScopeDisplay(memory.scope, characters)} />
           <ArchiveMetric label="敏感度" value={memorySensitivityLabels[memory.sensitivity]} />
@@ -1740,6 +1826,48 @@ function MemoryMentionQuickActions({
           key={action.label}
           label={action.label}
           onClick={() => onUpdateMemory({ ...memory, ...action.patch, userEdited: true })}
+        />
+      ))}
+    </>
+  )
+}
+
+function MemoryLayerQuickActions({
+  memory,
+  onUpdateMemory,
+}: {
+  memory: LongTermMemory
+  onUpdateMemory: (memory: LongTermMemory) => void
+}) {
+  const actions: Array<{ label: string; layer: MemoryLayer }> = []
+
+  if ((memory.kind === 'event' || memory.kind === 'reflection') && memory.layer !== 'episode') {
+    actions.push({ label: '转为事件', layer: 'episode' })
+  }
+
+  if (
+    ['profile', 'preference', 'procedure', 'relationship', 'project', 'world', 'character', 'taboo', 'safety'].includes(
+      memory.kind,
+    ) &&
+    memory.layer !== 'stable'
+  ) {
+    actions.push({ label: '转为稳定', layer: 'stable' })
+  }
+
+  if (memory.scope.kind === 'temporary' && memory.layer !== 'working') {
+    actions.push({ label: '转为临时', layer: 'working' })
+  }
+
+  if (actions.length === 0) return null
+
+  return (
+    <>
+      {actions.slice(0, 1).map((action) => (
+        <IconTextButton
+          icon={<History size={16} />}
+          key={action.label}
+          label={action.label}
+          onClick={() => onUpdateMemory({ ...memory, layer: action.layer, userEdited: true })}
         />
       ))}
     </>

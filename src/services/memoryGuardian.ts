@@ -2,7 +2,6 @@ import type {
   AppTrash,
   LongTermMemory,
   MemoryConflict,
-  MemoryKind,
   MemoryMentionPolicy,
   MemoryUsageLog,
 } from '../domain/types'
@@ -13,6 +12,8 @@ export type MemoryTimelineKind = 'created' | 'updated' | 'called' | 'deleted' | 
 export interface MemoryGuardianSummary {
   activeCount: number
   stableCount: number
+  episodeCount: number
+  workingCount: number
   reviewCount: number
   protectedCount: number
   recentUsageCount: number
@@ -60,18 +61,6 @@ interface BuildMemoryGuardianReportInput {
   now?: Date
 }
 
-const stableKinds = new Set<MemoryKind>([
-  'profile',
-  'preference',
-  'relationship',
-  'project',
-  'procedure',
-  'world',
-  'character',
-  'taboo',
-  'safety',
-])
-
 const sensitiveMentionPolicies = new Set<MemoryMentionPolicy>(['explicit', 'silent'])
 
 export function buildMemoryGuardianReport({
@@ -85,11 +74,16 @@ export function buildMemoryGuardianReport({
   const activeMemories = visibleMemories.filter((memory) => memory.status === 'active')
   const candidateMemories = visibleMemories.filter((memory) => memory.status === 'candidate')
   const protectedMemories = activeMemories.filter(isProtectedMemory)
+  const stableCount = activeMemories.filter((memory) => memory.layer === 'stable').length
+  const episodeCount = activeMemories.filter((memory) => memory.layer === 'episode').length
+  const workingCount = activeMemories.filter((memory) => memory.layer === 'working').length
   const recentUsageCount = usageLogs.filter((log) => daysBetween(log.createdAt, now) <= 7).length
   const reviewItems = buildReviewItems(visibleMemories, conflicts, now)
   const summary = buildSummary({
     activeCount: activeMemories.length,
-    stableCount: activeMemories.filter((memory) => stableKinds.has(memory.kind)).length,
+    stableCount,
+    episodeCount,
+    workingCount,
     reviewCount: reviewItems.length,
     protectedCount: protectedMemories.length,
     recentUsageCount,
@@ -109,22 +103,22 @@ export function buildMemoryGuardianReport({
         count: summary.stableCount,
       },
       {
-        id: 'review',
-        label: '待复查',
-        description: '需要妹妹或姐姐确认，不应该悄悄影响长期回复。',
-        count: summary.reviewCount,
+        id: 'episode',
+        label: '阶段事件',
+        description: '记录发生过的脉络，但不会变成永久偏好。',
+        count: summary.episodeCount,
+      },
+      {
+        id: 'working',
+        label: '临时工作',
+        description: '只在当前任务强相关时使用，避免污染长期人格。',
+        count: summary.workingCount,
       },
       {
         id: 'protected',
         label: '边界保护',
         description: '敏感、禁忌、冷却或只做安全边界的记忆。',
         count: summary.protectedCount,
-      },
-      {
-        id: 'usage',
-        label: '7天调用',
-        description: '最近一周聊天实际用过的记忆调用记录。',
-        count: summary.recentUsageCount,
       },
     ],
     reviewItems,
@@ -138,6 +132,8 @@ function buildSummary(input: {
   reviewCount: number
   protectedCount: number
   recentUsageCount: number
+  episodeCount: number
+  workingCount: number
   candidateCount: number
   conflictCount: number
   missingSourceCount: number
@@ -148,13 +144,16 @@ function buildSummary(input: {
     input.candidateCount * 4 +
     input.conflictCount * 8 +
     input.missingSourceCount * 3 +
-    input.lowConfidenceCount * 5
+    input.lowConfidenceCount * 5 +
+    input.workingCount * 2
   const activityBonus = Math.min(input.recentUsageCount * 2, 10)
   const healthScore = clamp(Math.round(100 - penalty + activityBonus), 0, 100)
 
   return {
     activeCount: input.activeCount,
     stableCount: input.stableCount,
+    episodeCount: input.episodeCount,
+    workingCount: input.workingCount,
     reviewCount: input.reviewCount,
     protectedCount: input.protectedCount,
     recentUsageCount: input.recentUsageCount,
@@ -195,6 +194,39 @@ function buildReviewItems(
     }
 
     if (memory.status !== 'active') return
+
+    if (memory.layer === 'stable' && (memory.kind === 'event' || memory.kind === 'reflection')) {
+      items.push({
+        id: `layer-stable-event-${memory.id}`,
+        memoryId: memory.id,
+        title: memory.title,
+        detail: '事件类内容被放进稳定事实，后面可能被误当成永久偏好。',
+        severity: 'warning',
+        suggestedAction: '改成“阶段事件”，让它留在时间线里。',
+      })
+    }
+
+    if (memory.layer === 'episode' && ['profile', 'preference', 'procedure', 'taboo', 'safety'].includes(memory.kind)) {
+      items.push({
+        id: `layer-episode-rule-${memory.id}`,
+        memoryId: memory.id,
+        title: memory.title,
+        detail: '这类记忆更像长期事实或规则，不该只当阶段事件。',
+        severity: 'info',
+        suggestedAction: '确认无误后可转成“稳定事实”。',
+      })
+    }
+
+    if (memory.layer === 'working' && daysBetween(memory.updatedAt, now) > 7) {
+      items.push({
+        id: `working-stale-${memory.id}`,
+        memoryId: memory.id,
+        title: memory.title,
+        detail: '临时工作记忆已经超过 7 天，可能该归档、删除或转成事件。',
+        severity: 'info',
+        suggestedAction: '复查它是否还服务当前任务。',
+      })
+    }
 
     if (memory.confidence < 0.72) {
       items.push({

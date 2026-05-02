@@ -47,6 +47,7 @@ export type MemorySourceKind = 'message' | 'manual' | 'summary' | 'system'
 export type MemoryStatus = 'candidate' | 'active' | 'archived' | 'trashed' | 'permanently_deleted'
 export type MemorySensitivity = 'low' | 'medium' | 'high' | 'critical'
 export type MemoryMentionPolicy = 'proactive' | 'contextual' | 'explicit' | 'silent'
+export type MemoryLayer = 'stable' | 'episode' | 'working'
 
 export type MemoryScope =
   | { kind: 'global_user' }
@@ -78,6 +79,7 @@ export interface MemorySnapshot {
   kind: MemoryKind
   confidence: number
   status: MemoryStatus
+  layer: MemoryLayer
   scope: MemoryScope
   sensitivity: MemorySensitivity
   mentionPolicy: MemoryMentionPolicy
@@ -102,6 +104,7 @@ export interface LongTermMemory {
   pinned: boolean
   kind: MemoryKind
   status: MemoryStatus
+  layer: MemoryLayer
   scope: MemoryScope
   sensitivity: MemorySensitivity
   mentionPolicy: MemoryMentionPolicy

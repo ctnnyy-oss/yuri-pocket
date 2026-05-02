@@ -20,9 +20,13 @@ import type { AccentTheme, AppSettings, AppState, LocalBackupSummary, LongTermMe
 import { requestAssistantReply } from './services/chatApi'
 import {
   checkCloudHealth,
+  createCloudBackup,
+  type CloudBackupSummary,
   type CloudMetadata,
+  downloadCloudBackup,
   getSavedCloudToken,
   isCloudSyncConfigured,
+  listCloudBackups,
   pullCloudState,
   pushCloudState,
   saveCloudToken,
@@ -87,7 +91,7 @@ const themeVariables: Record<AccentTheme, CSSProperties> = {
 }
 
 const appViews: AppView[] = ['chat', 'memory', 'world', 'model', 'settings', 'trash']
-type CloudBusyTask = 'checking' | 'pulling' | 'pushing'
+type CloudBusyTask = 'checking' | 'pulling' | 'pushing' | 'backing-up'
 
 function readViewFromLocation(): AppView {
   if (typeof window === 'undefined') return 'chat'
@@ -122,11 +126,23 @@ function App() {
   const [cloudMeta, setCloudMeta] = useState<CloudMetadata | null>(null)
   const [cloudBusy, setCloudBusy] = useState<CloudBusyTask | null>(null)
   const [localBackups, setLocalBackups] = useState<LocalBackupSummary[]>([])
+  const [cloudBackups, setCloudBackups] = useState<CloudBackupSummary[]>([])
   const [notice, setNotice] = useState('花园已就绪')
 
   const refreshLocalBackups = useCallback(async () => {
     const backups = await listLocalBackups()
     setLocalBackups(backups)
+  }, [])
+
+  const refreshCloudBackups = useCallback(async (token: string) => {
+    if (!isCloudSyncConfigured() || !token.trim()) {
+      setCloudBackups([])
+      return []
+    }
+
+    const backups = await listCloudBackups(token)
+    setCloudBackups(backups)
+    return backups
   }, [])
 
   const refreshCloudMetadata = useCallback(async (token: string) => {
@@ -149,6 +165,7 @@ function App() {
       const metadata = await checkCloudHealth(cleanedToken)
       setCloudMeta(metadata)
       setCloudStatus(formatCloudStatus(metadata))
+      void refreshCloudBackups(cleanedToken)
       return metadata
     } catch (error) {
       setCloudMeta(null)
@@ -157,7 +174,7 @@ function App() {
     } finally {
       setCloudBusy((currentTask) => (currentTask === 'checking' ? null : currentTask))
     }
-  }, [])
+  }, [refreshCloudBackups])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -673,12 +690,54 @@ function App() {
         revision: result.revision,
         updatedAt: result.updatedAt,
       })
+      void refreshCloudBackups(cloudToken)
       setCloudStatus(`已保存到云端 v${result.revision}，时间 ${formatCloudTime(result.updatedAt)}`)
       setNotice('云端数据已保存')
     } catch (error) {
       setCloudStatus(error instanceof Error ? error.message : '保存云端失败')
     } finally {
       setCloudBusy((currentTask) => (currentTask === 'pushing' ? null : currentTask))
+    }
+  }
+
+  async function handleCreateCloudBackup() {
+    if (cloudBusy) return
+
+    try {
+      setCloudBusy('backing-up')
+      setCloudStatus('正在创建云端备份...')
+      const backups = await createCloudBackup(cloudToken)
+      setCloudBackups(backups)
+      setCloudStatus('云端备份已创建')
+      setNotice('云端备份已创建')
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : '创建云端备份失败')
+    } finally {
+      setCloudBusy((currentTask) => (currentTask === 'backing-up' ? null : currentTask))
+    }
+  }
+
+  async function handleRefreshCloudBackups() {
+    try {
+      await refreshCloudBackups(cloudToken)
+      setCloudStatus('云端备份列表已刷新')
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : '刷新云端备份失败')
+    }
+  }
+
+  async function handleDownloadCloudBackup(fileName: string) {
+    try {
+      const blob = await downloadCloudBackup(cloudToken, fileName)
+      const url = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = fileName
+      anchor.click()
+      URL.revokeObjectURL(url)
+      setNotice('云端备份已下载')
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : '下载云端备份失败')
     }
   }
 
@@ -732,12 +791,16 @@ function App() {
           cloudStatus={cloudStatus}
           cloudMeta={cloudMeta}
           cloudBusy={cloudBusy}
+          cloudBackups={cloudBackups}
           cloudSyncConfigured={isCloudSyncConfigured()}
           cloudTokenSet={Boolean(cloudToken)}
           onConnectCloud={handleConnectCloud}
           onPullCloud={handlePullCloud}
           onPushCloud={handlePushCloud}
           onRefreshCloud={() => void refreshCloudMetadata(cloudToken)}
+          onCreateCloudBackup={handleCreateCloudBackup}
+          onDownloadCloudBackup={handleDownloadCloudBackup}
+          onRefreshCloudBackups={() => void handleRefreshCloudBackups()}
           localBackups={localBackups}
           onCreateLocalBackup={handleCreateLocalBackup}
           onDeleteLocalBackup={handleDeleteLocalBackup}

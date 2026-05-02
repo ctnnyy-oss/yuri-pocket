@@ -1,6 +1,6 @@
 import { timingSafeEqual } from 'node:crypto'
-import { mkdirSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs'
+import { basename, dirname, join, resolve, sep } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import cors from 'cors'
 import dotenv from 'dotenv'
@@ -46,6 +46,32 @@ app.get('/api/cloud/state', requireCloudAuth, (_request, response) => {
     updatedAt: snapshot?.updatedAt ?? null,
     revision: snapshot?.revision ?? 0,
   })
+})
+
+app.get('/api/cloud/backups', requireCloudAuth, (_request, response) => {
+  response.json({
+    ok: true,
+    backups: listCloudBackups(),
+  })
+})
+
+app.post('/api/cloud/backups', requireCloudAuth, (_request, response) => {
+  const backup = createCloudBackup('manual')
+  response.json({
+    ok: true,
+    backup,
+    backups: listCloudBackups(),
+  })
+})
+
+app.get('/api/cloud/backups/:fileName', requireCloudAuth, (request, response) => {
+  const backupPath = resolveBackupPath(request.params.fileName)
+  if (!backupPath || !existsSync(backupPath)) {
+    response.status(404).json({ error: 'Backup not found' })
+    return
+  }
+
+  response.download(backupPath)
 })
 
 app.put('/api/cloud/state', requireCloudAuth, (request, response) => {
@@ -131,7 +157,7 @@ let cloudDatabase
 function getCloudDatabase() {
   if (cloudDatabase) return cloudDatabase
 
-  const databasePath = resolve(process.env.YURI_NEST_DB_PATH || './data/yuri-nest.sqlite')
+  const databasePath = getCloudDatabasePath()
   mkdirSync(dirname(databasePath), { recursive: true })
   cloudDatabase = new DatabaseSync(databasePath)
   cloudDatabase.exec(`
@@ -145,6 +171,14 @@ function getCloudDatabase() {
   return cloudDatabase
 }
 
+function getCloudDatabasePath() {
+  return resolve(process.env.YURI_NEST_DB_PATH || './data/yuri-nest.sqlite')
+}
+
+function getCloudBackupDir() {
+  return resolve(process.env.YURI_NEST_BACKUP_DIR || './data/backups')
+}
+
 function readSnapshot() {
   const row = getCloudDatabase()
     .prepare('SELECT payload, updated_at AS updatedAt, revision FROM app_snapshots WHERE id = ?')
@@ -155,6 +189,9 @@ function readSnapshot() {
 
 function saveSnapshot(state) {
   const existing = readSnapshot()
+  if (existing) {
+    createCloudBackup(`auto-before-save-rev${existing.revision}`)
+  }
   const nextRevision = Number(existing?.revision ?? 0) + 1
   const updatedAt = new Date().toISOString()
   const payload = JSON.stringify(state)
@@ -171,6 +208,63 @@ function saveSnapshot(state) {
     .run(snapshotId, payload, updatedAt, nextRevision)
 
   return { payload, updatedAt, revision: nextRevision }
+}
+
+function createCloudBackup(reason = 'manual') {
+  const database = getCloudDatabase()
+  const backupDir = getCloudBackupDir()
+  mkdirSync(backupDir, { recursive: true })
+
+  const safeReason = String(reason).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-+/g, '-').slice(0, 48) || 'backup'
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const fileName = `yuri-nest-${safeReason}-${stamp}.sqlite`
+  const backupPath = join(backupDir, fileName)
+
+  database.exec(`VACUUM INTO ${quoteSqlString(backupPath)}`)
+  pruneCloudBackups()
+  return toCloudBackupSummary(backupPath)
+}
+
+function listCloudBackups() {
+  const backupDir = getCloudBackupDir()
+  if (!existsSync(backupDir)) return []
+
+  return readdirSync(backupDir)
+    .filter((fileName) => fileName.startsWith('yuri-nest-') && fileName.endsWith('.sqlite'))
+    .map((fileName) => toCloudBackupSummary(join(backupDir, fileName)))
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+}
+
+function pruneCloudBackups() {
+  const maxBackups = clampNumber(process.env.YURI_NEST_MAX_BACKUPS, 3, 120, 24)
+  const backups = listCloudBackups()
+  backups.slice(maxBackups).forEach((backup) => {
+    const backupPath = resolveBackupPath(backup.fileName)
+    if (backupPath) rmSync(backupPath, { force: true })
+  })
+}
+
+function resolveBackupPath(fileName) {
+  const cleanName = basename(String(fileName))
+  if (!cleanName.startsWith('yuri-nest-') || !cleanName.endsWith('.sqlite')) return null
+  const backupDir = getCloudBackupDir()
+  const backupPath = resolve(backupDir, cleanName)
+  return backupPath.startsWith(`${backupDir}${sep}`) ? backupPath : null
+}
+
+function toCloudBackupSummary(backupPath) {
+  const stats = statSync(backupPath)
+  const fileName = basename(backupPath)
+  return {
+    fileName,
+    label: fileName.replace(/^yuri-nest-/, '').replace(/\.sqlite$/, ''),
+    createdAt: stats.mtime.toISOString(),
+    sizeBytes: stats.size,
+  }
+}
+
+function quoteSqlString(value) {
+  return `'${String(value).replace(/'/g, "''")}'`
 }
 
 function isValidAppStateShape(state) {

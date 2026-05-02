@@ -31,10 +31,17 @@ export function formatCloudTime(value: string | null): string {
   return formatShortTime(value)
 }
 
-export function getCloudBusyLabel(cloudBusy: 'checking' | 'pulling' | 'pushing'): string {
+export function getCloudBusyLabel(cloudBusy: 'checking' | 'pulling' | 'pushing' | 'backing-up'): string {
   if (cloudBusy === 'checking') return '正在检查云端...'
   if (cloudBusy === 'pulling') return '正在读取云端，当前本机数据会先自动备份'
+  if (cloudBusy === 'backing-up') return '正在创建云端备份...'
   return '正在保存到云端...'
+}
+
+export function formatBytes(value: number): string {
+  if (value < 1024) return `${value} B`
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`
+  return `${(value / 1024 / 1024).toFixed(1)} MB`
 }
 
 export function formatBackupCounts(backup: LocalBackupSummary): string {

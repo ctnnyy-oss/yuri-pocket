@@ -1,4 +1,11 @@
-import type { MemoryKind, MemoryMentionPolicy, MemoryScope, MemorySensitivity, MemoryStatus } from './types'
+import type {
+  MemoryKind,
+  MemoryLayer,
+  MemoryMentionPolicy,
+  MemoryScope,
+  MemorySensitivity,
+  MemoryStatus,
+} from './types'
 
 export const memoryKindLabels: Record<MemoryKind, string> = {
   profile: '用户画像',
@@ -34,6 +41,12 @@ export const memoryMentionPolicyLabels: Record<MemoryMentionPolicy, string> = {
   contextual: '相关时使用',
   explicit: '问起再提',
   silent: '只做边界',
+}
+
+export const memoryLayerLabels: Record<MemoryLayer, string> = {
+  stable: '稳定事实',
+  episode: '阶段事件',
+  working: '临时工作',
 }
 
 export function formatMemoryScopeLabel(scope: MemoryScope): string {
