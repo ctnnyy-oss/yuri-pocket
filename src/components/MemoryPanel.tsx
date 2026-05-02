@@ -48,6 +48,7 @@ import {
   memoryStatusLabels,
 } from '../domain/memoryLabels'
 import type { MemoryDraft, WorldDraft } from './memory/memoryPanelTypes'
+import { MemoryGuardianPanel } from './memory/MemoryGuardianPanel'
 import { MemoryScopeEditor } from './memory/MemoryScopeEditor'
 import {
   addDaysIso,
@@ -272,6 +273,17 @@ export function MemoryPanel({
             activeCharacterId={activeCharacterId}
             characters={characters}
             memories={memories}
+          />
+          <MemoryGuardianPanel
+            activeCharacterId={activeCharacterId}
+            characters={characters}
+            conflicts={memoryConflicts}
+            memories={memories}
+            onEditMemory={startMemoryEdit}
+            onOpenMemory={(memory) => setSelectedMemoryId(memory.id)}
+            onUpdateMemory={onUpdateMemory}
+            trash={trash}
+            usageLogs={memoryUsageLogs}
           />
           <MemoryCandidateReview
             candidates={candidateMemories}
