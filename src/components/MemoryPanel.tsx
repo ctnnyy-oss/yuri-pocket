@@ -63,6 +63,7 @@ import { MemoryDiagnostics } from './memory/sections/MemoryDiagnostics'
 import { MemoryGardenInsight } from './memory/sections/MemoryGardenInsight'
 import { MemorySpaceOverview } from './memory/sections/MemorySpaceOverview'
 import { ModelAndDataPanel } from './model/ModelAndDataPanel'
+import { CoreCpProfiles } from './world/CoreCpProfiles'
 import {
   clamp,
   draftToScope,
@@ -652,10 +653,11 @@ export function MemoryPanel({
       {activeView === 'world' && (
         <>
           <WorkspaceTitle
-            description="用关键词触发世界观、CP 原则和应用设定，不合适的节点也可以关掉或删除。"
+            description="三对核心 CP、世界观规则和触发词先放在这里，后续可以慢慢补全。"
             icon={<Database size={20} />}
-            title="世界树"
+            title="百合小窝"
           />
+          <CoreCpProfiles />
           <section className="panel-stack">
             {worldNodes.length === 0 && <EmptyState text="当前没有世界树节点。删掉的内容可以去回收花园找回。" />}
             {worldNodes.map((node) => (

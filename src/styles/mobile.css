@@ -582,6 +582,7 @@
 
   .memory-insight,
   .space-overview,
+  .core-cp-section,
   .memory-guardian,
   .candidate-review,
   .diagnostic-column,
@@ -653,5 +654,38 @@
 
   .backup-actions {
     justify-content: flex-start;
+  }
+
+  .core-cp-head {
+    display: grid;
+  }
+
+  .core-cp-count {
+    width: fit-content;
+    min-width: 68px;
+  }
+
+  .core-cp-summary {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: flex-start;
+    padding: 13px;
+  }
+
+  .core-cp-summary-tags {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .core-cp-summary-main small {
+    white-space: normal;
+  }
+
+  .core-cp-card-body {
+    padding: 0 13px 13px;
+  }
+
+  .core-cp-characters,
+  .core-cp-footer {
+    grid-template-columns: 1fr;
   }
 }
