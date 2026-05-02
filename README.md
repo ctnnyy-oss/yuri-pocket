@@ -1,8 +1,23 @@
 # 百合小窝 / Yuri Nest
 
-网页端 AI 百合陪伴应用雏形。第一版已经包含聊天界面、角色卡、长期记忆、世界树、本地存储、数据导入导出和模型代理。
+网页端 AI 百合陪伴应用。它是妹妹“百合帝国”的应用侧起点，当前重点不是做一次性聊天 demo，而是把角色、长期记忆、世界树、本地/云端数据和可控的记忆主权慢慢打磨成长期可用的陪伴花园。
+
+线上预览：
+
+- https://ctnnyy-oss.github.io/yuri-nest/
 
 当前仓库、部署路径和服务器技术名已经统一为 `yuri-nest`，面向用户的产品名是“百合小窝 / Yuri Nest”。
+
+## 当前功能
+
+- 聊天工作台：支持角色切换、上下文提示、模型代理失败时的本地兜底回复。
+- 角色卡：已内置姐姐大人、雾岛怜、林秋实等角色雏形。
+- 长期记忆：支持用户画像、偏好、关系、项目、事件、规则、世界观、角色私有、禁忌和安全边界。
+- 记忆主权：支持编辑、删除、恢复、永久删除、版本回滚、冷却、归档和防复活 tombstone。
+- 记忆守护台：显示健康度、复查队列、事件账本、调用记录和最近更新。
+- 聊天记忆透镜：每条助手回复可展开查看实际调用过的记忆，并能直接反馈误用记忆：冷却 7 天、少用、问起再提、标敏感或归档。
+- 世界树：保存世界观节点和触发词，用于后续百合设定、角色和项目扩展。
+- 数据管理：支持本地 IndexedDB 存储、导入导出、本机备份、云端同步和云端备份。
 
 ## 启动
 
@@ -15,7 +30,7 @@ npm run dev
 
 ## 接入模型
 
-复制 `.env.local.example` 为 `.env.local`，填入自己的模型服务：
+复制 `.env.local.example` 为 `.env.local`，填入自己的 OpenAI-compatible 模型服务：
 
 ```env
 AI_API_KEY=你的密钥
@@ -25,12 +40,53 @@ AI_MAX_TOKENS=4096
 AI_ESCAPE_UNICODE_CONTENT=true
 ```
 
-没有填写密钥时，应用会使用本地演示回复，方便先验证界面、角色和记忆流程。
+没有填写密钥时，应用会使用本地兜底回复，方便先验证界面、角色和记忆流程。
 
-## 版本回溯与上线
+## 云端同步
 
-姐姐已经给项目准备了 Git 版本回溯和 GitHub Pages 自动部署配置。说明见：
+前端公开页面不保存 API Key。云端同步走后端服务，前端只保存用户输入的云端口令。
 
-- `docs/VERSIONING_AND_DEPLOYMENT.md`
+敏感配置不要提交到 GitHub：
 
-注意：GitHub Pages 公开网页不会上传 `.env.local`，所以不会泄露密钥；上线版主要用于三端 UI 和记忆流程预览，真正聊天仍建议跑本机版。
+- `secrets/`
+- `.env.local`
+- 服务器 `/opt/yuri-nest/.env`
+
+当前后端服务名：
+
+- `yuri-nest-api.service`
+- `yuri-nest-tunnel.service`
+
+如果 Cloudflare Quick Tunnel 地址变化，需要更新前端的 `VITE_API_BASE_URL` 后重新构建并推送。
+
+## 构建和上线
+
+GitHub Pages 使用仓库路径 `/yuri-nest/`，构建时必须带正确 base path：
+
+```powershell
+$env:VITE_BASE_PATH='/yuri-nest/'
+$env:VITE_API_BASE_URL='<当前云端 API 地址>'
+npm run build
+```
+
+构建后要检查 `dist/index.html` 是否引用：
+
+```text
+/yuri-nest/assets/...
+```
+
+`dist` 是当前 Pages 部署产物的一部分，提交前请确认没有把任何密钥、token 或 `.env.local` 加入 Git。
+
+## 文档
+
+- `docs/PROJECT_HANDOFF.md`：当前接手项目时最重要的交接文档。
+- `docs/ARCHITECTURE.md`：项目结构、记忆系统和路线说明。
+- `docs/VERSIONING_AND_DEPLOYMENT.md`：版本回溯与部署说明。
+- `docs/DEEP_RESEARCH_MEMORY_CLOSURE.md`：记忆系统阶段性收束记录。
+
+## 开发提醒
+
+- 不要从零重做架构；先读交接文档，再沿当前 React + Vite + Node/Express 后端继续迭代。
+- 记忆系统是项目灵魂，任何改动都要保留用户可编辑、可删除、可恢复、可永久删除的主权。
+- UI 风格偏雾粉、浅粉、淡粉，可爱但不要死亡芭比粉。
+- 妹妹零编程基础，功能说明和交互文案要尽量直观。
