@@ -54,6 +54,7 @@ import {
   upsertConversation,
 } from './services/memoryEngine'
 import { appendMemoryEvent, createMemoryEvent, type CreateMemoryEventInput } from './services/memoryEvents'
+import { applyMemoryFeedback, type MemoryFeedbackAction } from './services/memoryFeedback'
 import { applyTrashRetention, normalizeTrashRetentionSettings } from './services/trashRetention'
 
 const themeVariables: Record<AccentTheme, CSSProperties> = {
@@ -419,21 +420,24 @@ function App() {
     setNotice('记忆已修改')
   }
 
-  function handleCoolDownMemoryFromChat(memoryId: string) {
+  function handleMemoryFeedbackFromChat(memoryId: string, action: MemoryFeedbackAction) {
+    const currentMemory = state.memories.find((item) => item.id === memoryId)
+    if (!currentMemory) {
+      setNotice('这条记忆暂时没有找到')
+      return
+    }
+
+    const noticeText = applyMemoryFeedback(currentMemory, action).notice
+
     setState((currentState) => {
       const memory = currentState.memories.find((item) => item.id === memoryId)
       if (!memory) return currentState
 
-      const cooldownUntil = new Date()
-      cooldownUntil.setDate(cooldownUntil.getDate() + 7)
+      const feedback = applyMemoryFeedback(memory, action)
       const updatedMemory = updateMemoryWithRevision(
         memory,
-        {
-          ...memory,
-          cooldownUntil: cooldownUntil.toISOString(),
-          userEdited: true,
-        },
-        '聊天记忆透镜冷却',
+        feedback.memory,
+        feedback.revisionReason,
       )
 
       return addMemoryEventToState(
@@ -445,14 +449,14 @@ function App() {
           type: 'usage_feedback',
           actor: 'user',
           title: memory.title,
-          detail: '妹妹在聊天记忆透镜中让这条记忆冷却 7 天，避免继续误用。',
+          detail: feedback.detail,
           memoryIds: [memory.id],
           characterId: character.id,
           conversationId: conversation.id,
         },
       )
     })
-    setNotice('这条记忆已冷却 7 天')
+    setNotice(noticeText)
   }
 
   function handleOrganizeMemories() {
@@ -1001,8 +1005,8 @@ function App() {
           memories={state.memories}
           memoryUsageLogs={state.memoryUsageLogs}
           messages={conversation.messages}
-          onCoolDownMemory={handleCoolDownMemoryFromChat}
           onDraftChange={setDraft}
+          onMemoryFeedback={handleMemoryFeedbackFromChat}
           onSend={handleSend}
           onSettingsClick={() => navigateView('settings')}
           settings={state.settings}

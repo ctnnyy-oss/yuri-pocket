@@ -9,6 +9,7 @@ import type {
   MemoryUsageLog,
   PromptContextBlock,
 } from '../domain/types'
+import type { MemoryFeedbackAction } from '../services/memoryFeedback'
 import { buildMessageMemoryTrace } from '../services/memoryTrace'
 import { MessageBubble } from './MessageBubble'
 
@@ -22,7 +23,7 @@ interface ChatPhoneProps {
   isSending: boolean
   settings: AppSettings
   onDraftChange: (value: string) => void
-  onCoolDownMemory: (memoryId: string) => void
+  onMemoryFeedback: (memoryId: string, action: MemoryFeedbackAction) => void
   onSend: () => void
   onSettingsClick: () => void
 }
@@ -37,7 +38,7 @@ export function ChatPhone({
   isSending,
   settings,
   onDraftChange,
-  onCoolDownMemory,
+  onMemoryFeedback,
   onSend,
   onSettingsClick,
 }: ChatPhoneProps) {
@@ -120,7 +121,7 @@ export function ChatPhone({
               key={message.id}
               memoryTrace={message.role === 'assistant' ? traceByAssistantMessageId.get(message.id) : undefined}
               message={message}
-              onCoolDownMemory={onCoolDownMemory}
+              onMemoryFeedback={onMemoryFeedback}
             />
           ))}
           {isSending && (

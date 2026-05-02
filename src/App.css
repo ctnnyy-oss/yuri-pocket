@@ -511,8 +511,20 @@
   -webkit-line-clamp: 2;
 }
 
-.trace-memory-item button {
+.trace-feedback-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
   margin-top: 7px;
+}
+
+.trace-feedback-row small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.trace-feedback-row button {
   border: 1px solid rgba(217, 119, 152, 0.28);
   border-radius: 8px;
   background: rgba(255, 240, 245, 0.72);
@@ -521,10 +533,12 @@
   font: inherit;
   font-size: 12px;
   font-weight: 800;
+  line-height: 1.2;
+  min-height: 29px;
   padding: 5px 8px;
 }
 
-.trace-memory-item button:disabled {
+.trace-feedback-row button:disabled {
   background: rgba(244, 238, 241, 0.78);
   color: #9d8b93;
   cursor: default;

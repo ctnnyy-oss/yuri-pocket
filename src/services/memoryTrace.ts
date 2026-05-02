@@ -1,5 +1,17 @@
-import type { LongTermMemory, MemoryUsageLog } from '../domain/types'
-import { memoryKindLabels, memoryLayerLabels } from '../domain/memoryLabels'
+import type {
+  LongTermMemory,
+  MemoryMentionPolicy,
+  MemorySensitivity,
+  MemoryStatus,
+  MemoryUsageLog,
+} from '../domain/types'
+import {
+  memoryKindLabels,
+  memoryLayerLabels,
+  memoryMentionPolicyLabels,
+  memorySensitivityLabels,
+} from '../domain/memoryLabels'
+import { canApplyMemoryFeedback, type MemoryFeedbackAction } from './memoryFeedback'
 
 export interface MessageMemoryTraceItem {
   id: string
@@ -7,6 +19,10 @@ export interface MessageMemoryTraceItem {
   meta: string
   body: string
   isCoolingDown: boolean
+  mentionPolicy: MemoryMentionPolicy
+  sensitivity: MemorySensitivity
+  status: MemoryStatus
+  enabledActions: MemoryFeedbackAction[]
 }
 
 export interface MessageMemoryTrace {
@@ -29,11 +45,23 @@ export function buildMessageMemoryTrace(
     .map((memory) => ({
       id: memory.id,
       title: memory.title,
-      meta: `${memoryKindLabels[memory.kind]} / ${memoryLayerLabels[memory.layer]} / 权重 ${memory.priority}${
-        isMemoryCoolingDown(memory.cooldownUntil) ? ' / 冷却中' : ''
-      }`,
+      meta: [
+        memoryKindLabels[memory.kind],
+        memoryLayerLabels[memory.layer],
+        memorySensitivityLabels[memory.sensitivity],
+        memoryMentionPolicyLabels[memory.mentionPolicy],
+        `权重 ${memory.priority}`,
+        isMemoryCoolingDown(memory.cooldownUntil) ? '冷却中' : '',
+        memory.status === 'archived' ? '已归档' : '',
+      ]
+        .filter(Boolean)
+        .join(' / '),
       body: memory.body,
       isCoolingDown: isMemoryCoolingDown(memory.cooldownUntil),
+      mentionPolicy: memory.mentionPolicy,
+      sensitivity: memory.sensitivity,
+      status: memory.status,
+      enabledActions: buildEnabledActions(memory),
     }))
 
   return {
@@ -53,4 +81,9 @@ function isMemoryCoolingDown(cooldownUntil?: string): boolean {
   if (!cooldownUntil) return false
   const time = new Date(cooldownUntil).getTime()
   return !Number.isNaN(time) && time > Date.now()
+}
+
+function buildEnabledActions(memory: LongTermMemory): MemoryFeedbackAction[] {
+  const actions: MemoryFeedbackAction[] = ['cooldown', 'contextual', 'explicit', 'sensitive', 'archive']
+  return actions.filter((action) => canApplyMemoryFeedback(memory, action))
 }
