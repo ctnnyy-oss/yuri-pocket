@@ -20,6 +20,8 @@ interface CharacterRailProps {
   characters: CharacterCard[]
   activeCharacterId: string
   activeView: AppView
+  modelStatusLabel: string
+  modelStatusDetail: string
   onViewChange: (view: AppView) => void
   onSelect: (characterId: string) => void
 }
@@ -37,6 +39,8 @@ export function CharacterRail({
   characters,
   activeCharacterId,
   activeView,
+  modelStatusLabel,
+  modelStatusDetail,
   onViewChange,
   onSelect,
 }: CharacterRailProps) {
@@ -104,8 +108,8 @@ export function CharacterRail({
         <div className="mini-row">
           <span className="mini-dot" aria-hidden="true" />
           <span>
-            <strong>DeepSeek V4 Free</strong>
-            <small>本机中转已接入</small>
+            <strong>{modelStatusLabel}</strong>
+            <small>{modelStatusDetail}</small>
           </span>
         </div>
         <Signal size={17} />

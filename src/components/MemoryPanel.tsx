@@ -112,6 +112,7 @@ interface MemoryPanelProps {
   onSaveModelProfile: (profile: ModelProfileInput) => Promise<void>
   onDeleteModelProfile: (profileId: string) => Promise<void>
   onTestModelProfile: (input: { profileId?: string; profile?: ModelProfileInput }) => Promise<void>
+  onSaveCloudToken: (token: string) => Promise<boolean>
   cloudStatus: string
   cloudMeta: CloudMetadata | null
   cloudBusy: 'checking' | 'pulling' | 'pushing' | 'backing-up' | null
@@ -180,6 +181,7 @@ export function MemoryPanel({
   onSaveModelProfile,
   onDeleteModelProfile,
   onTestModelProfile,
+  onSaveCloudToken,
   cloudStatus,
   cloudMeta,
   cloudBusy,
@@ -843,6 +845,7 @@ export function MemoryPanel({
           onReset={onReset}
           onRestoreLocalBackup={onRestoreLocalBackup}
           onSaveModelProfile={onSaveModelProfile}
+          onSaveCloudToken={onSaveCloudToken}
           onTestModelProfile={onTestModelProfile}
           onUpdateSettings={onUpdateSettings}
           settings={settings}
