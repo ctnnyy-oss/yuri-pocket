@@ -246,7 +246,7 @@ export function createSeedState(): AppState {
   }))
 
   return {
-    version: 13,
+    version: 14,
     activeCharacterId: characters[0].id,
     characters,
     conversations,
@@ -261,8 +261,10 @@ export function createSeedState(): AppState {
     memoryEvents: [],
     settings: {
       model: 'deepseek/deepseek-v4-pro-free',
+      modelProfileId: '',
       temperature: 0.8,
       maxContextMessages: 18,
+      maxOutputTokens: 4096,
       enterToSend: true,
       fontSize: 15,
       accentTheme: 'sakura',

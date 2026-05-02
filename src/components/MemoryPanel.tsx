@@ -8,12 +8,10 @@ import {
   Link2,
   Palette,
   Pencil,
-  RefreshCw,
   RotateCcw,
   Save,
   Settings2,
   ShieldCheck,
-  SlidersHorizontal,
   Sparkles,
   Trash2,
   Type,
@@ -35,6 +33,8 @@ import type {
   MemorySensitivity,
   MemoryStatus,
   MemoryUsageLog,
+  ModelProfileInput,
+  ModelProfileSummary,
   WorldNode,
 } from '../domain/types'
 import type { CloudBackupSummary, CloudMetadata } from '../services/cloudSync'
@@ -62,16 +62,13 @@ import { MemoryCandidateReview } from './memory/sections/MemoryCandidateReview'
 import { MemoryDiagnostics } from './memory/sections/MemoryDiagnostics'
 import { MemoryGardenInsight } from './memory/sections/MemoryGardenInsight'
 import { MemorySpaceOverview } from './memory/sections/MemorySpaceOverview'
+import { ModelAndDataPanel } from './model/ModelAndDataPanel'
 import {
   clamp,
   draftToScope,
-  formatBackupCounts,
-  formatBytes,
-  formatCloudTime,
   formatDeletedAt,
   formatScopeDisplay,
   formatShortTime,
-  getCloudBusyLabel,
   isCoolingDown,
   isoToLocalInput,
   localInputToIso,
@@ -108,6 +105,13 @@ interface MemoryPanelProps {
   onExport: () => void
   onImport: (file: File) => void
   onReset: () => void
+  modelProfiles: ModelProfileSummary[]
+  modelProfileStatus: string
+  modelProfileBusy: boolean
+  onRefreshModelProfiles: () => void
+  onSaveModelProfile: (profile: ModelProfileInput) => Promise<void>
+  onDeleteModelProfile: (profileId: string) => Promise<void>
+  onTestModelProfile: (input: { profileId?: string; profile?: ModelProfileInput }) => Promise<void>
   cloudStatus: string
   cloudMeta: CloudMetadata | null
   cloudBusy: 'checking' | 'pulling' | 'pushing' | 'backing-up' | null
@@ -169,6 +173,13 @@ export function MemoryPanel({
   onExport,
   onImport,
   onReset,
+  modelProfiles,
+  modelProfileStatus,
+  modelProfileBusy,
+  onRefreshModelProfiles,
+  onSaveModelProfile,
+  onDeleteModelProfile,
+  onTestModelProfile,
   cloudStatus,
   cloudMeta,
   cloudBusy,
@@ -805,215 +816,37 @@ export function MemoryPanel({
       )}
 
       {activeView === 'model' && (
-        <>
-          <WorkspaceTitle
-            description="当前默认使用本机中转和免费模型，密钥只保存在本机。"
-            icon={<SlidersHorizontal size={20} />}
-            title="模型与数据"
-          />
-          <section className="settings-stack">
-            <label>
-              <span>模型</span>
-              <input
-                value={settings.model}
-                onChange={(event) => onUpdateSettings({ ...settings, model: event.target.value })}
-              />
-            </label>
-            <label>
-              <span>温柔度</span>
-              <input
-                max="2"
-                min="0"
-                step="0.1"
-                type="number"
-                value={settings.temperature}
-                onChange={(event) => onUpdateSettings({ ...settings, temperature: Number(event.target.value) })}
-              />
-            </label>
-            <label>
-              <span>短期记忆</span>
-              <input
-                max="60"
-                min="4"
-                step="1"
-                type="number"
-                value={settings.maxContextMessages}
-                onChange={(event) =>
-                  onUpdateSettings({ ...settings, maxContextMessages: Number(event.target.value) })
-                }
-              />
-            </label>
-
-            <div className="settings-section">
-              <div className="settings-section-title">
-                <Database size={18} />
-                <span>云端同步</span>
-              </div>
-              <p className="section-note">
-                {cloudSyncConfigured
-                  ? cloudTokenSet
-                    ? '云端后端已配置，口令已保存在这台设备。'
-                    : '云端后端已配置，第一次使用需要填写云端口令。'
-                  : '当前构建还没有配置云端后端地址。'}
-              </p>
-              <div className="cloud-meta-strip" aria-label="云端同步状态">
-                <span>
-                  <strong>版本</strong>
-                  {cloudMeta ? `v${cloudMeta.revision}` : '未检查'}
-                </span>
-                <span>
-                  <strong>最后保存</strong>
-                  {cloudMeta ? formatCloudTime(cloudMeta.updatedAt) : '未检查'}
-                </span>
-                <span>
-                  <strong>云端数据</strong>
-                  {cloudMeta ? (cloudMeta.hasState ? '已有快照' : '空') : '未检查'}
-                </span>
-              </div>
-              <small className="cloud-status-line">{cloudBusy ? getCloudBusyLabel(cloudBusy) : cloudStatus}</small>
-              <div className="settings-actions">
-                <button disabled={!cloudSyncConfigured || Boolean(cloudBusy)} onClick={onConnectCloud} type="button">
-                  <Link2 size={15} />
-                  连接云端
-                </button>
-                <button
-                  disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
-                  onClick={onRefreshCloud}
-                  type="button"
-                >
-                  <RefreshCw size={15} />
-                  检查云端
-                </button>
-                <button
-                  disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
-                  onClick={onPushCloud}
-                  type="button"
-                >
-                  <Save size={15} />
-                  {cloudBusy === 'pushing' ? '保存中' : '保存到云端'}
-                </button>
-                <button
-                  disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
-                  onClick={onPullCloud}
-                  type="button"
-                >
-                  <RefreshCw size={15} />
-                  {cloudBusy === 'pulling' ? '读取中' : '从云端读取'}
-                </button>
-              </div>
-              <div className="cloud-backup-panel">
-                <div className="cloud-backup-head">
-                  <div>
-                    <strong>云端保险箱</strong>
-                    <span>服务器会在每次覆盖云端快照前自动留一份 SQLite 备份，也可以手动创建。</span>
-                  </div>
-                  <div className="settings-actions compact-actions">
-                    <button
-                      disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
-                      onClick={onCreateCloudBackup}
-                      type="button"
-                    >
-                      <Save size={15} />
-                      {cloudBusy === 'backing-up' ? '备份中' : '创建备份'}
-                    </button>
-                    <button
-                      disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
-                      onClick={onRefreshCloudBackups}
-                      type="button"
-                    >
-                      <RefreshCw size={15} />
-                      刷新备份
-                    </button>
-                  </div>
-                </div>
-                <div className="backup-list">
-                  {cloudBackups.length === 0 ? (
-                    <small>还没有读取到云端备份。保存云端或手动创建后，这里会出现下载入口。</small>
-                  ) : (
-                    cloudBackups.slice(0, 5).map((backup) => (
-                      <article className="backup-item" key={backup.fileName}>
-                        <div>
-                          <strong>{backup.label}</strong>
-                          <span>
-                            {formatShortTime(backup.createdAt)} / {formatBytes(backup.sizeBytes)}
-                          </span>
-                          <small>{backup.fileName}</small>
-                        </div>
-                        <div className="backup-actions">
-                          <button onClick={() => onDownloadCloudBackup(backup.fileName)} type="button">
-                            下载
-                          </button>
-                        </div>
-                      </article>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="settings-section">
-              <div className="settings-section-title">
-                <ArchiveRestore size={18} />
-                <span>本机保险箱</span>
-              </div>
-              <p className="section-note">
-                从云端读取、导入文件、重置之前会自动留一份本机备份；妹妹也可以手动创建。
-              </p>
-              <div className="settings-actions">
-                <button onClick={onCreateLocalBackup} type="button">
-                  <Save size={15} />
-                  创建本机备份
-                </button>
-              </div>
-              <div className="backup-list">
-                {localBackups.length === 0 ? (
-                  <small>还没有本机备份。做一次读取、导入或重置前，姐姐会自动留底。</small>
-                ) : (
-                  localBackups.slice(0, 6).map((backup) => (
-                    <article className="backup-item" key={backup.id}>
-                      <div>
-                        <strong>{backup.label}</strong>
-                        <span>
-                          {formatShortTime(backup.createdAt)} / {backup.reason}
-                        </span>
-                        <small>{formatBackupCounts(backup)}</small>
-                      </div>
-                      <div className="backup-actions">
-                        <button onClick={() => onRestoreLocalBackup(backup.id)} type="button">
-                          恢复
-                        </button>
-                        <button className="danger-button" onClick={() => onDeleteLocalBackup(backup.id)} type="button">
-                          删除
-                        </button>
-                      </div>
-                    </article>
-                  ))
-                )}
-              </div>
-            </div>
-
-            <div className="settings-actions">
-              <button onClick={onExport} type="button">
-                导出
-              </button>
-              <label className="file-button">
-                导入
-                <input
-                  accept="application/json"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0]
-                    if (file) onImport(file)
-                    event.currentTarget.value = ''
-                  }}
-                  type="file"
-                />
-              </label>
-              <button className="danger-button" onClick={onReset} type="button">
-                重置
-              </button>
-            </div>
-          </section>
-        </>
+        <ModelAndDataPanel
+          cloudBackups={cloudBackups}
+          cloudBusy={cloudBusy}
+          cloudMeta={cloudMeta}
+          cloudStatus={cloudStatus}
+          cloudSyncConfigured={cloudSyncConfigured}
+          cloudTokenSet={cloudTokenSet}
+          localBackups={localBackups}
+          modelProfileBusy={modelProfileBusy}
+          modelProfileStatus={modelProfileStatus}
+          modelProfiles={modelProfiles}
+          onConnectCloud={onConnectCloud}
+          onCreateCloudBackup={onCreateCloudBackup}
+          onCreateLocalBackup={onCreateLocalBackup}
+          onDeleteLocalBackup={onDeleteLocalBackup}
+          onDeleteModelProfile={onDeleteModelProfile}
+          onDownloadCloudBackup={onDownloadCloudBackup}
+          onExport={onExport}
+          onImport={onImport}
+          onPullCloud={onPullCloud}
+          onPushCloud={onPushCloud}
+          onRefreshCloud={onRefreshCloud}
+          onRefreshCloudBackups={onRefreshCloudBackups}
+          onRefreshModelProfiles={onRefreshModelProfiles}
+          onReset={onReset}
+          onRestoreLocalBackup={onRestoreLocalBackup}
+          onSaveModelProfile={onSaveModelProfile}
+          onTestModelProfile={onTestModelProfile}
+          onUpdateSettings={onUpdateSettings}
+          settings={settings}
+        />
       )}
 
       {activeView === 'settings' && (

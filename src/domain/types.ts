@@ -214,11 +214,38 @@ export interface MemoryEvent {
 
 export type AccentTheme = 'sakura' | 'peach' | 'lavender' | 'mint'
 export type TrashRetentionMode = 'forever' | 'default' | 'custom'
+export type ModelProviderKind = 'openai-compatible' | 'anthropic' | 'google-gemini'
+
+export interface ModelProfileSummary {
+  id: string
+  name: string
+  kind: ModelProviderKind
+  baseUrl: string
+  model: string
+  hasApiKey: boolean
+  enabled: boolean
+  isDefault: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ModelProfileInput {
+  id?: string
+  name: string
+  kind: ModelProviderKind
+  baseUrl: string
+  model: string
+  apiKey?: string
+  enabled?: boolean
+  isDefault?: boolean
+}
 
 export interface AppSettings {
   model: string
+  modelProfileId: string
   temperature: number
   maxContextMessages: number
+  maxOutputTokens: number
   enterToSend: boolean
   fontSize: number
   accentTheme: AccentTheme

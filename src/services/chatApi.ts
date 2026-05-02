@@ -1,4 +1,5 @@
 import type { AppSettings, PromptBundle } from '../domain/types'
+import { getSavedCloudToken } from './cloudSync'
 
 export async function requestAssistantReply(bundle: PromptBundle, settings: AppSettings): Promise<string> {
   let response: Response
@@ -9,6 +10,7 @@ export async function requestAssistantReply(bundle: PromptBundle, settings: AppS
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...getChatAuthHeaders(),
       },
       body: JSON.stringify({ bundle, settings }),
     })
@@ -19,8 +21,8 @@ export async function requestAssistantReply(bundle: PromptBundle, settings: AppS
 
   if (!response.ok) {
     if (response.status === 404 && isStaticPreviewHost()) return createBrowserDemoReply(bundle)
-    const detail = await response.text()
-    throw new Error(detail || '聊天请求失败')
+    const detail = await readChatError(response)
+    throw new Error(formatChatError(response.status, detail))
   }
 
   const data = await response.json()
@@ -31,6 +33,31 @@ function getApiBaseUrl(): string {
   const configuredUrl = import.meta.env.VITE_API_BASE_URL
   if (!configuredUrl) return ''
   return stripTrailingSlash(configuredUrl)
+}
+
+function getChatAuthHeaders(): Record<string, string> {
+  const token = getSavedCloudToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+async function readChatError(response: Response): Promise<string> {
+  const detail = await response.text()
+  if (!detail) return ''
+
+  try {
+    const parsed = JSON.parse(detail) as { error?: string; message?: string }
+    return parsed.error || parsed.message || detail
+  } catch {
+    return detail
+  }
+}
+
+function formatChatError(status: number, detail: string): string {
+  if (status === 401) return detail || '模型代理需要先在“模型与数据”里连接云端口令'
+  if (status === 404) return detail || '模型代理入口没有找到'
+  if (status === 502) return detail || '模型供应商暂时没有接住请求'
+  if (status >= 500) return detail || `模型代理服务异常：${status}`
+  return detail || '聊天请求失败'
 }
 
 function isStaticPreviewHost(): boolean {

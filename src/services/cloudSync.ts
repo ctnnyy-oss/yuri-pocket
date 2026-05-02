@@ -19,7 +19,7 @@ export interface CloudBackupSummary {
 }
 
 export function isCloudSyncConfigured(): boolean {
-  return Boolean(getApiBaseUrl())
+  return Boolean(getCloudApiBaseUrl())
 }
 
 export function getSavedCloudToken(): string {
@@ -77,7 +77,7 @@ export async function downloadCloudBackup(token: string, fileName: string): Prom
 }
 
 async function cloudFetch(path: string, token: string, init: RequestInit = {}): Promise<Response> {
-  const apiBaseUrl = getApiBaseUrl()
+  const apiBaseUrl = getCloudApiBaseUrl()
   if (!apiBaseUrl) throw new Error('云端后端还没有配置')
   if (!token.trim()) throw new Error('还没有填写云端口令')
 
@@ -116,7 +116,7 @@ function formatCloudError(status: number, detail: string): string {
   return detail || `云端请求失败：${status}`
 }
 
-function getApiBaseUrl(): string {
+export function getCloudApiBaseUrl(): string {
   const configuredUrl = import.meta.env.VITE_API_BASE_URL
   if (!configuredUrl) return ''
   return configuredUrl.replace(/\/+$/, '')

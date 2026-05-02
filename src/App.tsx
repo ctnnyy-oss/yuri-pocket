@@ -26,7 +26,16 @@ import {
 } from './data/database'
 import { migrateAppState } from './data/migrations'
 import { createSeedState } from './data/seed'
-import type { AccentTheme, AppSettings, AppState, LocalBackupSummary, LongTermMemory, WorldNode } from './domain/types'
+import type {
+  AccentTheme,
+  AppSettings,
+  AppState,
+  LocalBackupSummary,
+  LongTermMemory,
+  ModelProfileInput,
+  ModelProfileSummary,
+  WorldNode,
+} from './domain/types'
 import { requestAssistantReply } from './services/chatApi'
 import {
   checkCloudHealth,
@@ -65,6 +74,12 @@ import {
 } from './services/memoryEngine'
 import { appendMemoryEvent, createMemoryEvent, type CreateMemoryEventInput } from './services/memoryEvents'
 import { applyMemoryFeedback, type MemoryFeedbackAction } from './services/memoryFeedback'
+import {
+  deleteModelProfile,
+  listModelProfiles,
+  saveModelProfile,
+  testModelProfile,
+} from './services/modelProfiles'
 import { applyTrashRetention, normalizeTrashRetentionSettings } from './services/trashRetention'
 
 const themeVariables: Record<AccentTheme, CSSProperties> = {
@@ -146,6 +161,12 @@ function App() {
   const [cloudBusy, setCloudBusy] = useState<CloudBusyTask | null>(null)
   const [localBackups, setLocalBackups] = useState<LocalBackupSummary[]>([])
   const [cloudBackups, setCloudBackups] = useState<CloudBackupSummary[]>([])
+  const [modelProfiles, setModelProfiles] = useState<ModelProfileSummary[]>([])
+  const [modelProfileStatus, setModelProfileStatus] = useState(() => {
+    if (!isCloudSyncConfigured()) return '模型密钥保险箱需要云端后端'
+    return getSavedCloudToken() ? '模型密钥保险箱待刷新' : '连接云端后可管理模型密钥'
+  })
+  const [modelProfileBusy, setModelProfileBusy] = useState(false)
   const [notice, setNotice] = useState('花园已就绪')
 
   const refreshLocalBackups = useCallback(async () => {
@@ -163,6 +184,35 @@ function App() {
     setCloudBackups(backups)
     return backups
   }, [])
+
+  const refreshModelProfileList = useCallback(async (tokenOverride?: string) => {
+    const token = (tokenOverride ?? cloudToken).trim()
+    if (!isCloudSyncConfigured()) {
+      setModelProfiles([])
+      setModelProfileStatus('模型密钥保险箱需要云端后端')
+      return []
+    }
+    if (!token) {
+      setModelProfiles([])
+      setModelProfileStatus('连接云端口令后可管理模型密钥')
+      return []
+    }
+
+    setModelProfileBusy(true)
+    setModelProfileStatus('正在读取模型密钥保险箱...')
+    try {
+      const profiles = await listModelProfiles(token)
+      setModelProfiles(profiles)
+      setModelProfileStatus(`已读取 ${profiles.length} 组模型配置`)
+      return profiles
+    } catch (error) {
+      setModelProfiles([])
+      setModelProfileStatus(error instanceof Error ? error.message : '读取模型配置失败')
+      return []
+    } finally {
+      setModelProfileBusy(false)
+    }
+  }, [cloudToken])
 
   const refreshCloudMetadata = useCallback(async (token: string) => {
     if (!isCloudSyncConfigured()) {
@@ -185,6 +235,7 @@ function App() {
       setCloudMeta(metadata)
       setCloudStatus(formatCloudStatus(metadata))
       void refreshCloudBackups(cleanedToken)
+      void refreshModelProfileList(cleanedToken)
       return metadata
     } catch (error) {
       setCloudMeta(null)
@@ -193,7 +244,7 @@ function App() {
     } finally {
       setCloudBusy((currentTask) => (currentTask === 'checking' ? null : currentTask))
     }
-  }, [refreshCloudBackups])
+  }, [refreshCloudBackups, refreshModelProfileList])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -850,6 +901,69 @@ function App() {
 
     setCloudStatus('云端口令已保存')
     void refreshCloudMetadata(cleanedToken)
+    void refreshModelProfileList(cleanedToken)
+  }
+
+  async function handleSaveModelProfile(profile: ModelProfileInput) {
+    try {
+      setModelProfileBusy(true)
+      setModelProfileStatus('正在保存模型配置...')
+      const result = await saveModelProfile(cloudToken, profile)
+      setModelProfiles(result.profiles)
+      setState((currentState) => ({
+        ...currentState,
+        settings: normalizeTrashRetentionSettings({
+          ...currentState.settings,
+          modelProfileId: result.profile.id,
+          model: result.profile.model,
+        }),
+      }))
+      setModelProfileStatus(`已保存并启用：${result.profile.name}`)
+      setNotice('模型配置已保存')
+    } catch (error) {
+      setModelProfileStatus(error instanceof Error ? error.message : '保存模型配置失败')
+    } finally {
+      setModelProfileBusy(false)
+    }
+  }
+
+  async function handleDeleteModelProfile(profileId: string) {
+    try {
+      setModelProfileBusy(true)
+      const profiles = await deleteModelProfile(cloudToken, profileId)
+      setModelProfiles(profiles)
+      setState((currentState) => ({
+        ...currentState,
+        settings:
+          currentState.settings.modelProfileId === profileId
+            ? normalizeTrashRetentionSettings({
+                ...currentState.settings,
+                modelProfileId: 'server-env',
+              })
+            : currentState.settings,
+      }))
+      setModelProfileStatus('模型配置已删除')
+      setNotice('模型配置已删除')
+    } catch (error) {
+      setModelProfileStatus(error instanceof Error ? error.message : '删除模型配置失败')
+    } finally {
+      setModelProfileBusy(false)
+    }
+  }
+
+  async function handleTestModelProfile(input: { profileId?: string; profile?: ModelProfileInput }) {
+    try {
+      setModelProfileBusy(true)
+      setModelProfileStatus('正在测试模型连通性...')
+      const result = await testModelProfile(cloudToken, input)
+      setModelProfileStatus(`测试成功：${result.provider} / ${result.model}，${result.latencyMs}ms，${result.preview}`)
+      setNotice('模型测试成功')
+    } catch (error) {
+      setModelProfileStatus(error instanceof Error ? error.message : '模型测试失败')
+      setNotice('模型测试失败')
+    } finally {
+      setModelProfileBusy(false)
+    }
   }
 
   async function handlePullCloud() {
@@ -1047,6 +1161,13 @@ function App() {
           onUpdateMemory={handleUpdateMemory}
           onUpdateSettings={handleUpdateSettings}
           onUpdateWorldNode={handleUpdateWorldNode}
+          modelProfiles={modelProfiles}
+          modelProfileStatus={modelProfileStatus}
+          modelProfileBusy={modelProfileBusy}
+          onRefreshModelProfiles={() => void refreshModelProfileList()}
+          onSaveModelProfile={handleSaveModelProfile}
+          onDeleteModelProfile={handleDeleteModelProfile}
+          onTestModelProfile={handleTestModelProfile}
           cloudStatus={cloudStatus}
           cloudMeta={cloudMeta}
           cloudBusy={cloudBusy}

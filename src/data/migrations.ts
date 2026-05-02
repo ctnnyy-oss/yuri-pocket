@@ -3,7 +3,7 @@ import { normalizeMemories } from '../services/memoryEngine'
 import { normalizeTrashRetentionSettings } from '../services/trashRetention'
 import { createSeedState } from './seed'
 
-const currentStateVersion = 13
+const currentStateVersion = 14
 
 export function migrateAppState(state: AppState): AppState {
   const defaults = createSeedState()
@@ -29,6 +29,8 @@ export function migrateAppState(state: AppState): AppState {
       ...defaults.settings,
       ...sourceSettings,
       model: sourceSettings.model === 'gpt-5.5' ? 'deepseek/deepseek-v4-pro-free' : sourceSettings.model,
+      modelProfileId: sourceSettings.modelProfileId || defaults.settings.modelProfileId,
+      maxOutputTokens: clampNumber(sourceSettings.maxOutputTokens, 512, 32768, defaults.settings.maxOutputTokens),
     },
   }
 
@@ -44,4 +46,10 @@ function mergeMissingSeedMemories(memories: LongTermMemory[], seedMemories: Long
   const existingIds = new Set(memories.map((memory) => memory.id))
   const missingSeeds = normalizeMemories(seedMemories).filter((memory) => !existingIds.has(memory.id))
   return [...missingSeeds, ...memories]
+}
+
+function clampNumber(value: unknown, min: number, max: number, fallback: number): number {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return fallback
+  return Math.min(max, Math.max(min, numericValue))
 }

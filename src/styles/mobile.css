@@ -67,6 +67,9 @@
 
   /* Grid collapses */
   .detail-grid,
+  .model-layout,
+  .model-form-grid,
+  .model-profile-item,
   .memory-diagnostics,
   .guardian-columns,
   .archive-meta-grid,
@@ -95,6 +98,10 @@
 
   .backup-actions {
     justify-content: flex-start;
+  }
+
+  .model-status-grid {
+    grid-template-columns: 1fr;
   }
 
   .cloud-backup-head {
