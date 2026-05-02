@@ -535,3 +535,174 @@
   cursor: not-allowed;
   opacity: 0.6;
 }
+
+/* Premium chat finish */
+.chat-workspace {
+  background:
+    radial-gradient(640px 320px at 68% 0%, rgba(255, 235, 247, 0.76), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 247, 252, 0.28));
+}
+
+.workspace-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.44);
+  background: rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.phone-contact strong {
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 850;
+}
+
+.phone-contact span {
+  color: rgba(116, 70, 90, 0.72);
+  font-weight: 650;
+}
+
+.icon-button {
+  border-color: rgba(255, 255, 255, 0.68);
+  border-radius: 15px;
+  background:
+    radial-gradient(90px 60px at 24% 10%, rgba(255, 255, 255, 0.78), transparent 72%),
+    rgba(255, 255, 255, 0.38);
+  box-shadow: var(--shadow-xs);
+}
+
+.icon-button:hover {
+  background:
+    radial-gradient(90px 60px at 24% 10%, rgba(255, 255, 255, 0.88), transparent 72%),
+    rgba(255, 237, 246, 0.72);
+  border-color: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 14px 32px rgba(255, 95, 145, 0.14);
+}
+
+.context-row {
+  gap: 8px;
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.context-row span {
+  border: 1px solid rgba(255, 255, 255, 0.64);
+  background: rgba(255, 255, 255, 0.44);
+  color: #8e3f58;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.44);
+}
+
+.context-row span:nth-child(3n) {
+  background: rgba(235, 250, 245, 0.42);
+  color: #5b8577;
+  border-color: rgba(255, 255, 255, 0.62);
+}
+
+.memory-lens {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.34);
+  background:
+    radial-gradient(520px 180px at 14% 0%, rgba(255, 255, 255, 0.56), transparent 72%),
+    rgba(255, 255, 255, 0.14);
+}
+
+.memory-lens-item {
+  border-color: rgba(255, 255, 255, 0.58);
+  border-radius: 15px;
+  background:
+    radial-gradient(160px 90px at 18% 0%, rgba(255, 255, 255, 0.7), transparent 72%),
+    rgba(255, 255, 255, 0.36);
+  box-shadow: var(--shadow-xs);
+}
+
+.message-list {
+  padding: 24px 26px;
+  background:
+    radial-gradient(440px 300px at 0% 10%, rgba(255, 229, 242, 0.22), transparent 72%),
+    radial-gradient(460px 320px at 100% 100%, rgba(255, 190, 220, 0.18), transparent 72%);
+}
+
+.message {
+  border: 1px solid rgba(255, 255, 255, 0.68);
+  border-radius: 25px 25px 25px 9px;
+  background:
+    radial-gradient(220px 120px at 18% 0%, rgba(255, 255, 255, 0.86), transparent 68%),
+    linear-gradient(150deg, rgba(255, 255, 255, 0.62), rgba(255, 246, 251, 0.5));
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.message:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.message-user {
+  border-color: rgba(255, 255, 255, 0.58);
+  border-radius: 25px 25px 9px 25px;
+  background: linear-gradient(135deg, #ff6f9f 0%, #ff8db5 54%, #ffb6d0 100%);
+  box-shadow:
+    0 18px 42px rgba(255, 95, 145, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.trace-memory-item,
+.memory-lens-item {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.composer {
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.46);
+  background: rgba(255, 255, 255, 0.36);
+  backdrop-filter: blur(22px) saturate(1.25);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+}
+
+.composer textarea {
+  min-height: 46px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 18px;
+  background:
+    radial-gradient(220px 90px at 12% 0%, rgba(255, 255, 255, 0.78), transparent 72%),
+    rgba(255, 255, 255, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.54),
+    0 10px 28px rgba(160, 76, 112, 0.06);
+}
+
+.composer textarea:focus {
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 0 0 3px rgba(255, 122, 168, 0.15),
+    0 18px 42px rgba(255, 95, 145, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.composer button {
+  border: 1px solid rgba(255, 255, 255, 0.66);
+  border-radius: 18px;
+  background: var(--accent-gradient);
+  box-shadow: 0 18px 42px rgba(255, 95, 145, 0.28);
+}
+
+.composer button:hover:not(:disabled) {
+  box-shadow: 0 22px 54px rgba(255, 95, 145, 0.34);
+}
+
+.memory-lens-title span,
+.memory-lens-item span {
+  color: var(--muted);
+}
+
+.memory-lens-item strong {
+  color: var(--ink-secondary);
+  font-weight: 700;
+}
+
+.composer textarea::placeholder {
+  color: rgba(150, 100, 120, 0.62);
+}
