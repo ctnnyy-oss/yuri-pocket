@@ -12,11 +12,10 @@
   padding: 18px;
   overflow: hidden;
   background:
-    radial-gradient(680px 500px at 4% 4%, rgba(255, 208, 228, 0.62), transparent 64%),
-    radial-gradient(820px 560px at 98% 6%, rgba(213, 235, 250, 0.32), transparent 62%),
-    radial-gradient(740px 540px at 48% 110%, rgba(255, 196, 220, 0.4), transparent 65%),
-    radial-gradient(420px 360px at 86% 86%, rgba(216, 196, 240, 0.14), transparent 66%),
-    linear-gradient(180deg, #fff7fb 0%, #fff2f8 52%, #fffafc 100%);
+    radial-gradient(640px 460px at 4% 4%, rgba(255, 214, 233, 0.42), transparent 64%),
+    radial-gradient(760px 520px at 98% 6%, rgba(216, 238, 250, 0.24), transparent 62%),
+    radial-gradient(720px 520px at 48% 110%, rgba(255, 206, 226, 0.24), transparent 65%),
+    linear-gradient(180deg, #fff9fc 0%, #fff5fa 52%, #fffafd 100%);
   color: var(--ink);
   font-size: var(--app-font-size, 15px);
 }
@@ -32,8 +31,8 @@
     radial-gradient(480px 480px at 92% 14%, rgba(190, 220, 245, 0.22), transparent 66%),
     radial-gradient(640px 520px at 56% 92%, rgba(255, 196, 220, 0.3), transparent 72%),
     radial-gradient(420px 360px at 82% 82%, rgba(216, 196, 240, 0.16), transparent 68%);
-  filter: blur(12px) saturate(1.04);
-  opacity: 0.94;
+  filter: blur(8px) saturate(1.02);
+  opacity: 0.38;
   animation: shell-breathe 26s ease-in-out infinite;
 }
 
@@ -87,8 +86,8 @@
   border-radius: 28px;
   background: var(--glass-gradient), var(--panel);
   box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(30px) saturate(1.4);
-  -webkit-backdrop-filter: blur(30px) saturate(1.4);
+  backdrop-filter: blur(22px) saturate(1.18);
+  -webkit-backdrop-filter: blur(22px) saturate(1.18);
 }
 
 .left-panel::before,
@@ -100,9 +99,9 @@
   pointer-events: none;
   border-radius: inherit;
   background:
-    radial-gradient(260px 180px at var(--mx, 16%) var(--my, 8%), rgba(255, 255, 255, 0.78), transparent 65%),
-    linear-gradient(115deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.04) 42%, rgba(255, 255, 255, 0.36) 100%);
-  opacity: 0.62;
+    radial-gradient(260px 180px at var(--mx, 16%) var(--my, 8%), rgba(255, 255, 255, 0.52), transparent 65%),
+    linear-gradient(115deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.02) 42%, rgba(255, 255, 255, 0.24) 100%);
+  opacity: 0.42;
 }
 
 .left-panel > *,
@@ -124,8 +123,8 @@
   padding: clamp(24px, 2.8vw, 40px);
   padding-bottom: 80px;
   background:
-    radial-gradient(560px 360px at 74% -4%, rgba(255, 230, 244, 0.5), transparent 72%),
-    linear-gradient(180deg, rgba(255, 252, 254, 0.74), rgba(255, 246, 251, 0.5));
+    radial-gradient(560px 360px at 74% -4%, rgba(255, 232, 244, 0.28), transparent 72%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 249, 252, 0.78));
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior-y: contain;

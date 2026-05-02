@@ -174,7 +174,7 @@ function App() {
     return '模型密钥会直接保存到服务器保险箱'
   })
   const [modelProfileBusy, setModelProfileBusy] = useState(false)
-  const [notice, setNotice] = useState('花园已就绪')
+  const [notice, setNotice] = useState('')
   const autoCloudReadyRef = useRef(false)
   const skipNextAutoPushRef = useRef(false)
 
@@ -292,6 +292,12 @@ function App() {
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
+
+  useEffect(() => {
+    if (!notice) return
+    const timer = window.setTimeout(() => setNotice(''), 2400)
+    return () => window.clearTimeout(timer)
+  }, [notice])
 
   useEffect(() => {
     loadAppState().then((savedState) => {
@@ -1238,7 +1244,7 @@ function App() {
       )}
 
       <MobileNav activeView={activeView} onViewChange={navigateView} />
-      <div className="status-pill">{notice}</div>
+      {notice && <div className="status-pill">{notice}</div>}
     </div>
   )
 }

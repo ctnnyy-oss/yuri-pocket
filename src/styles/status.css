@@ -6,10 +6,11 @@
 
 .status-pill {
   position: fixed;
-  right: 22px;
-  bottom: 22px;
+  right: 28px;
+  bottom: 92px;
   z-index: 30;
-  border: 1px solid rgba(255, 255, 255, 0.78);
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.9);
   background:
     radial-gradient(120px 70px at 16% 0%, rgba(255, 255, 255, 0.84), transparent 72%),
     linear-gradient(135deg, rgba(255, 171, 204, 0.92), rgba(255, 142, 183, 0.94));
@@ -65,12 +66,12 @@
 ) {
   border-color: rgba(255, 255, 255, 0.7) !important;
   background:
-    radial-gradient(280px 200px at 14% 0%, rgba(255, 255, 255, 0.78), transparent 72%),
-    radial-gradient(340px 240px at 96% 100%, rgba(255, 192, 219, 0.12), transparent 72%),
-    rgba(255, 255, 255, 0.42) !important;
+    radial-gradient(280px 200px at 14% 0%, rgba(255, 255, 255, 0.72), transparent 72%),
+    radial-gradient(340px 240px at 96% 100%, rgba(255, 192, 219, 0.08), transparent 72%),
+    rgba(255, 255, 255, 0.78) !important;
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(20px) saturate(1.2);
-  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.08);
+  -webkit-backdrop-filter: blur(14px) saturate(1.08);
 }
 
 :where(
@@ -112,7 +113,7 @@
   border-color: rgba(255, 255, 255, 0.62) !important;
   background:
     radial-gradient(180px 110px at 16% 0%, rgba(255, 255, 255, 0.7), transparent 72%),
-    rgba(255, 255, 255, 0.38) !important;
+    rgba(255, 255, 255, 0.72) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
@@ -132,7 +133,7 @@
   border-color: rgba(255, 255, 255, 0.86) !important;
   background:
     radial-gradient(200px 120px at 18% 0%, rgba(255, 255, 255, 0.86), transparent 72%),
-    rgba(255, 255, 255, 0.56) !important;
+    rgba(255, 255, 255, 0.84) !important;
   box-shadow: var(--shadow-md);
 }
 

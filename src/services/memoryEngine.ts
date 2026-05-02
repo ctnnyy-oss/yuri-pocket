@@ -119,11 +119,13 @@ export function buildPromptBundle(state: AppState): PromptBundle {
   const memoryContextBlocks = buildMemoryContextBlocks(activeMemories, {
     characterName: character.name,
   })
+  const runtimeContext = buildRuntimeContextBlock()
 
   return {
     characterName: character.name,
     systemPrompt: [
       character.systemPrompt,
+      buildCurrentTimeInstruction(),
       `你正在${brand.fullName}里与用户聊天。不要暴露内部实现。回复要自然、简体中文、有陪伴感。`,
       '优先保持连续性、情绪承接和可执行性；当用户做项目时给清晰下一步，当用户情绪不好时先接住再处理问题。',
       '如果长期记忆和当前用户明确表达冲突，以当前用户表达为准，并在合适时提醒用户可以修改旧记忆。',
@@ -132,6 +134,7 @@ export function buildPromptBundle(state: AppState): PromptBundle {
       '遵守每条记忆的提及策略：只做边界的记忆只能保护对话，不要主动说出；问起再提的记忆只有用户明确询问旧事或记忆时才可提起。',
     ].join('\n'),
     contextBlocks: [
+      runtimeContext,
       ...memoryContextBlocks,
       ...activeWorldNodes.map((node) => ({
         title: `世界树：${node.title}`,
@@ -152,6 +155,43 @@ export function buildPromptBundle(state: AppState): PromptBundle {
     ],
     messages: recentMessages,
   }
+}
+
+function buildCurrentTimeInstruction(): string {
+  return [
+    buildCurrentTimeLine(),
+    '如果用户询问现在几点、今天/今晚/明天/刚才等时间相关问题，只能依据这条当前北京时间回答。',
+    '不要凭剧情语气编造具体钟点；如果需要表达不确定，就先承认不确定。',
+  ].join('\n')
+}
+
+function buildRuntimeContextBlock(): PromptContextBlock {
+  return {
+    title: '当前环境',
+    content: [
+      buildCurrentTimeLine(),
+      '可直接处理：查当前时间和日期、整理对话、提炼下一步、检查角色/世界观设定、写作构思、前端项目建议。',
+      '不可编造：天气、新闻、价格、网页内容、外部实时资料。遇到这类问题要说明需要真实来源或让用户提供信息。',
+    ].join('\n'),
+    category: 'stable',
+    reason: '每轮对话都需要的实时环境和能力边界',
+  }
+}
+
+function buildCurrentTimeLine(): string {
+  const now = new Date()
+  const formatter = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+
+  return `当前北京时间：${formatter.format(now)}。`
 }
 
 export function createMemoryUsageLog(input: {

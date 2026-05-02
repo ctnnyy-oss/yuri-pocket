@@ -45,10 +45,7 @@
   line-height: 1.2;
   margin: 0;
   letter-spacing: 0.3px;
-  background: var(--accent-gradient-cool);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--rose-deep);
 }
 
 .brand-block span {
@@ -80,8 +77,8 @@
   border: 1px solid transparent;
   border-radius: 16px;
   background:
-    radial-gradient(160px 90px at 10% 0%, rgba(255, 255, 255, 0.5), transparent 72%),
-    rgba(255, 255, 255, 0.22);
+    radial-gradient(160px 90px at 10% 0%, rgba(255, 255, 255, 0.58), transparent 72%),
+    rgba(255, 255, 255, 0.44);
   color: inherit;
   padding: 10px var(--space-md);
   text-align: left;
@@ -93,9 +90,9 @@
 .nav-button:hover,
 .character-button:hover {
   background:
-    radial-gradient(180px 100px at 14% 0%, rgba(255, 255, 255, 0.7), transparent 72%),
-    rgba(255, 255, 255, 0.42);
-  border-color: rgba(255, 255, 255, 0.6);
+    radial-gradient(180px 100px at 14% 0%, rgba(255, 255, 255, 0.78), transparent 72%),
+    rgba(255, 255, 255, 0.68);
+  border-color: rgba(236, 190, 211, 0.46);
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
@@ -103,9 +100,9 @@
 .nav-button.active,
 .character-button.active {
   background:
-    radial-gradient(190px 110px at 14% 4%, rgba(255, 255, 255, 0.82), transparent 70%),
-    linear-gradient(135deg, rgba(255, 220, 236, 0.74), rgba(255, 244, 250, 0.6));
-  border-color: rgba(255, 255, 255, 0.78);
+    radial-gradient(190px 110px at 14% 4%, rgba(255, 255, 255, 0.88), transparent 70%),
+    linear-gradient(135deg, rgba(255, 224, 239, 0.82), rgba(255, 248, 252, 0.78));
+  border-color: rgba(236, 184, 208, 0.58);
   box-shadow:
     inset 4px 0 0 var(--rose),
     0 12px 30px rgba(255, 152, 192, 0.16);
@@ -142,7 +139,7 @@
 
 .nav-button small,
 .character-button small {
-  color: rgba(160, 118, 134, 0.72);
+  color: rgba(126, 86, 104, 0.76);
   font-size: 11px;
   font-weight: 600;
   margin-top: 2px;

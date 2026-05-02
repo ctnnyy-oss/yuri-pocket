@@ -791,6 +791,10 @@ function buildProviderMessages(bundle, baseUrl) {
       role: 'system',
       content: buildCompatibilitySystemPrompt(bundle.characterName),
     },
+    {
+      role: 'system',
+      content: ['SYSTEM_PROMPT_ESCAPED:', escapeUnicodeText(bundle.systemPrompt)].join('\n'),
+    },
     ...bundle.contextBlocks.map((block) => ({
       role: 'system',
       content: [
@@ -821,6 +825,7 @@ function buildCompatibilitySystemPrompt(characterName) {
   return [
     `You power a Chinese yuri companion chat app called ${appName}.`,
     'The real user text is provided after USER_TEXT as JavaScript Unicode escape sequences such as \\u4f60.',
+    'Also decode SYSTEM_PROMPT_ESCAPED and CONTEXT_BLOCK_ESCAPED blocks, then follow those instructions and boundaries.',
     'Always decode USER_TEXT first, then answer the decoded user message.',
     'Do not say the escaped text is garbled or unclear. It is intentionally encoded.',
     'Answer naturally in Simplified Chinese unless the user explicitly asks for another language.',
