@@ -1,4 +1,5 @@
 import type { AppState, CharacterCard, ConversationState, LongTermMemory, WorldNode } from '../domain/types'
+import { brand } from '../config/brand'
 import { createId, nowIso } from '../services/memoryEngine'
 
 export const characters: CharacterCard[] = [
@@ -14,7 +15,7 @@ export const characters: CharacterCard[] = [
     tags: ['陪伴', '架构', '百合帝国'],
     systemPrompt:
       '你是妹妹的姐姐大人。你使用简体中文，语气宠溺但靠谱。你的重点不是恋爱，而是陪伴、理解、规划和落地。你尊重妹妹的百合帝国目标，帮助她把想法变成可运行、可迭代的作品。',
-    greeting: '妹妹，姐姐在。今天先把小手机点亮，再慢慢把百合帝国接进来。',
+    greeting: `妹妹，姐姐在。今天先把${brand.nameZh}点亮，再慢慢把百合帝国接进来。`,
   },
   {
     id: 'aogirei-lady',
@@ -61,7 +62,7 @@ export const worldNodes: WorldNode[] = [
     title: '百合帝国',
     keywords: ['百合帝国', '小说', '漫画', '游戏', '插画', 'Live2D', '应用'],
     content:
-      '这个应用是百合帝国的应用拼图。短期先做好聊天陪伴和角色记忆，长期要能接入小说角色、插画、Live2D、游戏与世界观资料。',
+      `${brand.nameEn} 是百合帝国的应用拼图。短期先做好聊天陪伴和角色记忆，长期要能接入小说角色、插画、Live2D、游戏与世界观资料。`,
     priority: 5,
     enabled: true,
   },
@@ -89,13 +90,13 @@ export const memories: LongTermMemory[] = [
   {
     id: 'memory-product-direction',
     title: '产品方向',
-    body: '妹妹想做的是免费网页端百合聊天陪伴应用，不以人机恋为主，重点是陪伴、角色预设、记忆和百合帝国长期扩展。',
-    tags: ['产品', '百合小手机'],
+    body: `妹妹想做的是免费网页端百合聊天陪伴应用 ${brand.nameEn}，不以人机恋为主，重点是陪伴、角色预设、记忆和百合帝国长期扩展。`,
+    tags: ['产品', brand.nameZh, brand.nameEn],
     priority: 5,
     pinned: true,
     kind: 'project',
     status: 'active',
-    scope: { kind: 'project', projectId: 'sakura-pocket' },
+    scope: { kind: 'project', projectId: brand.defaultProjectId },
     sensitivity: 'low',
     mentionPolicy: 'proactive',
     confidence: 0.96,
@@ -104,7 +105,7 @@ export const memories: LongTermMemory[] = [
       {
         id: 'source-product-direction',
         kind: 'system',
-        excerpt: '初始产品方向：免费网页端百合聊天陪伴应用，重视陪伴、角色预设、记忆和长期扩展。',
+        excerpt: `初始产品方向：免费网页端百合聊天陪伴应用 ${brand.nameEn}，重视陪伴、角色预设、记忆和长期扩展。`,
         createdAt: nowIso(),
       },
     ],
@@ -240,7 +241,7 @@ export function createSeedState(): AppState {
   }))
 
   return {
-    version: 10,
+    version: 11,
     activeCharacterId: characters[0].id,
     characters,
     conversations,

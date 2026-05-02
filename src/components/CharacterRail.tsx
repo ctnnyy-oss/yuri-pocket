@@ -11,6 +11,7 @@ import {
   Sprout,
   type LucideIcon,
 } from 'lucide-react'
+import { brand } from '../config/brand'
 import type { CharacterCard } from '../domain/types'
 
 export type AppView = 'chat' | 'memory' | 'world' | 'model' | 'settings' | 'trash'
@@ -46,8 +47,8 @@ export function CharacterRail({
           <HeartHandshake size={22} />
         </div>
         <div>
-          <h1>百合小手机</h1>
-          <span>Sakura Pocket 0.1</span>
+          <h1>{brand.nameZh}</h1>
+          <span>{brand.versionLabel}</span>
         </div>
       </header>
 

@@ -4,6 +4,7 @@ import './App.css'
 import { CharacterRail, type AppView } from './components/CharacterRail'
 import { ChatPhone } from './components/ChatPhone'
 import { MemoryPanel } from './components/MemoryPanel'
+import { brand } from './config/brand'
 import {
   createLocalBackup,
   deleteLocalBackup,
@@ -550,7 +551,7 @@ function App() {
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = `yuri-pocket-${new Date().toISOString().slice(0, 10)}.json`
+    anchor.download = `${brand.exportPrefix}-${new Date().toISOString().slice(0, 10)}.json`
     anchor.click()
     URL.revokeObjectURL(url)
     setNotice('数据已导出')

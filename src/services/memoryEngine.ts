@@ -20,6 +20,7 @@ import type {
   PromptContextBlock,
   WorldNode,
 } from '../domain/types'
+import { brand } from '../config/brand'
 
 export const memoryKindLabels: Record<MemoryKind, string> = {
   profile: '用户画像',
@@ -151,7 +152,7 @@ export function buildPromptBundle(state: AppState): PromptBundle {
     characterName: character.name,
     systemPrompt: [
       character.systemPrompt,
-      '你正在百合小手机里与用户聊天。不要暴露内部实现。回复要自然、简体中文、有陪伴感。',
+      `你正在${brand.fullName}里与用户聊天。不要暴露内部实现。回复要自然、简体中文、有陪伴感。`,
       '优先保持连续性、情绪承接和可执行性；当用户做项目时给清晰下一步，当用户情绪不好时先接住再处理问题。',
       '如果长期记忆和当前用户明确表达冲突，以当前用户表达为准，并在合适时提醒用户可以修改旧记忆。',
       '使用记忆时不要机械复述，也不要炫耀你记得很多。低可信记忆只能温和确认，敏感记忆只能在用户主动相关提及时谨慎使用。',
@@ -689,7 +690,7 @@ function classifyMemory(
     return { kind: 'preference', confidence: 0.84, sensitivity: 'low', status: 'active' }
   }
 
-  if (/(百合帝国|项目|架构|应用|产品|小手机|世界树|记忆系统)/.test(content)) {
+  if (/(百合帝国|项目|架构|应用|产品|百合小窝|Yuri Nest|小手机|世界树|记忆系统)/i.test(content)) {
     return { kind: 'project', confidence: 0.82, sensitivity: 'low', status: 'active' }
   }
 
@@ -724,7 +725,7 @@ function buildMemoryTags(kind: MemoryKind, content: string, characterName?: stri
   if (characterName) tags.push(characterName)
   if (/百合|CP|世界树/.test(content)) tags.push('百合')
   if (/UI|界面|颜色|字体/.test(content)) tags.push('界面')
-  if (/架构|项目|产品|迭代/.test(content)) tags.push('产品')
+  if (/架构|项目|产品|迭代|百合小窝|Yuri Nest/i.test(content)) tags.push('产品')
   if (/回复|语气|风格/.test(content)) tags.push('交流方式')
   return unique(tags)
 }
@@ -735,7 +736,7 @@ function inferMemoryKind(memory: LongTermMemory): MemoryKind {
   if (/(安全|危机|求助|风险)/.test(text)) return 'safety'
   if (/(规则|回复|语气|风格|不要|必须|应该)/.test(text)) return 'procedure'
   if (/(喜欢|不喜欢|偏好|习惯|颜色|字体|UI|界面)/i.test(text)) return 'preference'
-  if (/(百合帝国|项目|架构|应用|产品|小手机|迭代)/.test(text)) return 'project'
+  if (/(百合帝国|项目|架构|应用|产品|百合小窝|Yuri Nest|小手机|迭代)/i.test(text)) return 'project'
   if (/(世界树|世界观|CP|角色设定|百合)/.test(text)) return 'world'
   if (/(姐姐|妹妹|关系|陪伴)/.test(text)) return 'relationship'
   return 'event'
@@ -955,8 +956,8 @@ function inferMemoryScope(
 ): MemoryScope {
   if (kind === 'relationship' && character) return { kind: 'relationship', characterId: character.id }
   if (kind === 'character' && character) return { kind: 'character_private', characterId: character.id }
-  if (kind === 'world') return { kind: 'world', worldId: 'sakura-pocket' }
-  if (kind === 'project') return { kind: 'project', projectId: 'sakura-pocket' }
+  if (kind === 'world') return { kind: 'world', worldId: brand.defaultProjectId }
+  if (kind === 'project') return { kind: 'project', projectId: brand.defaultProjectId }
   if (kind === 'event' && conversation) return { kind: 'conversation', conversationId: conversation.id }
   return { kind: 'global_user' }
 }
@@ -965,9 +966,9 @@ function normalizeMemoryScope(scope: MemoryScope): MemoryScope {
   if (!scope || typeof scope !== 'object' || !('kind' in scope)) return { kind: 'global_user' }
   if (scope.kind === 'character_private' && !scope.characterId) return { kind: 'global_user' }
   if (scope.kind === 'relationship' && !scope.characterId) return { kind: 'global_user' }
-  if (scope.kind === 'world' && !scope.worldId) return { kind: 'world', worldId: 'sakura-pocket' }
-  if (scope.kind === 'world_branch' && (!scope.worldId || !scope.branchId)) return { kind: 'world', worldId: 'sakura-pocket' }
-  if (scope.kind === 'project' && !scope.projectId) return { kind: 'project', projectId: 'sakura-pocket' }
+  if (scope.kind === 'world' && !scope.worldId) return { kind: 'world', worldId: brand.defaultProjectId }
+  if (scope.kind === 'world_branch' && (!scope.worldId || !scope.branchId)) return { kind: 'world', worldId: brand.defaultProjectId }
+  if (scope.kind === 'project' && !scope.projectId) return { kind: 'project', projectId: brand.defaultProjectId }
   if (scope.kind === 'conversation' && !scope.conversationId) return { kind: 'global_user' }
   return scope
 }

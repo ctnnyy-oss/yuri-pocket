@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
+import { brand } from '../config/brand'
 import type {
   AccentTheme,
   AppSettings,
@@ -143,7 +144,7 @@ const memoryScopeOptions: Array<{ id: MemoryScope['kind']; label: string }> = [
   { id: 'conversation', label: '当前会话' },
   { id: 'temporary', label: '临时' },
 ]
-const defaultProjectId = 'sakura-pocket'
+const defaultProjectId = brand.defaultProjectId
 
 export function MemoryPanel({
   memories,
@@ -1737,7 +1738,7 @@ function ScopeEditor({
               onChange={(event) => onChange({ ...draft, worldId: event.target.value })}
               value={draft.worldId || worldNodes[0]?.id || defaultProjectId}
             >
-              {[...worldNodes.map((node) => ({ id: node.id, title: node.title })), { id: defaultProjectId, title: 'Sakura Pocket' }]
+              {[...worldNodes.map((node) => ({ id: node.id, title: node.title })), { id: defaultProjectId, title: brand.nameEn }]
                 .filter((option, index, options) => options.findIndex((item) => item.id === option.id) === index)
                 .map((option) => (
                   <option key={option.id} value={option.id}>
@@ -2082,7 +2083,7 @@ function getScopeHint(scopeKind: MemoryScope['kind']): string {
     case 'character_private':
       return '只给某个角色知道，适合角色设定和私有剧情。'
     case 'project':
-      return '属于 Sakura Pocket 或其他长期项目的决策。'
+      return `属于 ${brand.nameEn} 或其他长期项目的决策。`
     case 'world':
       return '属于世界观正史，不要写入现实用户画像。'
     case 'world_branch':

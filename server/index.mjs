@@ -13,6 +13,7 @@ const app = express()
 const port = Number(process.env.YURI_POCKET_API_PORT || 8787)
 const corsOrigin = getCorsOrigin()
 const snapshotId = 'default'
+const appName = 'Yuri Nest'
 
 app.use(cors({ origin: corsOrigin }))
 app.use(express.json({ limit: process.env.YURI_POCKET_JSON_LIMIT || '10mb' }))
@@ -50,7 +51,7 @@ app.get('/api/cloud/state', requireCloudAuth, (_request, response) => {
 app.put('/api/cloud/state', requireCloudAuth, (request, response) => {
   const state = request.body?.state
   if (!isValidAppStateShape(state)) {
-    response.status(400).json({ error: 'Invalid Sakura Pocket state payload' })
+    response.status(400).json({ error: `Invalid ${appName} state payload` })
     return
   }
 
@@ -90,7 +91,7 @@ app.post('/api/chat', async (request, response) => {
 })
 
 app.listen(port, '127.0.0.1', () => {
-  console.log(`Yuri Pocket API listening on http://127.0.0.1:${port}`)
+  console.log(`${appName} API listening on http://127.0.0.1:${port}`)
 })
 
 function hasApiKey() {
@@ -224,7 +225,7 @@ async function callOpenAICompatibleChat(bundle, settings) {
 
 function createDemoReply(bundle) {
   const lastUserMessage = [...bundle.messages].reverse().find((message) => message.role === 'user')
-  const characterName = bundle.characterName || 'Yuri Pocket'
+  const characterName = bundle.characterName || appName
   const memoryHint = bundle.contextBlocks
     .map((block) => block.title)
     .slice(0, 2)
@@ -288,7 +289,7 @@ function shouldEscapeUnicodeContent() {
 
 function buildCompatibilitySystemPrompt(characterName) {
   return [
-    'You power a Chinese yuri companion chat app called Yuri Pocket.',
+    `You power a Chinese yuri companion chat app called ${appName}.`,
     'The real user text is provided after USER_TEXT as JavaScript Unicode escape sequences such as \\u4f60.',
     'Always decode USER_TEXT first, then answer the decoded user message.',
     'Do not say the escaped text is garbled or unclear. It is intentionally encoded.',
