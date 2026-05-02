@@ -288,6 +288,10 @@
   background:
     radial-gradient(520px 340px at 70% 0%, rgba(255, 235, 247, 0.72), transparent 70%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.46), rgba(255, 246, 251, 0.32));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .workspace-title-icon {

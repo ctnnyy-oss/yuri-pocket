@@ -61,8 +61,15 @@
 
   /* Detail pages */
   .detail-workspace {
+    height: 100dvh;
+    min-height: 0;
     padding: var(--space-lg);
     padding-bottom: 64px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
 
   /* Grid collapses */
