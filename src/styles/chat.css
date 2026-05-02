@@ -767,3 +767,23 @@
   max-width: 126px;
   font-size: 11px;
 }
+
+/* Desktop chat should read like a real two-sided conversation. */
+@media (min-width: 761px) {
+  .message-column {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .message {
+    max-width: min(58%, 760px);
+    margin-left: clamp(14px, 3.2vw, 58px);
+  }
+
+  .message-user {
+    max-width: min(42%, 560px);
+    margin-right: clamp(14px, 4.8vw, 88px);
+    margin-left: 0;
+  }
+}
