@@ -38,19 +38,18 @@
 
 姐姐已经准备好自动部署配置：`.github/workflows/deploy-pages.yml`。
 
-还差云端仓库这一步。当前电脑没有安装 GitHub CLI，也没有配置远程仓库，所以姐姐不能在不登录的情况下替妹妹创建 GitHub 仓库。
+云端仓库已经建立，当前统一名为 `ctnnyy-oss/yuri-nest`。
 
-等妹妹登录 GitHub 后，最稳的方式是：
+日常上线方式：
 
-1. 创建一个名为 `yuri-pocket` 的仓库。
-2. 把本地仓库推送到 GitHub。
-3. 在 GitHub 仓库 Settings -> Pages，把 Source 设为 GitHub Actions。
-4. 推送 `main` 分支后，GitHub 会自动构建并发布页面。
+1. 用 `VITE_BASE_PATH='/yuri-nest/'` 重新构建 `dist`。
+2. 把 `dist`、源码和文档一起提交。
+3. 推送 `main` 分支后，GitHub 会自动发布页面。
 
 部署成功后，地址通常类似：
 
 ```text
-https://你的GitHub用户名.github.io/yuri-pocket/
+https://ctnnyy-oss.github.io/yuri-nest/
 ```
 
 ## 为什么上线版不能直接真聊天

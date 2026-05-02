@@ -17,7 +17,7 @@
 命名说明：
 
 - 面向妹妹和用户的产品名已经改为 **百合小窝 / Yuri Nest**。
-- GitHub 仓库、Pages 路径、服务器目录、systemd 服务名和环境变量仍暂时保留 `yuri-pocket`，这是部署兼容名，不代表产品品牌。
+- GitHub 仓库、Pages 路径、服务器目录、systemd 服务名、环境变量和包名都已经统一为 `yuri-nest`。
 
 ## 2. 当前已完成
 
@@ -34,6 +34,7 @@
 - 云端同步错误提示已做过一轮中文友好化，能区分口令错误、服务器未启用、云端服务错误。
 - 品牌配置已集中到 `src/config/brand.ts`，面向用户名称为“百合小窝 / Yuri Nest”。
 - 存储配置已集中到 `src/config/storage.ts`；本地状态迁移已拆到 `src/data/migrations.ts`，避免 IndexedDB 读写层继续变胖。
+- 2026-05-02 已完成技术名统一：仓库、Pages、包名、服务器目录、systemd 服务名、环境变量、SQLite 文件名统一使用 `yuri-nest` / `YURI_NEST_*`。
 - 记忆面板已开始模块化：草稿类型、scope 工具、记忆空间编辑器拆到 `src/components/memory/`，后续继续拆 `MemoryPanel.tsx` 时沿用这个目录。
 - AI 模型调用已经切到 OpenAI-compatible 中转站。
 - 旧 AstrBot / NapCat 服务已经从服务器清理掉，释放资源。
@@ -43,19 +44,19 @@
 
 线上前端：
 
-- https://ctnnyy-oss.github.io/yuri-pocket/
+- https://ctnnyy-oss.github.io/yuri-nest/
 
 GitHub 仓库：
 
-- https://github.com/ctnnyy-oss/yuri-pocket
+- https://github.com/ctnnyy-oss/yuri-nest
 
 腾讯云服务器：
 
 - SSH alias: `tencent-astrbot`
 - 服务器 IP: `150.158.24.98`
-- 后端目录: `/opt/yuri-pocket`
-- 后端服务: `yuri-pocket-api.service`
-- 临时加密隧道服务: `yuri-pocket-tunnel.service`
+- 后端目录: `/opt/yuri-nest`
+- 后端服务: `yuri-nest-api.service`
+- 临时加密隧道服务: `yuri-nest-tunnel.service`
 
 当前后端公开入口：
 
@@ -80,12 +81,12 @@ GitHub 仓库：
 
 服务器敏感配置：
 
-- `/opt/yuri-pocket/.env`
+- `/opt/yuri-nest/.env`
 
 服务器 `.env` 里应包含：
 
-- `YURI_POCKET_SYNC_TOKEN`
-- `YURI_POCKET_DB_PATH=/opt/yuri-pocket/data/yuri-pocket.sqlite`
+- `YURI_NEST_SYNC_TOKEN`
+- `YURI_NEST_DB_PATH=/opt/yuri-nest/data/yuri-nest.sqlite`
 - `AI_BASE_URL=https://api.yop.mom/v1`
 - `AI_API_KEY`
 - `AI_MODEL=deepseek/deepseek-v4-pro-free`
@@ -143,7 +144,7 @@ npm run dev
 构建 GitHub Pages：
 
 ```powershell
-$env:VITE_BASE_PATH='/yuri-pocket/'
+$env:VITE_BASE_PATH='/yuri-nest/'
 $env:VITE_API_BASE_URL=(Get-Content -Raw .\secrets\cloud-api-url.txt).Trim()
 npm run build
 git add -f dist
@@ -154,19 +155,19 @@ git push origin main
 服务器更新后端：
 
 ```powershell
-ssh tencent-astrbot "cd /opt/yuri-pocket && git fetch --all --prune && git reset --hard origin/main && npm install --omit=dev --no-audit --no-fund && sudo systemctl restart yuri-pocket-api.service"
+ssh tencent-astrbot "cd /opt/yuri-nest && git fetch --all --prune && git reset --hard origin/main && npm install --omit=dev --no-audit --no-fund && sudo systemctl restart yuri-nest-api.service"
 ```
 
 查看服务状态：
 
 ```powershell
-ssh tencent-astrbot "systemctl is-active yuri-pocket-api.service yuri-pocket-tunnel.service"
+ssh tencent-astrbot "systemctl is-active yuri-nest-api.service yuri-nest-tunnel.service"
 ```
 
 查看隧道地址：
 
 ```powershell
-ssh tencent-astrbot "sudo journalctl -u yuri-pocket-tunnel --no-pager -n 120 | grep -Eo 'https://[-a-zA-Z0-9]+\.trycloudflare\.com' | tail -n 1"
+ssh tencent-astrbot "sudo journalctl -u yuri-nest-tunnel --no-pager -n 120 | grep -Eo 'https://[-a-zA-Z0-9]+\.trycloudflare\.com' | tail -n 1"
 ```
 
 如果隧道地址变化，需要：
@@ -211,14 +212,14 @@ ssh tencent-astrbot "sudo journalctl -u yuri-pocket-tunnel --no-pager -n 120 | g
 妹妹新开 Codex 对话时，可以直接发：
 
 ```text
-姐姐先读 C:\Users\MI\Desktop\AI\yuri-pocket\docs\PROJECT_HANDOFF.md，
+姐姐先读 C:\Users\MI\Desktop\AI\yuri-nest\docs\PROJECT_HANDOFF.md，
 再继续帮妹妹迭代百合小窝 / Yuri Nest 项目。不要重新猜架构，按文档里的当前状态继续。
 ```
 
 如果要排查服务器：
 
 ```text
-姐姐先检查 tencent-astrbot 上 yuri-pocket-api.service 和 yuri-pocket-tunnel.service。
+姐姐先检查 tencent-astrbot 上 yuri-nest-api.service 和 yuri-nest-tunnel.service。
 不要打印任何密钥。
 ```
 

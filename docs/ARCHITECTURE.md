@@ -12,7 +12,7 @@
 - `src/domain`：类型定义，是项目的共同语言。
 - `src/domain/memoryLabels.ts`：记忆类型、状态、敏感度、提及时机的中文标签。UI 可以读标签，但不要反向依赖记忆引擎。
 - `src/data`：种子数据、本地数据库和状态迁移，后续可替换或扩展为云同步。
-- `src/data/migrations.ts`：所有 AppState 版本升级、旧品牌名迁移、旧 scope 迁移都集中放这里，避免 IndexedDB 读写层越来越臃肿。
+- `src/data/migrations.ts`：所有 AppState 版本升级都集中放这里，避免 IndexedDB 读写层越来越臃肿。
 - `src/services/memoryEngine.ts`：短期记忆、长期记忆、世界树触发、提示词组装。
 - `src/services/chatApi.ts`：前端到本地 API 代理的通信。
 - `server/index.mjs`：本地模型代理，API Key 只留在本机环境变量里。
@@ -24,7 +24,7 @@
 - 默认能离线体验。没有 API Key 时走本地演示回复，方便快速验证 UI 和流程。
 - 记忆系统先做可解释版本：最近消息是短期记忆，人工/规则沉淀为长期记忆，关键词触发世界树。每条长期记忆都保留类型、可信度、来源、调用记录和版本记录，避免黑箱记忆。
 - 每个新能力都作为模块接入，避免把所有逻辑塞进聊天页面。
-- 品牌名、技术路径和存储 key 分开管理：面向用户叫“百合小窝 / Yuri Nest”，但仓库、Pages 路径、服务器服务名暂时仍可保留 `yuri-pocket` 作为兼容技术名。
+- 品牌名、技术路径和存储 key 分开管理，但当前主技术名已经统一为 `yuri-nest`，避免后续部署和文档继续分裂。
 - 旧数据升级只能走 `migrations.ts`，不要在界面组件里临时判断旧字段；这样妹妹本机、云端快照和未来多设备同步都能复用同一条升级路径。
 - 超过 500 行的文件默认进入“需要继续拆分观察区”。现在最胖的是 `MemoryPanel.tsx`、`memoryEngine.ts` 和 `App.tsx`，后续应优先按视图、prompt packer、memory writer/retriever 继续拆。
 - 拆大文件优先按“可验证的小模块”推进：先拆纯工具、配置、迁移、独立 UI，再拆带状态流的核心逻辑；每次拆完必须跑 lint/build 和浏览器回归。

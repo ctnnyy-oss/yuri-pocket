@@ -1,9 +1,8 @@
 export const storageConfig = {
-  databaseName: 'yuri-pocket',
+  databaseName: 'yuri-nest',
   storeName: 'app',
   stateKey: 'state',
   backupKeyPrefix: 'backup:',
   maxLocalBackups: 12,
-  cloudTokenStorageKey: 'yuri-pocket-cloud-token',
+  cloudTokenStorageKey: 'yuri-nest-cloud-token',
 }
-

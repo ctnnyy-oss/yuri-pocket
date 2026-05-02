@@ -10,13 +10,13 @@ dotenv.config({ path: '.env.local' })
 dotenv.config()
 
 const app = express()
-const port = Number(process.env.YURI_POCKET_API_PORT || 8787)
+const port = Number(process.env.YURI_NEST_API_PORT || 8787)
 const corsOrigin = getCorsOrigin()
 const snapshotId = 'default'
 const appName = 'Yuri Nest'
 
 app.use(cors({ origin: corsOrigin }))
-app.use(express.json({ limit: process.env.YURI_POCKET_JSON_LIMIT || '10mb' }))
+app.use(express.json({ limit: process.env.YURI_NEST_JSON_LIMIT || '10mb' }))
 
 app.get('/api/health', (_request, response) => {
   response.json({
@@ -99,18 +99,18 @@ function hasApiKey() {
 }
 
 function hasCloudSyncToken() {
-  return Boolean(process.env.YURI_POCKET_SYNC_TOKEN)
+  return Boolean(process.env.YURI_NEST_SYNC_TOKEN)
 }
 
 function requireCloudAuth(request, response, next) {
-  const expectedToken = process.env.YURI_POCKET_SYNC_TOKEN
+  const expectedToken = process.env.YURI_NEST_SYNC_TOKEN
   if (!expectedToken) {
     response.status(503).json({ error: 'Cloud sync is not configured on this server' })
     return
   }
 
   const providedToken =
-    request.get('x-yuri-pocket-token') || request.get('authorization')?.replace(/^Bearer\s+/i, '') || ''
+    request.get('x-yuri-nest-token') || request.get('authorization')?.replace(/^Bearer\s+/i, '') || ''
 
   if (!isSameToken(providedToken, expectedToken)) {
     response.status(401).json({ error: 'Cloud sync token is invalid' })
@@ -131,7 +131,7 @@ let cloudDatabase
 function getCloudDatabase() {
   if (cloudDatabase) return cloudDatabase
 
-  const databasePath = resolve(process.env.YURI_POCKET_DB_PATH || './data/yuri-pocket.sqlite')
+  const databasePath = resolve(process.env.YURI_NEST_DB_PATH || './data/yuri-nest.sqlite')
   mkdirSync(dirname(databasePath), { recursive: true })
   cloudDatabase = new DatabaseSync(databasePath)
   cloudDatabase.exec(`
@@ -317,7 +317,7 @@ function stripTrailingSlash(value) {
 }
 
 function getCorsOrigin() {
-  const configured = process.env.YURI_POCKET_CORS_ORIGIN
+  const configured = process.env.YURI_NEST_CORS_ORIGIN
   if (!configured) return true
   const origins = configured
     .split(',')

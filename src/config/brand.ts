@@ -4,7 +4,5 @@ export const brand = {
   fullName: '百合小窝 / Yuri Nest',
   versionLabel: 'Yuri Nest 0.1',
   defaultProjectId: 'yuri-nest',
-  legacyProjectId: 'sakura-pocket',
   exportPrefix: 'yuri-nest',
 }
-
