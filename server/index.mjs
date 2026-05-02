@@ -156,7 +156,7 @@ app.post('/api/chat', async (request, response) => {
 
   const authFailure = shouldRequireModelAuth() ? getCloudAuthFailure(request) : null
   if (authFailure) {
-    response.status(authFailure.status).json({ error: '模型代理需要先连接云端口令，避免公开页面被别人消耗密钥。' })
+    response.status(authFailure.status).json({ error: '模型代理需要登录或云端口令授权。' })
     return
   }
 
@@ -193,6 +193,11 @@ function hasCloudSyncToken() {
 }
 
 function requireCloudAuth(request, response, next) {
+  if (!shouldRequireCloudAuth()) {
+    next()
+    return
+  }
+
   const failure = getCloudAuthFailure(request)
   if (failure) {
     response.status(failure.status).json({ error: failure.message })
@@ -200,6 +205,10 @@ function requireCloudAuth(request, response, next) {
   }
 
   next()
+}
+
+function shouldRequireCloudAuth() {
+  return process.env.YURI_NEST_REQUIRE_CLOUD_AUTH === 'true'
 }
 
 function getCloudAuthFailure(request) {
@@ -595,7 +604,7 @@ function storedProfileToRuntime(profile) {
 }
 
 function shouldRequireModelAuth() {
-  return hasCloudSyncToken() && (hasApiKey() || listStoredModelProfiles().some((profile) => profile.hasApiKey))
+  return process.env.YURI_NEST_REQUIRE_CHAT_AUTH === 'true'
 }
 
 async function callModelChat(bundle, settings, profile) {

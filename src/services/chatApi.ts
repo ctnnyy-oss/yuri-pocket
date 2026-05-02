@@ -53,7 +53,7 @@ async function readChatError(response: Response): Promise<string> {
 }
 
 function formatChatError(status: number, detail: string): string {
-  if (status === 401) return detail || '模型代理需要先在“模型与数据”里连接云端口令'
+  if (status === 401) return detail || '模型代理拒绝访问。以后开启登录后，需要重新登录。'
   if (status === 404) return detail || '模型代理入口没有找到'
   if (status === 502) return detail || '模型供应商暂时没有接住请求'
   if (status >= 500) return detail || `模型代理服务异常：${status}`

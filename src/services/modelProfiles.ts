@@ -170,14 +170,12 @@ export async function testModelProfile(
 async function modelFetch(path: string, token: string, init: RequestInit = {}): Promise<Response> {
   const apiBaseUrl = getCloudApiBaseUrl()
   if (!apiBaseUrl) throw new Error('云端后端还没有配置')
-  if (!token.trim()) throw new Error('先连接云端口令，模型密钥才会安全保存在服务器')
+  const headers = new Headers(init.headers)
+  if (token.trim()) headers.set('Authorization', `Bearer ${token.trim()}`)
 
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
-    headers: {
-      ...init.headers,
-      Authorization: `Bearer ${token.trim()}`,
-    },
+    headers,
   })
 
   if (!response.ok) {
@@ -201,7 +199,7 @@ async function readModelError(response: Response): Promise<string> {
 }
 
 function formatModelError(status: number, detail: string): string {
-  if (status === 401) return '云端口令不对，模型密钥保险箱拒绝访问'
+  if (status === 401) return '服务器拒绝访问模型保险箱。以后开启登录后，需要重新登录。'
   if (status === 404) return detail || '没有找到这个模型配置'
   if (status >= 500) return `模型服务暂时没接住：${detail || status}`
   return detail || `模型配置请求失败：${status}`

@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import './styles/shell.css'
 import './styles/sidebar.css'
 import './styles/chat.css'
@@ -48,7 +48,6 @@ import {
   listCloudBackups,
   pullCloudState,
   pushCloudState,
-  saveCloudToken,
 } from './services/cloudSync'
 import {
   attachAssistantToMemoryUsageLog,
@@ -152,10 +151,10 @@ function App() {
   const [isReady, setIsReady] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [activeView, setActiveView] = useState<AppView>(() => readViewFromLocation())
-  const [cloudToken, setCloudToken] = useState(() => getSavedCloudToken())
+  const [cloudToken] = useState(() => getSavedCloudToken())
   const [cloudStatus, setCloudStatus] = useState(() => {
     if (!isCloudSyncConfigured()) return '云端后端未配置'
-    return getSavedCloudToken() ? '云端口令已保存' : '云端待连接'
+    return '云端直连已启用'
   })
   const [cloudMeta, setCloudMeta] = useState<CloudMetadata | null>(null)
   const [cloudBusy, setCloudBusy] = useState<CloudBusyTask | null>(null)
@@ -164,10 +163,12 @@ function App() {
   const [modelProfiles, setModelProfiles] = useState<ModelProfileSummary[]>([])
   const [modelProfileStatus, setModelProfileStatus] = useState(() => {
     if (!isCloudSyncConfigured()) return '模型密钥保险箱需要云端后端'
-    return getSavedCloudToken() ? '模型密钥保险箱待刷新' : '连接云端后可管理模型密钥'
+    return '模型密钥会直接保存到服务器保险箱'
   })
   const [modelProfileBusy, setModelProfileBusy] = useState(false)
   const [notice, setNotice] = useState('花园已就绪')
+  const autoCloudReadyRef = useRef(false)
+  const skipNextAutoPushRef = useRef(false)
 
   const refreshLocalBackups = useCallback(async () => {
     const backups = await listLocalBackups()
@@ -175,7 +176,7 @@ function App() {
   }, [])
 
   const refreshCloudBackups = useCallback(async (token: string) => {
-    if (!isCloudSyncConfigured() || !token.trim()) {
+    if (!isCloudSyncConfigured()) {
       setCloudBackups([])
       return []
     }
@@ -190,11 +191,6 @@ function App() {
     if (!isCloudSyncConfigured()) {
       setModelProfiles([])
       setModelProfileStatus('模型密钥保险箱需要云端后端')
-      return []
-    }
-    if (!token) {
-      setModelProfiles([])
-      setModelProfileStatus('连接云端口令后可管理模型密钥')
       return []
     }
 
@@ -222,11 +218,6 @@ function App() {
     }
 
     const cleanedToken = token.trim()
-    if (!cleanedToken) {
-      setCloudMeta(null)
-      setCloudStatus('云端待连接')
-      return null
-    }
 
     setCloudBusy('checking')
     setCloudStatus('正在检查云端状态...')
@@ -246,37 +237,39 @@ function App() {
     }
   }, [refreshCloudBackups, refreshModelProfileList])
 
-  const handleSaveCloudToken = useCallback(async (token: string): Promise<boolean> => {
-    if (!isCloudSyncConfigured()) {
-      setCloudStatus('云端后端还没有配置')
-      setModelProfileStatus('模型密钥保险箱需要云端后端')
-      return false
-    }
+  const bootstrapCloudState = useCallback(async (localState: AppState) => {
+    if (!isCloudSyncConfigured() || autoCloudReadyRef.current) return
 
-    const cleanedToken = token.trim()
-    saveCloudToken(cleanedToken)
-    setCloudToken(cleanedToken)
-    if (!cleanedToken) {
-      setCloudMeta(null)
-      setCloudBackups([])
-      setModelProfiles([])
-      setCloudStatus('云端口令已清除')
-      setModelProfileStatus('连接云端口令后可管理模型密钥')
-      return false
-    }
+    setCloudStatus('正在自动连接云端...')
+    setModelProfileStatus('正在读取模型密钥保险箱...')
+    try {
+      const snapshot = await pullCloudState(cloudToken)
+      if (snapshot.state) {
+        const pulledState = migrateAppState(snapshot.state)
+        skipNextAutoPushRef.current = true
+        setState(pulledState)
+        setCloudMeta({
+          hasState: true,
+          revision: snapshot.revision,
+          updatedAt: snapshot.updatedAt,
+        })
+        setCloudStatus(`已自动读取云端 v${snapshot.revision}`)
+        setNotice('云端数据已自动同步')
+      } else {
+        const result = await pushCloudState(applyTrashRetention(localState), cloudToken)
+        setCloudMeta({ hasState: true, revision: result.revision, updatedAt: result.updatedAt })
+        setCloudStatus(`已创建云端同步 v${result.revision}`)
+      }
 
-    const metadata = await refreshCloudMetadata(cleanedToken)
-    if (!metadata) {
-      saveCloudToken('')
-      setCloudToken('')
-      setModelProfiles([])
-      setModelProfileStatus('云端口令没有通过，请重新输入')
-      return false
+      autoCloudReadyRef.current = true
+      void refreshCloudBackups(cloudToken)
+      void refreshModelProfileList(cloudToken)
+    } catch (error) {
+      autoCloudReadyRef.current = false
+      setCloudStatus(error instanceof Error ? error.message : '自动连接云端失败')
+      setModelProfileStatus('模型保险箱暂时没连上')
     }
-
-    setNotice('云端口令已连接')
-    return true
-  }, [refreshCloudMetadata])
+  }, [cloudToken, refreshCloudBackups, refreshModelProfileList])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -297,19 +290,30 @@ function App() {
       setState(savedState)
       setIsReady(true)
       void refreshLocalBackups()
+      void bootstrapCloudState(savedState)
     })
-  }, [refreshLocalBackups])
+  }, [bootstrapCloudState, refreshLocalBackups])
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    const savedToken = getSavedCloudToken()
-    if (!isCloudSyncConfigured() || !savedToken) return
+    if (!isReady || !isCloudSyncConfigured() || !autoCloudReadyRef.current) return
+    if (skipNextAutoPushRef.current) {
+      skipNextAutoPushRef.current = false
+      return
+    }
 
     const timer = window.setTimeout(() => {
-      void handleSaveCloudToken(savedToken)
-    }, 0)
+      void pushCloudState(applyTrashRetention(state), cloudToken)
+        .then((result) => {
+          setCloudMeta({ hasState: true, revision: result.revision, updatedAt: result.updatedAt })
+          setCloudStatus(`已自动同步到云端 v${result.revision}`)
+        })
+        .catch((error) => {
+          setCloudStatus(error instanceof Error ? error.message : '自动同步云端失败')
+        })
+    }, 1200)
+
     return () => window.clearTimeout(timer)
-  }, [handleSaveCloudToken])
+  }, [cloudToken, isReady, state])
 
   useEffect(() => {
     if (isReady) {
@@ -338,21 +342,6 @@ function App() {
       return
     }
     window.history.pushState(statePayload, '', url)
-  }
-
-  async function requestAssistantReplyWithCloudGate(bundle: typeof promptBundle, settings: AppSettings): Promise<string> {
-    try {
-      return await requestAssistantReply(bundle, settings)
-    } catch (error) {
-      if (!isCloudTokenRequiredError(error)) throw error
-
-      const token = window.prompt('模型代理需要先连接云端口令。\n输入一次后，这台设备下次会自动连接。')
-      if (token === null) throw error
-
-      const ok = await handleSaveCloudToken(token)
-      if (!ok) throw error
-      return requestAssistantReply(bundle, settings)
-    }
   }
 
   async function handleSend() {
@@ -413,7 +402,7 @@ function App() {
     setNotice(keptMemory ? (keptMemory.status === 'candidate' ? '发现一条待确认记忆' : '已捕捉并归档一条记忆') : '消息已送达')
 
     try {
-      const reply = await requestAssistantReplyWithCloudGate(requestBundle, nextState.settings)
+      const reply = await requestAssistantReply(requestBundle, nextState.settings)
       const assistantMessage = createMessage('assistant', reply)
       const repliedConversation = {
         ...nextConversation,
@@ -945,26 +934,14 @@ function App() {
       return
     }
 
-    const token = window.prompt('输入姐姐给妹妹保存的云端口令')
-    if (token === null) return
-    void handleSaveCloudToken(token)
-  }
-
-  async function getCloudTokenForModelAction(actionLabel: string): Promise<string | null> {
-    const existingToken = cloudToken.trim()
-    if (existingToken) return existingToken
-
-    const token = window.prompt(`${actionLabel}需要先连接云端口令。\n口令只会保存在这台设备，用来访问服务器保险箱。`)
-    if (token === null) return null
-
-    const ok = await handleSaveCloudToken(token)
-    return ok ? token.trim() : null
+    void refreshCloudMetadata(cloudToken)
+    void refreshModelProfileList(cloudToken)
+    setNotice('云端连接已检查')
   }
 
   async function handleSaveModelProfile(profile: ModelProfileInput) {
     try {
-      const token = await getCloudTokenForModelAction('保存模型配置')
-      if (!token) return
+      const token = cloudToken.trim()
       setModelProfileBusy(true)
       setModelProfileStatus('正在保存模型配置...')
       const result = await saveModelProfile(token, profile)
@@ -988,8 +965,7 @@ function App() {
 
   async function handleDeleteModelProfile(profileId: string) {
     try {
-      const token = await getCloudTokenForModelAction('删除模型配置')
-      if (!token) return
+      const token = cloudToken.trim()
       setModelProfileBusy(true)
       const profiles = await deleteModelProfile(token, profileId)
       setModelProfiles(profiles)
@@ -1014,8 +990,7 @@ function App() {
 
   async function handleTestModelProfile(input: { profileId?: string; profile?: ModelProfileInput }) {
     try {
-      const token = await getCloudTokenForModelAction('测试模型')
-      if (!token) return
+      const token = cloudToken.trim()
       setModelProfileBusy(true)
       setModelProfileStatus('正在测试模型连通性...')
       const result = await testModelProfile(token, input)
@@ -1179,7 +1154,7 @@ function App() {
         activeCharacterId={state.activeCharacterId}
         activeView={activeView}
         characters={state.characters}
-        modelStatusDetail={cloudToken ? '云端口令已连接' : '需要连接云端口令'}
+        modelStatusDetail={cloudToken ? '同步保险箱已连接' : '聊天直连服务器'}
         modelStatusLabel={getModelStatusLabel(state.settings, modelProfiles)}
         onSelect={handleSelectCharacter}
         onViewChange={navigateView}
@@ -1233,13 +1208,11 @@ function App() {
           onSaveModelProfile={handleSaveModelProfile}
           onDeleteModelProfile={handleDeleteModelProfile}
           onTestModelProfile={handleTestModelProfile}
-          onSaveCloudToken={handleSaveCloudToken}
           cloudStatus={cloudStatus}
           cloudMeta={cloudMeta}
           cloudBusy={cloudBusy}
           cloudBackups={cloudBackups}
           cloudSyncConfigured={isCloudSyncConfigured()}
-          cloudTokenSet={Boolean(cloudToken)}
           onConnectCloud={handleConnectCloud}
           onPullCloud={handlePullCloud}
           onPushCloud={handlePushCloud}
@@ -1275,10 +1248,6 @@ function getModelStatusLabel(settings: AppSettings, profiles: ModelProfileSummar
     profiles[0]
   if (profile) return profile.model === '由页面模型栏决定' ? settings.model : profile.model
   return settings.model || '模型待连接'
-}
-
-function isCloudTokenRequiredError(error: unknown): boolean {
-  return error instanceof Error && /云端口令|需要先连接|401/.test(error.message)
 }
 
 function formatCloudTime(value: string | null): string {

@@ -79,14 +79,12 @@ export async function downloadCloudBackup(token: string, fileName: string): Prom
 async function cloudFetch(path: string, token: string, init: RequestInit = {}): Promise<Response> {
   const apiBaseUrl = getCloudApiBaseUrl()
   if (!apiBaseUrl) throw new Error('云端后端还没有配置')
-  if (!token.trim()) throw new Error('还没有填写云端口令')
+  const headers = new Headers(init.headers)
+  if (token.trim()) headers.set('Authorization', `Bearer ${token.trim()}`)
 
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
-    headers: {
-      ...init.headers,
-      Authorization: `Bearer ${token.trim()}`,
-    },
+    headers,
   })
 
   if (!response.ok) {
@@ -110,7 +108,7 @@ async function readCloudError(response: Response): Promise<string> {
 }
 
 function formatCloudError(status: number, detail: string): string {
-  if (status === 401) return '云端口令不对，或者服务器口令已经更换'
+  if (status === 401) return '服务器拒绝访问。以后开启登录后，需要重新登录。'
   if (status === 503) return '云端同步还没有在服务器启用'
   if (status >= 500) return `云端服务暂时没接住：${detail || status}`
   return detail || `云端请求失败：${status}`

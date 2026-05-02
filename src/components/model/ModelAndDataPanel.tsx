@@ -34,7 +34,6 @@ interface ModelAndDataPanelProps {
   onSaveModelProfile: (profile: ModelProfileInput) => Promise<void>
   onDeleteModelProfile: (profileId: string) => Promise<void>
   onTestModelProfile: (input: { profileId?: string; profile?: ModelProfileInput }) => Promise<void>
-  onSaveCloudToken: (token: string) => Promise<boolean>
   onExport: () => void
   onImport: (file: File) => void
   onReset: () => void
@@ -43,7 +42,6 @@ interface ModelAndDataPanelProps {
   cloudBusy: 'checking' | 'pulling' | 'pushing' | 'backing-up' | null
   cloudBackups: CloudBackupSummary[]
   cloudSyncConfigured: boolean
-  cloudTokenSet: boolean
   onConnectCloud: () => void
   onPullCloud: () => void
   onPushCloud: () => void
@@ -73,7 +71,6 @@ export function ModelAndDataPanel({
   onSaveModelProfile,
   onDeleteModelProfile,
   onTestModelProfile,
-  onSaveCloudToken,
   onExport,
   onImport,
   onReset,
@@ -82,7 +79,6 @@ export function ModelAndDataPanel({
   cloudBusy,
   cloudBackups,
   cloudSyncConfigured,
-  cloudTokenSet,
   onConnectCloud,
   onPullCloud,
   onPushCloud,
@@ -101,7 +97,6 @@ export function ModelAndDataPanel({
     modelProfiles[0]
   const [selectedPresetId, setSelectedPresetId] = useState(modelProviderPresets[0].id)
   const [draft, setDraft] = useState<ModelProfileInput>(() => createDraftFromPreset(modelProviderPresets[0]))
-  const [cloudTokenDraft, setCloudTokenDraft] = useState('')
 
   const savedEditableProfiles = useMemo(
     () => modelProfiles.filter((profile) => profile.id !== 'server-env'),
@@ -135,11 +130,6 @@ export function ModelAndDataPanel({
     await onTestModelProfile({ profile: draft })
   }
 
-  async function handleSaveCloudToken() {
-    const ok = await onSaveCloudToken(cloudTokenDraft)
-    if (ok) setCloudTokenDraft('')
-  }
-
   function handleUseProfile(profile: ModelProfileSummary) {
     onUpdateSettings({
       ...settings,
@@ -151,7 +141,7 @@ export function ModelAndDataPanel({
   return (
     <>
       <WorkspaceTitle
-        description="模型密钥交给云端保险箱保存，手机和平板只要连接云端口令就能使用同一套配置。"
+        description="妹妹单人使用阶段默认直连服务器，聊天、记忆、设置和模型配置都会自动同步到云端。"
         icon={<SlidersHorizontal size={20} />}
         title="模型与数据"
       />
@@ -169,8 +159,8 @@ export function ModelAndDataPanel({
               </p>
               <div className="model-status-grid">
                 <span>
-                  <strong>云端口令</strong>
-                  {cloudTokenSet ? '已连接' : '未连接'}
+                  <strong>云端同步</strong>
+                  自动直连
                 </span>
                 <span>
                   <strong>密钥保险箱</strong>
@@ -182,36 +172,14 @@ export function ModelAndDataPanel({
                 </span>
               </div>
               <small className="cloud-status-line">{modelProfileStatus}</small>
-              <div className="cloud-token-box">
-                <label>
-                  <span>云端口令</span>
-                  <input
-                    autoComplete="off"
-                    placeholder={cloudTokenSet ? '已连接，可重新输入覆盖' : '先填云端口令，再保存模型密钥'}
-                    type="password"
-                    value={cloudTokenDraft}
-                    onChange={(event) => setCloudTokenDraft(event.target.value)}
-                  />
-                </label>
-                <button
-                  disabled={!cloudSyncConfigured || modelProfileBusy || !cloudTokenDraft.trim()}
-                  onClick={handleSaveCloudToken}
-                  type="button"
-                >
-                  <Link2 size={15} />
-                  {cloudTokenSet ? '更新口令' : '连接口令'}
-                </button>
-              </div>
-              {!cloudTokenSet && (
-                <small className="model-warning">API Key 不会保存在浏览器里，必须先连接云端口令才能写入服务器保险箱。</small>
-              )}
+              <small className="model-warning">当前按妹妹单人使用处理：聊天、记忆、设置和模型配置都会直接走服务器。公开多人版再加登录注册。</small>
               <div className="settings-actions">
                 <button disabled={!cloudSyncConfigured || modelProfileBusy} onClick={onConnectCloud} type="button">
                   <Link2 size={15} />
-                  弹窗连接
+                  检查连接
                 </button>
                 <button
-                  disabled={!cloudSyncConfigured || !cloudTokenSet || modelProfileBusy}
+                  disabled={!cloudSyncConfigured || modelProfileBusy}
                   onClick={onRefreshModelProfiles}
                   type="button"
                 >
@@ -389,9 +357,7 @@ export function ModelAndDataPanel({
               </div>
               <p className="section-note">
                 {cloudSyncConfigured
-                  ? cloudTokenSet
-                    ? '云端后端已配置，口令已保存在这台设备。'
-                    : '云端后端已配置，第一次使用需要填写云端口令。'
+                  ? '云端后端已配置，会自动保存和读取。'
                   : '当前构建还没有配置云端后端地址。'}
               </p>
               <div className="cloud-meta-strip" aria-label="云端同步状态">
@@ -412,10 +378,10 @@ export function ModelAndDataPanel({
               <div className="settings-actions">
                 <button disabled={!cloudSyncConfigured || Boolean(cloudBusy)} onClick={onConnectCloud} type="button">
                   <Link2 size={15} />
-                  连接云端
+                  检查连接
                 </button>
                 <button
-                  disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
+                  disabled={!cloudSyncConfigured || Boolean(cloudBusy)}
                   onClick={onRefreshCloud}
                   type="button"
                 >
@@ -423,7 +389,7 @@ export function ModelAndDataPanel({
                   检查云端
                 </button>
                 <button
-                  disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
+                  disabled={!cloudSyncConfigured || Boolean(cloudBusy)}
                   onClick={onPushCloud}
                   type="button"
                 >
@@ -431,7 +397,7 @@ export function ModelAndDataPanel({
                   {cloudBusy === 'pushing' ? '保存中' : '保存到云端'}
                 </button>
                 <button
-                  disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
+                  disabled={!cloudSyncConfigured || Boolean(cloudBusy)}
                   onClick={onPullCloud}
                   type="button"
                 >
@@ -447,7 +413,7 @@ export function ModelAndDataPanel({
                   </div>
                   <div className="settings-actions compact-actions">
                     <button
-                      disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
+                      disabled={!cloudSyncConfigured || Boolean(cloudBusy)}
                       onClick={onCreateCloudBackup}
                       type="button"
                     >
@@ -455,7 +421,7 @@ export function ModelAndDataPanel({
                       {cloudBusy === 'backing-up' ? '备份中' : '创建备份'}
                     </button>
                     <button
-                      disabled={!cloudSyncConfigured || !cloudTokenSet || Boolean(cloudBusy)}
+                      disabled={!cloudSyncConfigured || Boolean(cloudBusy)}
                       onClick={onRefreshCloudBackups}
                       type="button"
                     >
