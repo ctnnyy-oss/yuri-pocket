@@ -246,7 +246,7 @@ export function createSeedState(): AppState {
   }))
 
   return {
-    version: 12,
+    version: 13,
     activeCharacterId: characters[0].id,
     characters,
     conversations,
@@ -258,6 +258,7 @@ export function createSeedState(): AppState {
     },
     memoryTombstones: [],
     memoryUsageLogs: [],
+    memoryEvents: [],
     settings: {
       model: 'deepseek/deepseek-v4-pro-free',
       temperature: 0.8,

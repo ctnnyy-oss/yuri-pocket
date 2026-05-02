@@ -2,12 +2,14 @@ import type {
   AppTrash,
   LongTermMemory,
   MemoryConflict,
+  MemoryEvent,
   MemoryMentionPolicy,
   MemoryUsageLog,
 } from '../domain/types'
+import { getMemoryEventTypeLabel } from './memoryEvents'
 
 export type MemoryGuardianSeverity = 'danger' | 'warning' | 'info'
-export type MemoryTimelineKind = 'created' | 'updated' | 'called' | 'deleted' | 'candidate' | 'review'
+export type MemoryTimelineKind = 'created' | 'updated' | 'called' | 'deleted' | 'candidate' | 'review' | 'event'
 
 export interface MemoryGuardianSummary {
   activeCount: number
@@ -57,6 +59,7 @@ interface BuildMemoryGuardianReportInput {
   memories: LongTermMemory[]
   conflicts: MemoryConflict[]
   usageLogs: MemoryUsageLog[]
+  memoryEvents: MemoryEvent[]
   trash: AppTrash
   now?: Date
 }
@@ -67,6 +70,7 @@ export function buildMemoryGuardianReport({
   memories,
   conflicts,
   usageLogs,
+  memoryEvents,
   trash,
   now = new Date(),
 }: BuildMemoryGuardianReportInput): MemoryGuardianReport {
@@ -122,7 +126,7 @@ export function buildMemoryGuardianReport({
       },
     ],
     reviewItems,
-    timelineItems: buildTimelineItems(visibleMemories, usageLogs, trash, now),
+    timelineItems: buildTimelineItems(visibleMemories, usageLogs, memoryEvents, trash, now),
   }
 }
 
@@ -290,6 +294,7 @@ function buildReviewItems(
 function buildTimelineItems(
   memories: LongTermMemory[],
   usageLogs: MemoryUsageLog[],
+  memoryEvents: MemoryEvent[],
   trash: AppTrash,
   now: Date,
 ): MemoryTimelineItem[] {
@@ -353,6 +358,17 @@ function buildTimelineItems(
           : '没有注入长期记忆。',
       at: log.createdAt,
       kind: 'called',
+    })
+  })
+
+  memoryEvents.slice(0, 24).forEach((event) => {
+    items.push({
+      id: `event-${event.id}`,
+      memoryId: event.memoryIds[0],
+      title: event.title,
+      detail: `${getMemoryEventTypeLabel(event.type)}：${event.detail}`,
+      at: event.createdAt,
+      kind: 'event',
     })
   })
 

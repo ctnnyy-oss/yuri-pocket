@@ -53,6 +53,7 @@ import {
   updateMemoryWithRevision,
   upsertConversation,
 } from './services/memoryEngine'
+import { appendMemoryEvent, createMemoryEvent, type CreateMemoryEventInput } from './services/memoryEvents'
 import { applyTrashRetention, normalizeTrashRetentionSettings } from './services/trashRetention'
 
 const themeVariables: Record<AccentTheme, CSSProperties> = {
@@ -92,6 +93,13 @@ const themeVariables: Record<AccentTheme, CSSProperties> = {
 
 const appViews: AppView[] = ['chat', 'memory', 'world', 'model', 'settings', 'trash']
 type CloudBusyTask = 'checking' | 'pulling' | 'pushing' | 'backing-up'
+
+function addMemoryEventToState(state: AppState, input: CreateMemoryEventInput): AppState {
+  return {
+    ...state,
+    memoryEvents: appendMemoryEvent(state.memoryEvents, createMemoryEvent(input)),
+  }
+}
 
 function readViewFromLocation(): AppView {
   if (typeof window === 'undefined') return 'chat'
@@ -252,9 +260,20 @@ function App() {
         ? capturedMemory
         : null
 
-    const nextState = {
+    let nextState = {
       ...upsertConversation(state, nextConversation),
       memories: keptMemory ? integrateMemoryCandidate(touchedMemories, keptMemory) : touchedMemories,
+    }
+    if (keptMemory) {
+      nextState = addMemoryEventToState(nextState, {
+        type: 'captured',
+        actor: 'assistant',
+        title: keptMemory.title,
+        detail: keptMemory.status === 'candidate' ? '自动捕捉为候选记忆，等待妹妹确认。' : '自动捕捉并写入长期记忆。',
+        memoryIds: [keptMemory.id],
+        characterId: character.id,
+        conversationId: nextConversation.id,
+      })
     }
     const requestBundle = buildPromptBundle(nextState)
     const usageLog = createMemoryUsageLog({
@@ -342,41 +361,101 @@ function App() {
       reason: '手动整理最近聊天',
     })
 
-    setState((currentState) => ({
-      ...currentState,
-      memories: [memory, ...currentState.memories],
-    }))
+    setState((currentState) =>
+      addMemoryEventToState(
+        {
+          ...currentState,
+          memories: [memory, ...currentState.memories],
+        },
+        {
+          type: 'created',
+          actor: 'user',
+          title: memory.title,
+          detail: '妹妹手动从最近聊天整理出一条记忆。',
+          memoryIds: [memory.id],
+          characterId: character.id,
+          conversationId: conversation.id,
+        },
+      ),
+    )
     setNotice('最近聊天已整理')
   }
 
   function handleUpdateMemory(updatedMemory: LongTermMemory) {
-    setState((currentState) => ({
-      ...currentState,
-      memories: currentState.memories.map((memory) =>
+    setState((currentState) => {
+      const previousMemory = currentState.memories.find((memory) => memory.id === updatedMemory.id)
+      const nextMemories = currentState.memories.map((memory) =>
         memory.id === updatedMemory.id ? updateMemoryWithRevision(memory, updatedMemory, '妹妹手动编辑') : memory,
-      ),
-    }))
+      )
+      const eventType = previousMemory?.status === 'candidate' && updatedMemory.status === 'active' ? 'confirmed' : 'edited'
+      const detail = eventType === 'confirmed' ? '候选记忆被确认生效。' : '妹妹手动修改了记忆档案。'
+
+      return addMemoryEventToState(
+        {
+          ...currentState,
+          memories: nextMemories,
+        },
+        {
+          type: eventType,
+          actor: 'user',
+          title: updatedMemory.title,
+          detail,
+          memoryIds: [updatedMemory.id],
+          characterId: character.id,
+          conversationId: conversation.id,
+        },
+      )
+    })
     setNotice('记忆已修改')
   }
 
   function handleOrganizeMemories() {
     const report = consolidateMemoryGarden(state.memories)
-    setState((currentState) => ({
-      ...currentState,
-      memories: report.memories,
-    }))
+    setState((currentState) =>
+      addMemoryEventToState(
+        {
+          ...currentState,
+          memories: report.memories,
+        },
+        {
+          type: 'organized',
+          actor: 'system',
+          title: '后台整理',
+          detail:
+            report.mergedCount > 0
+              ? `检查 ${report.reviewedCount} 条记忆，合并 ${report.mergedCount} 条重复内容。`
+              : `检查 ${report.reviewedCount} 条记忆，暂时不需要合并。`,
+          memoryIds: report.memories.slice(0, 8).map((memory) => memory.id),
+          characterId: character.id,
+        },
+      ),
+    )
     setNotice(
       report.mergedCount > 0 ? `已整理 ${report.reviewedCount} 条，合并 ${report.mergedCount} 条` : '记忆系统已检查',
     )
   }
 
   function handleRestoreMemoryRevision(memoryId: string, revisionId: string) {
-    setState((currentState) => ({
-      ...currentState,
-      memories: currentState.memories.map((memory) =>
-        memory.id === memoryId ? restoreMemoryRevision(memory, revisionId) : memory,
-      ),
-    }))
+    setState((currentState) => {
+      const currentMemory = currentState.memories.find((memory) => memory.id === memoryId)
+      const restoredMemory = currentMemory ? restoreMemoryRevision(currentMemory, revisionId) : null
+
+      return addMemoryEventToState(
+        {
+          ...currentState,
+          memories: currentState.memories.map((memory) => (memory.id === memoryId ? restoredMemory ?? memory : memory)),
+        },
+        {
+          type: 'revision_restored',
+          actor: 'user',
+          title: restoredMemory?.title ?? currentMemory?.title ?? '记忆回滚',
+          detail: '从版本线恢复了一版记忆内容。',
+          memoryIds: [memoryId],
+          characterId: character.id,
+          conversationId: conversation.id,
+        },
+      )
+    })
     setNotice('记忆已回滚')
   }
 
@@ -385,14 +464,25 @@ function App() {
       const memory = currentState.memories.find((item) => item.id === memoryId)
       if (!memory) return currentState
 
-      return {
-        ...currentState,
-        memories: currentState.memories.filter((item) => item.id !== memoryId),
-        trash: {
-          ...currentState.trash,
-          memories: [{ ...memory, status: 'trashed' as const, deletedAt: nowIso() }, ...currentState.trash.memories],
+      return addMemoryEventToState(
+        {
+          ...currentState,
+          memories: currentState.memories.filter((item) => item.id !== memoryId),
+          trash: {
+            ...currentState.trash,
+            memories: [{ ...memory, status: 'trashed' as const, deletedAt: nowIso() }, ...currentState.trash.memories],
+          },
         },
-      }
+        {
+          type: 'trashed',
+          actor: 'user',
+          title: memory.title,
+          detail: '记忆移入回收花园，仍然可以恢复。',
+          memoryIds: [memory.id],
+          characterId: character.id,
+          conversationId: conversation.id,
+        },
+      )
     })
     setNotice('记忆已放入回收花园')
   }
@@ -427,14 +517,25 @@ function App() {
       const memory = currentState.trash.memories.find((item) => item.id === memoryId)
       if (!memory) return currentState
 
-      return {
-        ...currentState,
-        memories: [{ ...memory, status: 'active' as const, updatedAt: nowIso() }, ...currentState.memories],
-        trash: {
-          ...currentState.trash,
-          memories: currentState.trash.memories.filter((item) => item.id !== memoryId),
+      return addMemoryEventToState(
+        {
+          ...currentState,
+          memories: [{ ...memory, status: 'active' as const, updatedAt: nowIso() }, ...currentState.memories],
+          trash: {
+            ...currentState.trash,
+            memories: currentState.trash.memories.filter((item) => item.id !== memoryId),
+          },
         },
-      }
+        {
+          type: 'restored',
+          actor: 'user',
+          title: memory.title,
+          detail: '记忆从回收花园恢复为可用状态。',
+          memoryIds: [memory.id],
+          characterId: character.id,
+          conversationId: conversation.id,
+        },
+      )
     })
     setNotice('记忆已恢复')
   }
@@ -465,19 +566,34 @@ function App() {
   }
 
   function handleDeleteTrashedMemory(memoryId: string) {
-    setState((currentState) => ({
-      ...currentState,
-      memoryTombstones: [
-        ...currentState.trash.memories
-          .filter((item) => item.id === memoryId)
-          .map((memory) => createMemoryTombstone(memory, 'user_permanent_delete')),
-        ...currentState.memoryTombstones,
-      ],
-      trash: {
-        ...currentState.trash,
-        memories: currentState.trash.memories.filter((item) => item.id !== memoryId),
-      },
-    }))
+    setState((currentState) => {
+      const deletedMemory = currentState.trash.memories.find((item) => item.id === memoryId)
+
+      return addMemoryEventToState(
+        {
+          ...currentState,
+          memoryTombstones: [
+            ...currentState.trash.memories
+              .filter((item) => item.id === memoryId)
+              .map((memory) => createMemoryTombstone(memory, 'user_permanent_delete')),
+            ...currentState.memoryTombstones,
+          ],
+          trash: {
+            ...currentState.trash,
+            memories: currentState.trash.memories.filter((item) => item.id !== memoryId),
+          },
+        },
+        {
+          type: 'permanently_deleted',
+          actor: 'user',
+          title: deletedMemory?.title ?? '彻底删除记忆',
+          detail: '记忆被永久删除，并留下防复活指纹。',
+          memoryIds: [memoryId],
+          characterId: character.id,
+          conversationId: conversation.id,
+        },
+      )
+    })
     setNotice('记忆已彻底删除')
   }
 
@@ -493,17 +609,29 @@ function App() {
   }
 
   function handleEmptyTrash() {
-    setState((currentState) => ({
-      ...currentState,
-      memoryTombstones: [
-        ...currentState.trash.memories.map((memory) => createMemoryTombstone(memory, 'empty_trash')),
-        ...currentState.memoryTombstones,
-      ],
-      trash: {
-        memories: [],
-        worldNodes: [],
-      },
-    }))
+    setState((currentState) =>
+      addMemoryEventToState(
+        {
+          ...currentState,
+          memoryTombstones: [
+            ...currentState.trash.memories.map((memory) => createMemoryTombstone(memory, 'empty_trash')),
+            ...currentState.memoryTombstones,
+          ],
+          trash: {
+            memories: [],
+            worldNodes: [],
+          },
+        },
+        {
+          type: 'trash_emptied',
+          actor: 'user',
+          title: '清空回收花园',
+          detail: `永久删除 ${currentState.trash.memories.length} 条回收记忆。`,
+          memoryIds: currentState.trash.memories.map((memory) => memory.id),
+          characterId: character.id,
+        },
+      ),
+    )
     setNotice('回收花园已清空')
   }
 
@@ -524,7 +652,17 @@ function App() {
 
   async function handleCreateLocalBackup() {
     try {
-      const backup = await makeLocalBackup('妹妹手动创建')
+      const stateWithEvent = addMemoryEventToState(applyTrashRetention(state), {
+        type: 'local_backup_created',
+        actor: 'user',
+        title: '创建本机备份',
+        detail: '妹妹手动创建了一份本机保险箱备份。',
+        memoryIds: [],
+        characterId: character.id,
+      })
+      const backup = await createLocalBackup(stateWithEvent, '妹妹手动创建')
+      setState(stateWithEvent)
+      await refreshLocalBackups()
       setNotice(`已创建本机备份：${formatShortDateTime(backup.createdAt)}`)
     } catch {
       setNotice('本机备份创建失败')
@@ -548,7 +686,16 @@ function App() {
         return
       }
 
-      setState(restoredState)
+      setState(
+        addMemoryEventToState(restoredState, {
+          type: 'local_backup_restored',
+          actor: 'user',
+          title: '恢复本机备份',
+          detail: `恢复 ${label}，恢复前已自动备份当前状态。`,
+          memoryIds: [],
+          characterId: character.id,
+        }),
+      )
       setNotice('已恢复本机备份')
     } catch {
       setNotice('恢复本机备份失败')
@@ -581,7 +728,17 @@ function App() {
         throw new Error('Invalid state file')
       }
       await makeLocalBackup('导入文件前自动备份')
-      setState(migrateAppState(importedState))
+      const migratedState = migrateAppState(importedState)
+      setState(
+        addMemoryEventToState(migratedState, {
+          type: 'imported',
+          actor: 'user',
+          title: '导入数据',
+          detail: '从 JSON 文件导入应用数据，导入前已自动备份当前状态。',
+          memoryIds: migratedState.memories.slice(0, 8).map((memory) => memory.id),
+          characterId: character.id,
+        }),
+      )
       setNotice('数据已导入')
     } catch {
       setNotice('导入失败，文件格式或本机备份没有通过')
@@ -597,7 +754,16 @@ function App() {
     try {
       await makeLocalBackup('重置前自动备份')
       const nextState = await resetAppState()
-      setState(nextState)
+      setState(
+        addMemoryEventToState(nextState, {
+          type: 'reset',
+          actor: 'user',
+          title: '重置应用',
+          detail: '回到初始状态，重置前已自动备份当前状态。',
+          memoryIds: nextState.memories.map((memory) => memory.id),
+          characterId: character.id,
+        }),
+      )
       setNotice('已回到初始状态，本机旧数据已备份')
     } catch {
       setNotice('重置失败，本机备份没有通过')
@@ -663,7 +829,17 @@ function App() {
       }
 
       await makeLocalBackup('从云端读取前自动备份')
-      setState(migrateAppState(snapshot.state))
+      const pulledState = migrateAppState(snapshot.state)
+      setState(
+        addMemoryEventToState(pulledState, {
+          type: 'cloud_pulled',
+          actor: 'user',
+          title: '读取云端数据',
+          detail: `从云端读取 v${snapshot.revision}，读取前已自动备份本机状态。`,
+          memoryIds: pulledState.memories.slice(0, 8).map((memory) => memory.id),
+          characterId: character.id,
+        }),
+      )
       setCloudMeta({
         hasState: true,
         revision: snapshot.revision,
@@ -684,7 +860,16 @@ function App() {
     try {
       setCloudBusy('pushing')
       setCloudStatus('正在保存到云端...')
-      const result = await pushCloudState(applyTrashRetention(state), cloudToken)
+      const stateToPush = addMemoryEventToState(applyTrashRetention(state), {
+        type: 'cloud_pushed',
+        actor: 'user',
+        title: '保存到云端',
+        detail: '把当前本机状态保存到云端快照。',
+        memoryIds: state.memories.slice(0, 8).map((memory) => memory.id),
+        characterId: character.id,
+      })
+      const result = await pushCloudState(stateToPush, cloudToken)
+      setState(stateToPush)
       setCloudMeta({
         hasState: true,
         revision: result.revision,
@@ -708,6 +893,16 @@ function App() {
       setCloudStatus('正在创建云端备份...')
       const backups = await createCloudBackup(cloudToken)
       setCloudBackups(backups)
+      setState((currentState) =>
+        addMemoryEventToState(currentState, {
+          type: 'cloud_backup_created',
+          actor: 'user',
+          title: '创建云端备份',
+          detail: `云端保险箱现有 ${backups.length} 份备份。`,
+          memoryIds: [],
+          characterId: character.id,
+        }),
+      )
       setCloudStatus('云端备份已创建')
       setNotice('云端备份已创建')
     } catch (error) {
@@ -770,6 +965,7 @@ function App() {
           activeConversationId={conversation.id}
           characters={state.characters}
           memoryConflicts={memoryConflicts}
+          memoryEvents={state.memoryEvents}
           memoryUsageLogs={state.memoryUsageLogs}
           memories={state.memories}
           onAddMemory={handleAddMemory}

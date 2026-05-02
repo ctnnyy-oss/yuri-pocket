@@ -954,6 +954,11 @@
   color: #9b2f3b;
 }
 
+.timeline-dot[data-kind='event'] {
+  background: rgba(255, 247, 231, 0.96);
+  color: #9c6a1c;
+}
+
 .timeline-title {
   display: flex;
   align-items: baseline;

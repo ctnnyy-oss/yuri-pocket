@@ -178,6 +178,39 @@ export interface MemoryUsageLog {
   createdAt: string
 }
 
+export type MemoryEventType =
+  | 'created'
+  | 'captured'
+  | 'confirmed'
+  | 'edited'
+  | 'organized'
+  | 'revision_restored'
+  | 'trashed'
+  | 'restored'
+  | 'permanently_deleted'
+  | 'trash_emptied'
+  | 'imported'
+  | 'reset'
+  | 'cloud_pushed'
+  | 'cloud_pulled'
+  | 'cloud_backup_created'
+  | 'local_backup_created'
+  | 'local_backup_restored'
+
+export type MemoryEventActor = 'user' | 'assistant' | 'system'
+
+export interface MemoryEvent {
+  id: string
+  type: MemoryEventType
+  actor: MemoryEventActor
+  title: string
+  detail: string
+  memoryIds: string[]
+  createdAt: string
+  characterId?: string
+  conversationId?: string
+}
+
 export type AccentTheme = 'sakura' | 'peach' | 'lavender' | 'mint'
 export type TrashRetentionMode = 'forever' | 'default' | 'custom'
 
@@ -204,6 +237,7 @@ export interface AppState {
   trash: AppTrash
   memoryTombstones: MemoryTombstone[]
   memoryUsageLogs: MemoryUsageLog[]
+  memoryEvents: MemoryEvent[]
   settings: AppSettings
 }
 

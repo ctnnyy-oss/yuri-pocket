@@ -3,7 +3,7 @@ import { normalizeMemories } from '../services/memoryEngine'
 import { normalizeTrashRetentionSettings } from '../services/trashRetention'
 import { createSeedState } from './seed'
 
-const currentStateVersion = 12
+const currentStateVersion = 13
 
 export function migrateAppState(state: AppState): AppState {
   const defaults = createSeedState()
@@ -24,6 +24,7 @@ export function migrateAppState(state: AppState): AppState {
     },
     memoryTombstones: Array.isArray(state.memoryTombstones) ? state.memoryTombstones : defaults.memoryTombstones,
     memoryUsageLogs: Array.isArray(state.memoryUsageLogs) ? state.memoryUsageLogs : defaults.memoryUsageLogs,
+    memoryEvents: Array.isArray(state.memoryEvents) ? state.memoryEvents : defaults.memoryEvents,
     settings: {
       ...defaults.settings,
       ...sourceSettings,

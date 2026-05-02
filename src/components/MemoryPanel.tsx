@@ -32,6 +32,7 @@ import type {
   LocalBackupSummary,
   LongTermMemory,
   MemoryConflict,
+  MemoryEvent,
   MemoryKind,
   MemoryLayer,
   MemoryMentionPolicy,
@@ -76,6 +77,7 @@ import type { AppView } from './CharacterRail'
 interface MemoryPanelProps {
   memories: LongTermMemory[]
   memoryConflicts: MemoryConflict[]
+  memoryEvents: MemoryEvent[]
   memoryUsageLogs: MemoryUsageLog[]
   worldNodes: WorldNode[]
   characters: CharacterCard[]
@@ -136,6 +138,7 @@ const memoryMentionPolicyOptions = Object.keys(memoryMentionPolicyLabels) as Mem
 export function MemoryPanel({
   memories,
   memoryConflicts,
+  memoryEvents,
   memoryUsageLogs,
   worldNodes,
   characters,
@@ -292,6 +295,7 @@ export function MemoryPanel({
             activeCharacterId={activeCharacterId}
             characters={characters}
             conflicts={memoryConflicts}
+            memoryEvents={memoryEvents}
             memories={memories}
             onEditMemory={startMemoryEdit}
             onOpenMemory={(memory) => setSelectedMemoryId(memory.id)}

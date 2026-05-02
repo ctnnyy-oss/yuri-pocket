@@ -1,6 +1,13 @@
 import { Activity, Clock3, Eye, FileWarning, History, ListChecks, Pencil, ShieldCheck, TimerReset } from 'lucide-react'
 import type { ReactNode } from 'react'
-import type { AppTrash, CharacterCard, LongTermMemory, MemoryConflict, MemoryUsageLog } from '../../domain/types'
+import type {
+  AppTrash,
+  CharacterCard,
+  LongTermMemory,
+  MemoryConflict,
+  MemoryEvent,
+  MemoryUsageLog,
+} from '../../domain/types'
 import {
   buildMemoryGuardianReport,
   type MemoryGuardianSeverity,
@@ -12,6 +19,7 @@ interface MemoryGuardianPanelProps {
   activeCharacterId: string
   characters: CharacterCard[]
   conflicts: MemoryConflict[]
+  memoryEvents: MemoryEvent[]
   memories: LongTermMemory[]
   trash: AppTrash
   usageLogs: MemoryUsageLog[]
@@ -25,6 +33,7 @@ const timelineKindLabels: Record<MemoryTimelineKind, string> = {
   candidate: '候选',
   created: '写入',
   deleted: '删除',
+  event: '事件',
   review: '复查',
   updated: '更新',
 }
@@ -33,6 +42,7 @@ export function MemoryGuardianPanel({
   activeCharacterId,
   characters,
   conflicts,
+  memoryEvents,
   memories,
   trash,
   usageLogs,
@@ -40,7 +50,7 @@ export function MemoryGuardianPanel({
   onOpenMemory,
   onUpdateMemory,
 }: MemoryGuardianPanelProps) {
-  const report = buildMemoryGuardianReport({ memories, conflicts, usageLogs, trash })
+  const report = buildMemoryGuardianReport({ memories, conflicts, memoryEvents, usageLogs, trash })
   const memoryById = new Map(memories.map((memory) => [memory.id, memory]))
   const currentCharacter = characters.find((character) => character.id === activeCharacterId)
 
@@ -126,7 +136,7 @@ export function MemoryGuardianPanel({
         </div>
 
         <div className="guardian-column">
-          <GuardianColumnTitle icon={<History size={15} />} title="记忆时间线" />
+          <GuardianColumnTitle icon={<History size={15} />} title="记忆事件账本" />
           {report.timelineItems.length === 0 ? (
             <p className="guardian-empty">还没有记忆活动。</p>
           ) : (
