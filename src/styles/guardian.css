@@ -51,18 +51,18 @@
 }
 
 .guardian-score[data-state='good'] {
-  border-color: rgba(111, 165, 146, 0.3);
-  background: linear-gradient(135deg, rgba(232, 245, 239, 0.85), rgba(224, 240, 232, 0.7));
+  border-color: rgba(168, 220, 198, 0.4);
+  background: var(--mint-soft);
 }
 
 .guardian-score[data-state='fair'] {
-  border-color: rgba(229, 183, 198, 0.5);
-  background: linear-gradient(135deg, rgba(255, 249, 251, 0.85), rgba(255, 244, 248, 0.7));
+  border-color: rgba(255, 213, 230, 0.6);
+  background: var(--rose-soft);
 }
 
 .guardian-score[data-state='weak'] {
-  border-color: rgba(188, 84, 98, 0.25);
-  background: linear-gradient(135deg, rgba(255, 244, 246, 0.9), rgba(255, 238, 242, 0.8));
+  border-color: rgba(201, 124, 155, 0.32);
+  background: linear-gradient(135deg, rgba(255, 232, 240, 0.92), rgba(255, 220, 232, 0.82));
 }
 
 .guardian-score span {
@@ -183,14 +183,16 @@
 }
 
 .guardian-review.danger {
-  border-color: rgba(188, 84, 98, 0.22);
-  border-left: 3px solid rgba(188, 84, 98, 0.5);
-  background: rgba(255, 247, 249, 0.85);
+  border-color: rgba(201, 124, 155, 0.28);
+  border-left: 3px solid var(--rose-hot);
+  background:
+    radial-gradient(220px 120px at 12% 0%, rgba(255, 255, 255, 0.74), transparent 72%),
+    rgba(255, 244, 248, 0.86);
 }
 
 .guardian-review.warning {
-  border-color: rgba(229, 183, 198, 0.5);
-  border-left: 3px solid rgba(229, 183, 198, 0.7);
+  border-color: rgba(255, 213, 230, 0.6);
+  border-left: 3px solid var(--rose-hover);
 }
 
 .guardian-review-head {
@@ -200,14 +202,16 @@
 
 .guardian-review-head span {
   width: fit-content;
+  border: 1px solid rgba(255, 255, 255, 0.66);
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, rgba(255, 239, 244, 0.95), rgba(255, 230, 238, 0.85));
-  color: #98566f;
+  background: linear-gradient(135deg, rgba(255, 234, 244, 0.85), rgba(255, 220, 234, 0.75));
+  color: var(--rose-deep);
   font-size: 10px;
   font-weight: 800;
-  padding: 2px 8px;
+  padding: 3px 10px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .guardian-review-head strong,
@@ -279,26 +283,28 @@
 .timeline-dot {
   width: 28px;
   height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
   border-radius: var(--radius-full);
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, rgba(255, 239, 244, 0.9), rgba(255, 230, 238, 0.8));
+  background: linear-gradient(135deg, rgba(255, 234, 244, 0.85), rgba(255, 220, 234, 0.74));
   color: var(--rose-strong);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .timeline-dot[data-kind='called'] {
-  background: linear-gradient(135deg, rgba(232, 244, 238, 0.9), rgba(224, 240, 232, 0.8));
-  color: #547366;
+  background: var(--mint-soft);
+  color: #5d8d7c;
 }
 
 .timeline-dot[data-kind='deleted'] {
-  background: linear-gradient(135deg, rgba(255, 244, 246, 0.9), rgba(255, 238, 242, 0.8));
-  color: #9b2f3b;
+  background: linear-gradient(135deg, rgba(255, 232, 240, 0.94), rgba(255, 220, 232, 0.84));
+  color: #b25268;
 }
 
 .timeline-dot[data-kind='event'] {
-  background: linear-gradient(135deg, rgba(255, 247, 231, 0.9), rgba(255, 242, 220, 0.8));
-  color: #9c6a1c;
+  background: var(--butter-soft);
+  color: #b08648;
 }
 
 .timeline-title {
@@ -380,9 +386,9 @@
 }
 
 .diagnostic-item.warning {
-  border-color: rgba(229, 183, 198, 0.5);
-  border-left: 3px solid rgba(229, 183, 198, 0.7);
-  background: rgba(255, 249, 251, 0.8);
+  border-color: rgba(255, 213, 230, 0.6);
+  border-left: 3px solid var(--rose-hover);
+  background: rgba(255, 246, 250, 0.82);
 }
 
 .diagnostic-item strong {
@@ -437,8 +443,8 @@
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 250, 253, 0.56));
   box-shadow:
-    0 18px 48px rgba(155, 82, 112, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+    0 18px 48px rgba(228, 152, 188, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.84);
   margin-bottom: 16px;
   padding: 18px;
 }
@@ -482,7 +488,7 @@
   min-height: 82px;
   border: 0;
   border-radius: 0;
-  border-right: 1px solid rgba(184, 117, 145, 0.1);
+  border-right: 1px solid rgba(255, 171, 204, 0.16);
   background: transparent;
   box-shadow: none;
   padding: 12px 14px;
@@ -500,7 +506,7 @@
 }
 
 .guardian-lane span {
-  color: rgba(136, 65, 87, 0.68);
+  color: rgba(160, 118, 134, 0.78);
   font-size: 11px;
   font-weight: 650;
   text-transform: none;
@@ -512,7 +518,7 @@
 }
 
 .guardian-lane small {
-  color: rgba(116, 70, 90, 0.76);
+  color: var(--ink-secondary);
   font-size: 11px;
 }
 
@@ -539,7 +545,7 @@
 
 .guardian-column-title {
   padding: 0 2px;
-  color: rgba(116, 70, 90, 0.86);
+  color: var(--ink-secondary);
   font-size: 12px;
 }
 
@@ -555,7 +561,7 @@
 .guardian-timeline-item {
   border: 0;
   border-radius: 0;
-  border-bottom: 1px solid rgba(184, 117, 145, 0.1);
+  border-bottom: 1px solid rgba(255, 171, 204, 0.16);
   background: transparent;
   box-shadow: none;
   padding: 13px 14px;
@@ -585,7 +591,7 @@
 }
 
 .timeline-title span {
-  color: rgba(136, 65, 87, 0.78);
+  color: rgba(160, 118, 134, 0.86);
   font-size: 10px;
   text-transform: none;
 }
@@ -595,7 +601,7 @@
   display: block;
   margin: 0;
   padding: 10px 14px;
-  color: rgba(116, 70, 90, 0.66);
+  color: var(--muted);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -609,6 +615,6 @@
   border-color: rgba(255, 255, 255, 0.68);
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.58);
-  box-shadow: 0 16px 42px rgba(155, 82, 112, 0.045);
+  box-shadow: 0 16px 42px rgba(228, 152, 188, 0.08);
   padding: 18px;
 }

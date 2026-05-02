@@ -434,9 +434,10 @@
 @media (max-width: 760px) {
   .app-shell {
     background:
-      radial-gradient(420px 360px at -20% -8%, rgba(255, 190, 222, 0.72), transparent 68%),
-      radial-gradient(360px 320px at 112% 2%, rgba(216, 244, 255, 0.28), transparent 64%),
-      linear-gradient(180deg, #fff5fa 0%, #fff0f6 58%, #fff8fb 100%);
+      radial-gradient(420px 360px at -20% -8%, rgba(255, 196, 220, 0.66), transparent 68%),
+      radial-gradient(360px 320px at 112% 2%, rgba(213, 235, 250, 0.32), transparent 64%),
+      radial-gradient(420px 320px at 60% 100%, rgba(255, 196, 220, 0.4), transparent 70%),
+      linear-gradient(180deg, #fff7fb 0%, #fff2f8 58%, #fffafc 100%);
   }
 
   .app-shell::before {
@@ -470,15 +471,17 @@
   }
 
   .mobile-nav {
-    left: 8px;
-    right: 8px;
-    bottom: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.68);
-    border-radius: 22px;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    border-radius: 24px;
     background:
-      radial-gradient(220px 90px at 15% 0%, rgba(255, 255, 255, 0.76), transparent 72%),
-      rgba(255, 248, 252, 0.72);
-    box-shadow: 0 18px 48px rgba(160, 76, 112, 0.16);
+      radial-gradient(220px 90px at 15% 0%, rgba(255, 255, 255, 0.86), transparent 72%),
+      rgba(255, 250, 252, 0.78);
+    box-shadow:
+      0 22px 54px rgba(228, 152, 188, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
   }
 
   .mobile-nav-item {
@@ -488,14 +491,17 @@
   .mobile-nav-item.active {
     color: var(--rose-strong);
     background:
-      radial-gradient(90px 58px at 30% 0%, rgba(255, 255, 255, 0.72), transparent 70%),
-      rgba(255, 232, 243, 0.78);
+      radial-gradient(90px 58px at 30% 0%, rgba(255, 255, 255, 0.82), transparent 70%),
+      rgba(255, 220, 234, 0.74);
   }
 
   .mobile-nav-item.active::before {
     top: 3px;
     height: 3px;
+    width: 24px;
+    border-radius: 0 0 var(--radius-full) var(--radius-full);
     background: var(--accent-gradient);
+    box-shadow: 0 4px 10px rgba(255, 152, 192, 0.34);
   }
 
   .composer {
@@ -615,7 +621,7 @@
   .guardian-lane:nth-child(odd),
   .model-status-grid span:nth-child(odd),
   .cloud-meta-strip span:nth-child(odd) {
-    border-right: 1px solid rgba(184, 117, 145, 0.1);
+    border-right: 1px solid rgba(255, 171, 204, 0.16);
   }
 
   .insight-stat,
@@ -623,7 +629,7 @@
   .guardian-lane,
   .model-status-grid span,
   .cloud-meta-strip span {
-    border-bottom: 1px solid rgba(184, 117, 145, 0.1);
+    border-bottom: 1px solid rgba(255, 171, 204, 0.16);
   }
 
   .insight-columns,

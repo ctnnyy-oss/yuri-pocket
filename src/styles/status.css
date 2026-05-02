@@ -1,23 +1,31 @@
 /* ═══════════════════════════════════════════════════
-   百合小窝 — Status Pill
+   百合小窝 — Status Pill & Cross-app surfaces
    ═══════════════════════════════════════════════════ */
 
 /* ── Status Pill ── */
 
 .status-pill {
   position: fixed;
-  right: 20px;
-  bottom: 18px;
-  background: linear-gradient(135deg, rgba(55, 38, 48, 0.92), rgba(70, 50, 62, 0.88));
+  right: 22px;
+  bottom: 22px;
+  z-index: 30;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  background:
+    radial-gradient(120px 70px at 16% 0%, rgba(255, 255, 255, 0.84), transparent 72%),
+    linear-gradient(135deg, rgba(255, 171, 204, 0.92), rgba(255, 142, 183, 0.94));
   color: #fff;
   border-radius: var(--radius-full);
-  padding: var(--space-sm) var(--space-xl);
+  padding: 9px 18px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.3px;
-  box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(12px);
+  box-shadow:
+    0 22px 52px rgba(255, 152, 192, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
   animation: pill-in var(--duration-slow) var(--ease-out) both;
+  text-shadow: 0 1px 2px rgba(176, 99, 130, 0.22);
 }
 
 @keyframes pill-in {
@@ -27,7 +35,8 @@
   }
 }
 
-/* Cross-app premium surfaces */
+/* ── Cross-app premium surfaces ── */
+
 :where(
   .memory-insight,
   .space-overview,
@@ -54,14 +63,14 @@
   .archive-timeline article,
   .scope-editor
 ) {
-  border-color: rgba(255, 255, 255, 0.64) !important;
+  border-color: rgba(255, 255, 255, 0.7) !important;
   background:
-    radial-gradient(260px 180px at 14% 0%, rgba(255, 255, 255, 0.72), transparent 72%),
-    radial-gradient(320px 220px at 96% 100%, rgba(255, 158, 197, 0.1), transparent 72%),
-    rgba(255, 255, 255, 0.38) !important;
+    radial-gradient(280px 200px at 14% 0%, rgba(255, 255, 255, 0.78), transparent 72%),
+    radial-gradient(340px 240px at 96% 100%, rgba(255, 192, 219, 0.12), transparent 72%),
+    rgba(255, 255, 255, 0.42) !important;
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(18px) saturate(1.18);
-  -webkit-backdrop-filter: blur(18px) saturate(1.18);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
 }
 
 :where(
@@ -77,7 +86,7 @@
   .archive-modal,
   .scope-editor
 ) {
-  border-radius: 24px !important;
+  border-radius: 26px !important;
 }
 
 :where(
@@ -100,11 +109,11 @@
   .archive-metric,
   .archive-timeline article
 ) {
-  border-color: rgba(255, 255, 255, 0.58) !important;
+  border-color: rgba(255, 255, 255, 0.62) !important;
   background:
-    radial-gradient(180px 110px at 16% 0%, rgba(255, 255, 255, 0.66), transparent 72%),
-    rgba(255, 255, 255, 0.34) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.34);
+    radial-gradient(180px 110px at 16% 0%, rgba(255, 255, 255, 0.7), transparent 72%),
+    rgba(255, 255, 255, 0.38) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 :where(
@@ -120,10 +129,10 @@
   .diagnostic-item,
   .archive-timeline article
 ):hover {
-  border-color: rgba(255, 255, 255, 0.82) !important;
+  border-color: rgba(255, 255, 255, 0.86) !important;
   background:
-    radial-gradient(200px 120px at 18% 0%, rgba(255, 255, 255, 0.82), transparent 72%),
-    rgba(255, 255, 255, 0.5) !important;
+    radial-gradient(200px 120px at 18% 0%, rgba(255, 255, 255, 0.86), transparent 72%),
+    rgba(255, 255, 255, 0.56) !important;
   box-shadow: var(--shadow-md);
 }
 
@@ -149,10 +158,10 @@
   .edit-form textarea,
   .number-control input
 ) {
-  border-color: rgba(255, 255, 255, 0.68) !important;
+  border-color: rgba(255, 255, 255, 0.72) !important;
   border-radius: 16px !important;
-  background: rgba(255, 255, 255, 0.52) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.58) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.56);
 }
 
 :where(
@@ -163,10 +172,10 @@
   .edit-form textarea,
   .number-control input
 ):focus {
-  border-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.94) !important;
   box-shadow:
-    0 0 0 3px rgba(255, 122, 168, 0.15),
-    0 14px 34px rgba(255, 95, 145, 0.1) !important;
+    0 0 0 3px var(--rose-glow),
+    0 14px 34px rgba(255, 152, 192, 0.12) !important;
 }
 
 :where(
@@ -180,7 +189,7 @@
   .archive-timeline button,
   .retention-button
 ) {
-  border-color: rgba(255, 255, 255, 0.66) !important;
+  border-color: rgba(255, 255, 255, 0.7) !important;
   box-shadow: var(--shadow-xs);
 }
 
@@ -188,23 +197,14 @@
 .settings-actions button:first-child {
   background: var(--accent-gradient) !important;
   color: #fff !important;
-  box-shadow: 0 16px 38px rgba(255, 95, 145, 0.24) !important;
+  box-shadow: 0 16px 38px rgba(255, 152, 192, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.56) !important;
 }
 
 .quiet-action,
 .mini-action,
 .file-button,
 .settings-actions button {
-  background: rgba(255, 255, 255, 0.42) !important;
-}
-
-.status-pill {
-  border: 1px solid rgba(255, 255, 255, 0.7);
   background:
-    radial-gradient(90px 60px at 10% 0%, rgba(255, 255, 255, 0.72), transparent 70%),
-    rgba(82, 52, 65, 0.82);
-  color: #fff;
-  box-shadow: 0 18px 48px rgba(82, 52, 65, 0.24);
-  backdrop-filter: blur(18px) saturate(1.2);
-  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+    radial-gradient(140px 80px at 16% 0%, rgba(255, 255, 255, 0.74), transparent 72%),
+    rgba(255, 255, 255, 0.5) !important;
 }

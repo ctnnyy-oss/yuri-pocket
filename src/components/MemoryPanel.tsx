@@ -132,10 +132,10 @@ interface MemoryPanelProps {
 }
 
 const accentThemes: Array<{ id: AccentTheme; label: string; color: string }> = [
-  { id: 'sakura', label: '雾粉', color: '#d97798' },
-  { id: 'peach', label: '蜜桃', color: '#df8a78' },
-  { id: 'lavender', label: '淡紫', color: '#a88ad8' },
-  { id: 'mint', label: '薄荷', color: '#74a695' },
+  { id: 'sakura', label: '樱花粉', color: '#ffabcc' },
+  { id: 'peach', label: '蜜桃奶', color: '#ffb6a0' },
+  { id: 'lavender', label: '奶油紫', color: '#d4baff' },
+  { id: 'mint', label: '薄荷奶', color: '#a8dcc6' },
 ]
 
 const memoryKindOptions = Object.keys(memoryKindLabels) as MemoryKind[]
