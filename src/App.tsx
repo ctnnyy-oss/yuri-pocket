@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { CharacterRail, type AppView } from './components/CharacterRail'
 import { ChatPhone } from './components/ChatPhone'
+import { MobileNav } from './components/MobileNav'
 import { MemoryPanel } from './components/MemoryPanel'
 import { brand } from './config/brand'
 import {
@@ -1060,6 +1061,7 @@ function App() {
         />
       )}
 
+      <MobileNav activeView={activeView} onViewChange={navigateView} />
       <div className="status-pill">{notice}</div>
     </div>
   )
