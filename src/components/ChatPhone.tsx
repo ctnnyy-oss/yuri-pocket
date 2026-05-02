@@ -22,6 +22,7 @@ interface ChatPhoneProps {
   isSending: boolean
   settings: AppSettings
   onDraftChange: (value: string) => void
+  onCoolDownMemory: (memoryId: string) => void
   onSend: () => void
   onSettingsClick: () => void
 }
@@ -36,6 +37,7 @@ export function ChatPhone({
   isSending,
   settings,
   onDraftChange,
+  onCoolDownMemory,
   onSend,
   onSettingsClick,
 }: ChatPhoneProps) {
@@ -118,6 +120,7 @@ export function ChatPhone({
               key={message.id}
               memoryTrace={message.role === 'assistant' ? traceByAssistantMessageId.get(message.id) : undefined}
               message={message}
+              onCoolDownMemory={onCoolDownMemory}
             />
           ))}
           {isSending && (

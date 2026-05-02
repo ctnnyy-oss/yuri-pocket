@@ -511,6 +511,25 @@
   -webkit-line-clamp: 2;
 }
 
+.trace-memory-item button {
+  margin-top: 7px;
+  border: 1px solid rgba(217, 119, 152, 0.28);
+  border-radius: 8px;
+  background: rgba(255, 240, 245, 0.72);
+  color: var(--rose-strong);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 8px;
+}
+
+.trace-memory-item button:disabled {
+  background: rgba(244, 238, 241, 0.78);
+  color: #9d8b93;
+  cursor: default;
+}
+
 .pending {
   flex-direction: row;
 }

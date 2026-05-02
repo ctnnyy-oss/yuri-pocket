@@ -6,6 +6,7 @@ export interface MessageMemoryTraceItem {
   title: string
   meta: string
   body: string
+  isCoolingDown: boolean
 }
 
 export interface MessageMemoryTrace {
@@ -28,8 +29,11 @@ export function buildMessageMemoryTrace(
     .map((memory) => ({
       id: memory.id,
       title: memory.title,
-      meta: `${memoryKindLabels[memory.kind]} / ${memoryLayerLabels[memory.layer]} / 权重 ${memory.priority}`,
+      meta: `${memoryKindLabels[memory.kind]} / ${memoryLayerLabels[memory.layer]} / 权重 ${memory.priority}${
+        isMemoryCoolingDown(memory.cooldownUntil) ? ' / 冷却中' : ''
+      }`,
       body: memory.body,
+      isCoolingDown: isMemoryCoolingDown(memory.cooldownUntil),
     }))
 
   return {
@@ -43,4 +47,10 @@ export function buildMessageMemoryTrace(
 
 function cleanContextTitle(title: string): string {
   return title.replace('长期记忆：', '').replace('世界树：', '')
+}
+
+function isMemoryCoolingDown(cooldownUntil?: string): boolean {
+  if (!cooldownUntil) return false
+  const time = new Date(cooldownUntil).getTime()
+  return !Number.isNaN(time) && time > Date.now()
 }

@@ -4,13 +4,14 @@ import type { MessageMemoryTrace } from '../services/memoryTrace'
 interface MessageBubbleProps {
   message: ChatMessage
   memoryTrace?: MessageMemoryTrace
+  onCoolDownMemory?: (memoryId: string) => void
 }
 
-export function MessageBubble({ memoryTrace, message }: MessageBubbleProps) {
+export function MessageBubble({ memoryTrace, message, onCoolDownMemory }: MessageBubbleProps) {
   return (
     <article className={`message message-${message.role}`}>
       <p>{message.content}</p>
-      {memoryTrace && <MemoryTrace trace={memoryTrace} />}
+      {memoryTrace && <MemoryTrace onCoolDownMemory={onCoolDownMemory} trace={memoryTrace} />}
       <time dateTime={message.createdAt}>
         {new Intl.DateTimeFormat('zh-CN', {
           hour: '2-digit',
@@ -21,7 +22,13 @@ export function MessageBubble({ memoryTrace, message }: MessageBubbleProps) {
   )
 }
 
-function MemoryTrace({ trace }: { trace: MessageMemoryTrace }) {
+function MemoryTrace({
+  onCoolDownMemory,
+  trace,
+}: {
+  onCoolDownMemory?: (memoryId: string) => void
+  trace: MessageMemoryTrace
+}) {
   const usedMemoryText = trace.memoryCount > 0 ? `调用 ${trace.memoryCount} 条记忆` : '只用最近对话'
 
   return (
@@ -39,6 +46,11 @@ function MemoryTrace({ trace }: { trace: MessageMemoryTrace }) {
               <strong>{item.title}</strong>
               <span>{item.meta}</span>
               <p>{item.body}</p>
+              {onCoolDownMemory && (
+                <button disabled={item.isCoolingDown} onClick={() => onCoolDownMemory(item.id)} type="button">
+                  {item.isCoolingDown ? '已冷却' : '冷却7天'}
+                </button>
+              )}
             </div>
           ))}
           {trace.missingCount > 0 && <small>另有 {trace.missingCount} 条记忆已被删除或归档。</small>}

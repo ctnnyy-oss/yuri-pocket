@@ -196,6 +196,7 @@ export type MemoryEventType =
   | 'cloud_backup_created'
   | 'local_backup_created'
   | 'local_backup_restored'
+  | 'usage_feedback'
 
 export type MemoryEventActor = 'user' | 'assistant' | 'system'
 

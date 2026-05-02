@@ -419,6 +419,42 @@ function App() {
     setNotice('记忆已修改')
   }
 
+  function handleCoolDownMemoryFromChat(memoryId: string) {
+    setState((currentState) => {
+      const memory = currentState.memories.find((item) => item.id === memoryId)
+      if (!memory) return currentState
+
+      const cooldownUntil = new Date()
+      cooldownUntil.setDate(cooldownUntil.getDate() + 7)
+      const updatedMemory = updateMemoryWithRevision(
+        memory,
+        {
+          ...memory,
+          cooldownUntil: cooldownUntil.toISOString(),
+          userEdited: true,
+        },
+        '聊天记忆透镜冷却',
+      )
+
+      return addMemoryEventToState(
+        {
+          ...currentState,
+          memories: currentState.memories.map((item) => (item.id === memoryId ? updatedMemory : item)),
+        },
+        {
+          type: 'usage_feedback',
+          actor: 'user',
+          title: memory.title,
+          detail: '妹妹在聊天记忆透镜中让这条记忆冷却 7 天，避免继续误用。',
+          memoryIds: [memory.id],
+          characterId: character.id,
+          conversationId: conversation.id,
+        },
+      )
+    })
+    setNotice('这条记忆已冷却 7 天')
+  }
+
   function handleOrganizeMemories() {
     const report = consolidateMemoryGarden(state.memories)
     setState((currentState) =>
@@ -965,6 +1001,7 @@ function App() {
           memories={state.memories}
           memoryUsageLogs={state.memoryUsageLogs}
           messages={conversation.messages}
+          onCoolDownMemory={handleCoolDownMemoryFromChat}
           onDraftChange={setDraft}
           onSend={handleSend}
           onSettingsClick={() => navigateView('settings')}

@@ -70,6 +70,8 @@ export function getMemoryEventTypeLabel(type: MemoryEventType): string {
       return '本机备份'
     case 'local_backup_restored':
       return '本机恢复'
+    case 'usage_feedback':
+      return '反馈'
     default:
       return '事件'
   }
