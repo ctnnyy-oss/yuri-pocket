@@ -1172,7 +1172,6 @@ function App() {
           onDraftChange={setDraft}
           onMemoryFeedback={handleMemoryFeedbackFromChat}
           onSend={handleSend}
-          onSettingsClick={() => navigateView('settings')}
           settings={state.settings}
         />
       ) : (

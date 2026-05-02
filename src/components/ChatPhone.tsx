@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useRef } from 'react'
-import { Send, SlidersHorizontal, Sparkles } from 'lucide-react'
+import { Send, Sparkles } from 'lucide-react'
 import type {
   AppSettings,
   CharacterCard,
@@ -25,7 +25,6 @@ interface ChatPhoneProps {
   onDraftChange: (value: string) => void
   onMemoryFeedback: (memoryId: string, action: MemoryFeedbackAction) => void
   onSend: () => void
-  onSettingsClick: () => void
 }
 
 export function ChatPhone({
@@ -40,7 +39,6 @@ export function ChatPhone({
   onDraftChange,
   onMemoryFeedback,
   onSend,
-  onSettingsClick,
 }: ChatPhoneProps) {
   const messageListRef = useRef<HTMLDivElement>(null)
   const memoryBlocks = contextBlocks.filter((block) => block.memoryIds?.length)
@@ -84,34 +82,22 @@ export function ChatPhone({
             <span>{character.subtitle}</span>
           </div>
         </div>
-        <button aria-label="模型设置" className="icon-button" onClick={onSettingsClick} type="button">
-          <SlidersHorizontal size={19} />
-        </button>
       </header>
 
-      <div className="context-row">
-        {contextBlocks.length === 0 && <span>短期对话</span>}
-        {contextBlocks.slice(0, 5).map((block, index) => (
-          <span key={`${block.title}-${index}`}>{block.title.replace('长期记忆：', '').replace('世界树：', '')}</span>
-        ))}
-      </div>
-
-      <section className="memory-lens" aria-label="本轮记忆调用">
-        <div className="memory-lens-title">
-          <Sparkles size={15} />
-          <strong>本轮记忆</strong>
-          <span>{memoryCount > 0 ? `${memoryCount} 条长期记忆待调用` : '只使用最近对话'}</span>
+      <section className="chat-context-strip" aria-label="本轮上下文和记忆">
+        <div className="context-row">
+          {contextBlocks.length === 0 && <span>短期对话</span>}
+          {contextBlocks.slice(0, 4).map((block, index) => (
+            <span key={`${block.title}-${index}`}>
+              {block.title.replace('长期记忆：', '').replace('世界树：', '')}
+            </span>
+          ))}
         </div>
-        {memoryBlocks.length > 0 && (
-          <div className="memory-lens-list">
-            {memoryBlocks.slice(0, 4).map((block) => (
-              <div className="memory-lens-item" key={block.title}>
-                <strong>{block.title}</strong>
-                <span>{block.reason ?? '按当前角色和话题筛选'}</span>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="memory-lens-title compact-memory-status">
+          <Sparkles size={15} />
+          <strong>记忆</strong>
+          <span>{memoryCount > 0 ? `${memoryCount} 条待调用` : '最近对话'}</span>
+        </div>
       </section>
 
       <div className="message-list" ref={messageListRef}>

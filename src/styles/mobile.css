@@ -499,3 +499,45 @@
     padding-bottom: calc(64px + 68px);
   }
 }
+
+/* QQ-like compact chat top */
+@media (max-width: 760px) {
+  .chat-workspace {
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+  }
+
+  .chat-context-strip {
+    display: none;
+  }
+
+  .workspace-header {
+    min-height: 58px;
+    padding: 8px 14px;
+    border-bottom-color: rgba(255, 255, 255, 0.34);
+  }
+
+  .phone-contact {
+    gap: 10px;
+  }
+
+  .phone-contact .avatar.large {
+    width: 40px;
+    height: 40px;
+    border-radius: 15px;
+    font-size: 16px;
+  }
+
+  .phone-contact strong {
+    font-size: 17px;
+    line-height: 1.2;
+  }
+
+  .phone-contact span {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .message-list {
+    padding-top: 14px;
+  }
+}
