@@ -260,7 +260,7 @@ export function createSeedState(): AppState {
     memoryUsageLogs: [],
     memoryEvents: [],
     settings: {
-      model: 'deepseek/deepseek-v4-pro-free',
+      model: 'deepseek-v4-flash',
       modelProfileId: '',
       temperature: 0.8,
       maxContextMessages: 18,

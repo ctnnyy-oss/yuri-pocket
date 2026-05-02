@@ -26,11 +26,19 @@ export interface ModelProfileTestResult {
 export const modelProviderPresets: ModelProviderPreset[] = [
   {
     id: 'yop-free',
-    label: 'YOP 中转 / DeepSeek Free',
-    description: '妹妹当前默认路线，适合先保留免费模型。',
+    label: 'YOP 中转 / DeepSeek Flash',
+    description: '当前已验证可用的不带 Go/ 的 DeepSeek 路线，适合先作为默认模型。',
     kind: 'openai-compatible',
     baseUrl: 'https://api.yop.mom/v1',
-    model: 'deepseek/deepseek-v4-pro-free',
+    model: 'deepseek-v4-flash',
+  },
+  {
+    id: 'yop-pro',
+    label: 'YOP 中转 / DeepSeek Pro',
+    description: '已验证可用的不带 Go/ 的 Pro 路线，妹妹确认成本后再手动启用。',
+    kind: 'openai-compatible',
+    baseUrl: 'https://api.yop.mom/v1',
+    model: 'deepseek-v4-pro',
   },
   {
     id: 'openai',

@@ -28,7 +28,7 @@ export function migrateAppState(state: AppState): AppState {
     settings: {
       ...defaults.settings,
       ...sourceSettings,
-      model: sourceSettings.model === 'gpt-5.5' ? 'deepseek/deepseek-v4-pro-free' : sourceSettings.model,
+      model: normalizeDefaultModel(sourceSettings.model),
       modelProfileId: sourceSettings.modelProfileId || defaults.settings.modelProfileId,
       maxOutputTokens: clampNumber(sourceSettings.maxOutputTokens, 512, 32768, defaults.settings.maxOutputTokens),
     },
@@ -46,6 +46,11 @@ function mergeMissingSeedMemories(memories: LongTermMemory[], seedMemories: Long
   const existingIds = new Set(memories.map((memory) => memory.id))
   const missingSeeds = normalizeMemories(seedMemories).filter((memory) => !existingIds.has(memory.id))
   return [...missingSeeds, ...memories]
+}
+
+function normalizeDefaultModel(model: string | undefined): string {
+  if (!model || model === 'gpt-5.5' || model === 'deepseek/deepseek-v4-pro-free') return 'deepseek-v4-flash'
+  return model
 }
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {

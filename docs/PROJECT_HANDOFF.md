@@ -48,6 +48,7 @@
 - 聊天请求已携带云端口令；当服务器配置了密钥或模型保险箱时，未授权的公开请求会被拒绝，避免 GitHub Pages 公开页面消耗服务器密钥。
 - 模型错误提示已做一轮中文化：能把 invalid_model、密钥错误、额度限制、上游 5xx 等情况转成可操作提示。
 - 2026-05-02 追加修正：保存过云端口令的设备会自动恢复连接；未连接时保存/测试模型和聊天会主动提示输入口令，不再只显示灰色按钮。
+- 2026-05-02 线上排查发现 YOP 旧模型 `deepseek/deepseek-v4-pro-free` 返回“无可用渠道”，已把默认模型切到实测可用的 `deepseek-v4-flash`；`deepseek-v4-pro` 也可用，但不要默认切到妹妹曾经明确想避免的 `Go/deepseek-v4-pro`。
 - 旧 AstrBot / NapCat 服务已经从服务器清理掉，释放资源。
 - GitHub 已经作为版本回溯和部署入口。
 
@@ -100,7 +101,7 @@ GitHub 仓库：
 - `YURI_NEST_DB_PATH=/opt/yuri-nest/data/yuri-nest.sqlite`
 - `AI_BASE_URL=https://api.yop.mom/v1`
 - `AI_API_KEY`
-- `AI_MODEL=deepseek/deepseek-v4-pro-free`
+- `AI_MODEL=deepseek-v4-flash`
 - `YURI_NEST_MODEL_SECRET`（可选但建议设置，用于加密服务器里保存的用户模型密钥；不设置时会退回使用同步口令派生密钥）
 
 可选备份配置：

@@ -528,7 +528,7 @@ function getServerEnvProfileSummary() {
     name: '服务器默认配置',
     kind: 'openai-compatible',
     baseUrl: getBaseUrl(),
-    model: process.env.AI_MODEL || process.env.OPENAI_MODEL || '由页面模型栏决定',
+    model: process.env.AI_MODEL || process.env.OPENAI_MODEL || 'deepseek-v4-flash',
     hasApiKey: hasApiKey(),
     enabled: true,
     isDefault: !readDefaultStoredModelProfile(),
@@ -749,7 +749,12 @@ function getBaseUrl() {
 }
 
 function getModel(settings) {
-  return settings?.model || process.env.AI_MODEL || process.env.OPENAI_MODEL || 'gpt-5.5'
+  return normalizeModelAlias(settings?.model || process.env.AI_MODEL || process.env.OPENAI_MODEL || 'deepseek-v4-flash')
+}
+
+function normalizeModelAlias(model) {
+  if (!model || model === 'gpt-5.5' || model === 'deepseek/deepseek-v4-pro-free') return 'deepseek-v4-flash'
+  return model
 }
 
 function getMaxOutputTokens(settings) {

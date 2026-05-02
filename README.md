@@ -36,7 +36,7 @@ npm run dev
 ```env
 AI_API_KEY=你的密钥
 AI_BASE_URL=http://127.0.0.1:18788/v1
-AI_MODEL=deepseek/deepseek-v4-pro-free
+AI_MODEL=deepseek-v4-flash
 AI_MAX_TOKENS=4096
 AI_ESCAPE_UNICODE_CONTENT=true
 ```
