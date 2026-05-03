@@ -84,8 +84,10 @@ async function callOpenAICompatibleChat(bundle, settings, profile) {
     body: stringifyJsonForProvider({
       model: profile.model,
       messages,
-      temperature: clampNumber(settings?.temperature, 0, 2, 0.8),
+      temperature: clampNumber(settings?.temperature, 0, 2, 0.85),
       max_tokens: maxTokens,
+      frequency_penalty: clampNumber(settings?.frequencyPenalty, -2, 2, 0.3),
+      presence_penalty: clampNumber(settings?.presencePenalty, -2, 2, 0.2),
     }),
   })
 
@@ -174,7 +176,7 @@ async function callAnthropicChat(bundle, settings, profile) {
         role: message.role === 'assistant' ? 'assistant' : 'user',
         content: message.content,
       })),
-      temperature: clampNumber(settings?.temperature, 0, 1, 0.8),
+      temperature: clampNumber(settings?.temperature, 0, 1, 0.85),
       max_tokens: getMaxOutputTokens(settings),
     }),
   })
@@ -212,7 +214,7 @@ async function callGeminiChat(bundle, settings, profile) {
         parts: [{ text: message.content }],
       })),
       generationConfig: {
-        temperature: clampNumber(settings?.temperature, 0, 2, 0.8),
+        temperature: clampNumber(settings?.temperature, 0, 2, 0.85),
         maxOutputTokens: getMaxOutputTokens(settings),
       },
     }),
