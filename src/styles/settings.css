@@ -415,6 +415,44 @@
     0 2px 8px rgba(96, 68, 80, 0.18);
 }
 
+.custom-color-control {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--pink-50);
+  padding: 12px 16px;
+}
+
+.custom-color-control.active {
+  border-color: var(--pink-400);
+  box-shadow: inset 4px 0 0 var(--pink-500), var(--shadow-xs);
+}
+
+.custom-color-control strong,
+.custom-color-control small {
+  display: block;
+}
+
+.custom-color-control strong {
+  color: var(--ink);
+  font-size: 13.5px;
+}
+
+.custom-color-control input[type='color'] {
+  width: 52px;
+  height: 36px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  cursor: pointer;
+  padding: 4px;
+  box-shadow: var(--shadow-xs);
+}
+
 /* ── 保留时长选择 ── */
 
 .retention-button {
@@ -498,8 +536,29 @@
 /* ── 文件选择 / 危险按钮 ── */
 
 .file-button {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-full);
+  background: var(--panel);
+  color: var(--ink-secondary);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 14px;
   position: relative;
   overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  transition: all var(--duration-fast) var(--ease-smooth);
+}
+
+.file-button:hover {
+  background: var(--pink-50);
+  border-color: var(--line);
+  transform: translateY(-1px);
 }
 
 .file-button input {

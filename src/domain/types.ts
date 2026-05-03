@@ -252,8 +252,18 @@ export interface AgentRoom {
   updatedAt: string
 }
 
-export type AccentTheme = 'sakura' | 'peach' | 'lavender' | 'mint'
+export type AccentTheme =
+  | 'sakura'
+  | 'peach'
+  | 'lavender'
+  | 'mint'
+  | 'mono'
+  | 'berry'
+  | 'sky'
+  | 'midnight'
+  | 'custom'
 export type TrashRetentionMode = 'forever' | 'default' | 'custom'
+export type DataStorageMode = 'cloud' | 'local'
 export type ModelProviderKind = 'openai-compatible' | 'anthropic' | 'google-gemini'
 
 export interface ModelProfileSummary {
@@ -289,6 +299,8 @@ export interface AppSettings {
   enterToSend: boolean
   fontSize: number
   accentTheme: AccentTheme
+  customAccentColor: string
+  dataStorageMode: DataStorageMode
   trashRetentionMode: TrashRetentionMode
   trashRetentionDays: number
   autoMemoryEnabled: boolean

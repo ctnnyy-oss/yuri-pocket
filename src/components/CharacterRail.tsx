@@ -1,14 +1,13 @@
 import type { CSSProperties } from 'react'
 import {
+  ArchiveRestore,
   Bot,
   Brain,
-  ArchiveRestore,
   HeartHandshake,
   Images,
   MessageCircle,
   MessagesSquare,
   Palette,
-  Signal,
   SlidersHorizontal,
   Sprout,
   type LucideIcon,
@@ -22,8 +21,6 @@ interface CharacterRailProps {
   characters: CharacterCard[]
   activeCharacterId: string
   activeView: AppView
-  modelStatusLabel: string
-  modelStatusDetail: string
   onViewChange: (view: AppView) => void
   onSelect: (characterId: string) => void
 }
@@ -35,7 +32,7 @@ const navigationItems: Array<{ id: AppView; label: string; description: string; 
   { id: 'memory', label: '记忆', description: '长期记忆和摘要', icon: Brain },
   { id: 'world', label: '世界树', description: '世界观和触发词', icon: Sprout },
   { id: 'trash', label: '回收', description: '误删后找回', icon: ArchiveRestore },
-  { id: 'model', label: '模型', description: '模型与数据管理', icon: SlidersHorizontal },
+  { id: 'model', label: '模型', description: '模型接入管理', icon: SlidersHorizontal },
   { id: 'settings', label: '设置', description: '输入、字体和主题', icon: Palette },
 ]
 
@@ -43,8 +40,6 @@ export function CharacterRail({
   characters,
   activeCharacterId,
   activeView,
-  modelStatusLabel,
-  modelStatusDetail,
   onViewChange,
   onSelect,
 }: CharacterRailProps) {
@@ -107,19 +102,6 @@ export function CharacterRail({
           ))}
         </div>
       </section>
-
-      <section className="status-card">
-        <div className="mini-row">
-          <span className="mini-dot" aria-hidden="true" />
-          <span>
-            <strong>{modelStatusLabel}</strong>
-            <small>{modelStatusDetail}</small>
-          </span>
-        </div>
-        <Signal size={17} />
-      </section>
-
-      <p className="sidebar-footnote">桌面版采用固定工作台：左边切功能，右边专心使用。</p>
     </aside>
   )
 }

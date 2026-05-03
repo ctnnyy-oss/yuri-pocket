@@ -92,47 +92,367 @@ import {
 } from './services/modelProfiles'
 import { applyTrashRetention, normalizeTrashRetentionSettings } from './services/trashRetention'
 
-const themeVariables: Record<AccentTheme, CSSProperties> = {
+// 每套主题完整覆盖整个 token 集 —— "换主题" 是真的把整个 UI 换色
+const themeVariables: Record<Exclude<AccentTheme, 'custom'>, CSSProperties> = {
+  /* 樱花粉 (默认) ─ 回到上一版更轻、更透的色系 */
   sakura: {
+    '--pink-50': '#fff8fb',
+    '--pink-100': '#ffeaf3',
+    '--pink-150': '#ffe2ee',
+    '--pink-200': '#ffd8e9',
+    '--pink-300': '#ffc9df',
+    '--pink-400': '#ffabcc',
+    '--pink-500': '#ee92b9',
+    '--pink-600': '#c97c9b',
+    '--pink-700': '#9f5f7b',
+    '--ink': '#4a3340',
+    '--ink-secondary': '#68485a',
+    '--muted': '#9b7888',
+    '--muted-light': '#c9aebb',
     '--page-bg': '#fff8fb',
+    '--canvas': '#fff8fb',
+    '--panel': '#fffdfd',
+    '--panel-soft': '#fffafd',
     '--rose': '#ffabcc',
     '--rose-strong': '#c97c9b',
+    '--rose-deep': '#a96582',
     '--rose-soft': '#ffeaf3',
     '--rose-hover': '#ffc0db',
     '--rose-hot': '#ff8eb7',
+    '--rose-ghost': 'rgba(255, 171, 204, 0.14)',
+    '--rose-glow': 'rgba(228, 152, 188, 0.18)',
+    '--line': 'rgba(228, 152, 188, 0.24)',
+    '--line-soft': 'rgba(228, 152, 188, 0.14)',
     '--line-strong': 'rgba(255, 255, 255, 0.84)',
+    '--hairline': 'rgba(74, 51, 64, 0.06)',
     '--soft-shadow': '0 24px 72px rgba(228, 152, 188, 0.12)',
+    '--grad-pink': 'linear-gradient(135deg, #ffabcc 0%, #ff98c0 50%, #ee92b9 100%)',
+    '--grad-bubble': 'linear-gradient(135deg, #ffb4d1 0%, #f39abd 100%)',
+    '--grad-page':
+      'radial-gradient(900px 700px at 8% 6%, rgba(255, 188, 214, 0.34), transparent 65%), radial-gradient(800px 650px at 96% 12%, rgba(226, 205, 255, 0.20), transparent 68%), radial-gradient(900px 700px at 50% 100%, rgba(255, 196, 222, 0.24), transparent 70%), #fff8fb',
   } as CSSProperties,
+
+  /* 蜜桃奶 ─ 暖橙调 */
   peach: {
-    '--page-bg': '#fff4f0',
-    '--rose': '#ffb6a0',
-    '--rose-strong': '#c08474',
-    '--rose-soft': '#ffe5db',
-    '--rose-hover': '#ffcab8',
-    '--rose-hot': '#ff9a82',
-    '--line-strong': 'rgba(255, 255, 255, 0.82)',
-    '--soft-shadow': '0 24px 72px rgba(232, 168, 144, 0.12)',
+    '--pink-50': '#fff0e6',
+    '--pink-100': '#ffe0cc',
+    '--pink-150': '#ffcfb3',
+    '--pink-200': '#ffbd99',
+    '--pink-300': '#ffa87a',
+    '--pink-400': '#ff9159',
+    '--pink-500': '#ff7a38',
+    '--pink-600': '#e96020',
+    '--pink-700': '#c04810',
+    '--ink': '#4a2f24',
+    '--ink-secondary': '#6e493a',
+    '--muted': '#a17a64',
+    '--muted-light': '#c8a892',
+    '--page-bg': '#fff0e6',
+    '--canvas': '#fff5ed',
+    '--panel': '#ffffff',
+    '--panel-soft': '#fff8f3',
+    '--rose': '#ffa87a',
+    '--rose-strong': '#ff7a38',
+    '--rose-deep': '#e96020',
+    '--rose-soft': '#ffe0cc',
+    '--rose-hover': '#ffbd99',
+    '--rose-hot': '#ff7a38',
+    '--rose-ghost': 'rgba(255, 145, 89, 0.16)',
+    '--rose-glow': 'rgba(255, 145, 89, 0.32)',
+    '--line': 'rgba(255, 168, 122, 0.32)',
+    '--line-soft': 'rgba(255, 168, 122, 0.18)',
+    '--line-strong': 'rgba(255, 145, 89, 0.45)',
+    '--hairline': 'rgba(74, 47, 36, 0.06)',
+    '--grad-pink': 'linear-gradient(135deg, #ffa87a 0%, #ff9159 50%, #ff7a38 100%)',
+    '--grad-bubble': 'linear-gradient(135deg, #ff9d6b 0%, #ff8545 100%)',
+    '--grad-page':
+      'radial-gradient(900px 700px at 8% 6%, rgba(255, 168, 122, 0.55), transparent 65%), radial-gradient(800px 650px at 96% 12%, rgba(255, 210, 180, 0.35), transparent 68%), radial-gradient(900px 700px at 50% 100%, rgba(255, 190, 150, 0.45), transparent 70%), #fff0e6',
   } as CSSProperties,
+
+  /* 奶油紫 ─ 淡雅梦幻 */
   lavender: {
-    '--page-bg': '#faf5ff',
-    '--rose': '#d4baff',
-    '--rose-strong': '#9479c4',
-    '--rose-soft': '#f0e6ff',
-    '--rose-hover': '#e4cdff',
-    '--rose-hot': '#b893f0',
-    '--line-strong': 'rgba(255, 255, 255, 0.82)',
-    '--soft-shadow': '0 24px 72px rgba(184, 152, 224, 0.12)',
+    '--pink-50': '#f5ebff',
+    '--pink-100': '#ead6ff',
+    '--pink-150': '#ddc0ff',
+    '--pink-200': '#cfa8ff',
+    '--pink-300': '#bd8cff',
+    '--pink-400': '#a66ef5',
+    '--pink-500': '#8e52e0',
+    '--pink-600': '#7338c8',
+    '--pink-700': '#5a22a8',
+    '--ink': '#2f2440',
+    '--ink-secondary': '#4d3d63',
+    '--muted': '#7e6a93',
+    '--muted-light': '#aa97c0',
+    '--page-bg': '#f5ebff',
+    '--canvas': '#f9f0ff',
+    '--panel': '#ffffff',
+    '--panel-soft': '#fcf8ff',
+    '--rose': '#bd8cff',
+    '--rose-strong': '#8e52e0',
+    '--rose-deep': '#7338c8',
+    '--rose-soft': '#ead6ff',
+    '--rose-hover': '#cfa8ff',
+    '--rose-hot': '#8e52e0',
+    '--rose-ghost': 'rgba(166, 110, 245, 0.18)',
+    '--rose-glow': 'rgba(166, 110, 245, 0.34)',
+    '--line': 'rgba(189, 140, 255, 0.32)',
+    '--line-soft': 'rgba(189, 140, 255, 0.18)',
+    '--line-strong': 'rgba(166, 110, 245, 0.45)',
+    '--hairline': 'rgba(47, 36, 64, 0.06)',
+    '--grad-pink': 'linear-gradient(135deg, #bd8cff 0%, #a66ef5 50%, #8e52e0 100%)',
+    '--grad-bubble': 'linear-gradient(135deg, #b080ff 0%, #9560e8 100%)',
+    '--grad-page':
+      'radial-gradient(900px 700px at 8% 6%, rgba(189, 140, 255, 0.55), transparent 65%), radial-gradient(800px 650px at 96% 12%, rgba(255, 196, 222, 0.25), transparent 68%), radial-gradient(900px 700px at 50% 100%, rgba(207, 168, 255, 0.45), transparent 70%), #f5ebff',
   } as CSSProperties,
+
+  /* 薄荷奶 ─ 清新治愈 */
   mint: {
-    '--page-bg': '#f4fbf8',
-    '--rose': '#a8dcc6',
-    '--rose-strong': '#6da490',
-    '--rose-soft': '#e3f5ef',
-    '--rose-hover': '#c2e8d8',
-    '--rose-hot': '#7fc4ad',
-    '--line-strong': 'rgba(255, 255, 255, 0.82)',
-    '--soft-shadow': '0 24px 72px rgba(140, 198, 178, 0.12)',
+    '--pink-50': '#e8f9f1',
+    '--pink-100': '#d0f3e3',
+    '--pink-150': '#b8edd5',
+    '--pink-200': '#9ee6c5',
+    '--pink-300': '#7fddb0',
+    '--pink-400': '#5dd199',
+    '--pink-500': '#3cc482',
+    '--pink-600': '#28a86a',
+    '--pink-700': '#1a8a52',
+    '--ink': '#1f3a2c',
+    '--ink-secondary': '#3a5747',
+    '--muted': '#6a8276',
+    '--muted-light': '#9bafa3',
+    '--page-bg': '#e8f9f1',
+    '--canvas': '#f0fcf6',
+    '--panel': '#ffffff',
+    '--panel-soft': '#f8fdfb',
+    '--rose': '#7fddb0',
+    '--rose-strong': '#3cc482',
+    '--rose-deep': '#28a86a',
+    '--rose-soft': '#d0f3e3',
+    '--rose-hover': '#9ee6c5',
+    '--rose-hot': '#3cc482',
+    '--rose-ghost': 'rgba(93, 209, 153, 0.16)',
+    '--rose-glow': 'rgba(93, 209, 153, 0.32)',
+    '--line': 'rgba(127, 221, 176, 0.32)',
+    '--line-soft': 'rgba(127, 221, 176, 0.18)',
+    '--line-strong': 'rgba(93, 209, 153, 0.45)',
+    '--hairline': 'rgba(31, 58, 44, 0.06)',
+    '--grad-pink': 'linear-gradient(135deg, #7fddb0 0%, #5dd199 50%, #3cc482 100%)',
+    '--grad-bubble': 'linear-gradient(135deg, #6fd5a5 0%, #48c78e 100%)',
+    '--grad-page':
+      'radial-gradient(900px 700px at 8% 6%, rgba(127, 221, 176, 0.50), transparent 65%), radial-gradient(800px 650px at 96% 12%, rgba(184, 237, 213, 0.40), transparent 68%), radial-gradient(900px 700px at 50% 100%, rgba(158, 230, 197, 0.48), transparent 70%), #e8f9f1',
   } as CSSProperties,
+
+  /* 黑白简约 ─ 不喜欢粉色的妹妹也能用 */
+  mono: {
+    '--pink-50': '#f0f0f2',
+    '--pink-100': '#e0e0e5',
+    '--pink-150': '#d0d0d8',
+    '--pink-200': '#bfbfc8',
+    '--pink-300': '#a8a8b5',
+    '--pink-400': '#8888a0',
+    '--pink-500': '#68688a',
+    '--pink-600': '#484870',
+    '--pink-700': '#282850',
+    '--ink': '#18181c',
+    '--ink-secondary': '#3a3a42',
+    '--muted': '#6e6e78',
+    '--muted-light': '#a4a4ac',
+    '--page-bg': '#ececf0',
+    '--canvas': '#f5f5f8',
+    '--panel': '#ffffff',
+    '--panel-soft': '#fafafc',
+    '--rose': '#a8a8b5',
+    '--rose-strong': '#68688a',
+    '--rose-deep': '#484870',
+    '--rose-soft': '#e0e0e5',
+    '--rose-hover': '#bfbfc8',
+    '--rose-hot': '#68688a',
+    '--rose-ghost': 'rgba(104, 104, 138, 0.10)',
+    '--rose-glow': 'rgba(104, 104, 138, 0.18)',
+    '--line': 'rgba(80, 80, 100, 0.18)',
+    '--line-soft': 'rgba(80, 80, 100, 0.10)',
+    '--line-strong': 'rgba(80, 80, 100, 0.28)',
+    '--hairline': 'rgba(24, 24, 28, 0.06)',
+    '--grad-pink': 'linear-gradient(135deg, #68688a 0%, #484870 100%)',
+    '--grad-bubble': 'linear-gradient(135deg, #585880 0%, #383860 100%)',
+    '--grad-page':
+      'radial-gradient(900px 700px at 8% 6%, rgba(200, 200, 215, 0.60), transparent 65%), radial-gradient(800px 650px at 96% 12%, rgba(230, 230, 240, 0.65), transparent 68%), radial-gradient(900px 700px at 50% 100%, rgba(220, 220, 235, 0.60), transparent 70%), #ececf0',
+  } as CSSProperties,
+
+  /* 莓果 ─ 浓郁草莓奶昔 */
+  berry: {
+    '--pink-50': '#ffe0ed',
+    '--pink-100': '#ffc0db',
+    '--pink-150': '#ffa0c9',
+    '--pink-200': '#ff7fb5',
+    '--pink-300': '#ff5c9f',
+    '--pink-400': '#f53888',
+    '--pink-500': '#e21670',
+    '--pink-600': '#bf0058',
+    '--pink-700': '#8d0040',
+    '--ink': '#3d1228',
+    '--ink-secondary': '#5e2543',
+    '--muted': '#9d5878',
+    '--muted-light': '#c9889e',
+    '--page-bg': '#ffe0ed',
+    '--canvas': '#ffebf4',
+    '--panel': '#ffffff',
+    '--panel-soft': '#fff5fa',
+    '--rose': '#ff5c9f',
+    '--rose-strong': '#e21670',
+    '--rose-deep': '#bf0058',
+    '--rose-soft': '#ffc0db',
+    '--rose-hover': '#ff7fb5',
+    '--rose-hot': '#e21670',
+    '--rose-ghost': 'rgba(245, 56, 136, 0.16)',
+    '--rose-glow': 'rgba(245, 56, 136, 0.32)',
+    '--line': 'rgba(255, 92, 159, 0.32)',
+    '--line-soft': 'rgba(255, 92, 159, 0.18)',
+    '--line-strong': 'rgba(245, 56, 136, 0.45)',
+    '--hairline': 'rgba(61, 18, 40, 0.08)',
+    '--grad-pink': 'linear-gradient(135deg, #ff5c9f 0%, #f53888 50%, #e21670 100%)',
+    '--grad-bubble': 'linear-gradient(135deg, #f54890 0%, #d6247a 100%)',
+    '--grad-page':
+      'radial-gradient(900px 700px at 8% 6%, rgba(255, 127, 181, 0.60), transparent 65%), radial-gradient(800px 650px at 96% 12%, rgba(255, 192, 219, 0.40), transparent 68%), radial-gradient(900px 700px at 50% 100%, rgba(255, 160, 201, 0.55), transparent 70%), #ffe0ed',
+  } as CSSProperties,
+
+  /* 晴空蓝 ─ 中性清爽 */
+  sky: {
+    '--pink-50': '#e6f3ff',
+    '--pink-100': '#cce6ff',
+    '--pink-150': '#b3d9ff',
+    '--pink-200': '#99ccff',
+    '--pink-300': '#7ab8ff',
+    '--pink-400': '#5ca3f5',
+    '--pink-500': '#3d8de0',
+    '--pink-600': '#2270c4',
+    '--pink-700': '#0f559e',
+    '--ink': '#1c2a40',
+    '--ink-secondary': '#3a4a64',
+    '--muted': '#6a7a92',
+    '--muted-light': '#9badc4',
+    '--page-bg': '#e6f3ff',
+    '--canvas': '#f0f8ff',
+    '--panel': '#ffffff',
+    '--panel-soft': '#f8fcff',
+    '--rose': '#7ab8ff',
+    '--rose-strong': '#3d8de0',
+    '--rose-deep': '#2270c4',
+    '--rose-soft': '#cce6ff',
+    '--rose-hover': '#99ccff',
+    '--rose-hot': '#3d8de0',
+    '--rose-ghost': 'rgba(92, 163, 245, 0.16)',
+    '--rose-glow': 'rgba(92, 163, 245, 0.32)',
+    '--line': 'rgba(122, 184, 255, 0.32)',
+    '--line-soft': 'rgba(122, 184, 255, 0.18)',
+    '--line-strong': 'rgba(92, 163, 245, 0.45)',
+    '--hairline': 'rgba(28, 42, 64, 0.06)',
+    '--grad-pink': 'linear-gradient(135deg, #7ab8ff 0%, #5ca3f5 50%, #3d8de0 100%)',
+    '--grad-bubble': 'linear-gradient(135deg, #6aadff 0%, #4898e8 100%)',
+    '--grad-page':
+      'radial-gradient(900px 700px at 8% 6%, rgba(122, 184, 255, 0.50), transparent 65%), radial-gradient(800px 650px at 96% 12%, rgba(179, 217, 255, 0.40), transparent 68%), radial-gradient(900px 700px at 50% 100%, rgba(153, 204, 255, 0.48), transparent 70%), #e6f3ff',
+  } as CSSProperties,
+
+  /* 深夜紫 ─ 暗色模式 */
+  midnight: {
+    '--pink-50': '#2a1f38',
+    '--pink-100': '#342848',
+    '--pink-150': '#3e3158',
+    '--pink-200': '#4a3d6a',
+    '--pink-300': '#5f4d82',
+    '--pink-400': '#7a62a0',
+    '--pink-500': '#9678be',
+    '--pink-600': '#b895dc',
+    '--pink-700': '#d4b0f0',
+    '--ink': '#f0e6f5',
+    '--ink-secondary': '#c9b8d4',
+    '--muted': '#9484a3',
+    '--muted-light': '#6e607a',
+    '--page-bg': '#1a1228',
+    '--canvas': '#201830',
+    '--panel': '#2a1f38',
+    '--panel-soft': '#241c32',
+    '--rose': '#b895dc',
+    '--rose-strong': '#d4b0f0',
+    '--rose-deep': '#e2c0ff',
+    '--rose-soft': '#3e3158',
+    '--rose-hover': '#4a3d6a',
+    '--rose-hot': '#d4b0f0',
+    '--rose-ghost': 'rgba(212, 176, 240, 0.14)',
+    '--rose-glow': 'rgba(212, 176, 240, 0.28)',
+    '--line': 'rgba(212, 176, 240, 0.20)',
+    '--line-soft': 'rgba(212, 176, 240, 0.12)',
+    '--line-strong': 'rgba(212, 176, 240, 0.35)',
+    '--hairline': 'rgba(240, 230, 245, 0.08)',
+    '--grad-pink': 'linear-gradient(135deg, #b895dc 0%, #9678be 50%, #7a62a0 100%)',
+    '--grad-bubble': 'linear-gradient(135deg, #c8a0e8 0%, #9678be 100%)',
+    '--grad-page':
+      'radial-gradient(900px 700px at 8% 6%, rgba(122, 98, 160, 0.50), transparent 65%), radial-gradient(800px 650px at 96% 12%, rgba(95, 77, 130, 0.42), transparent 68%), radial-gradient(900px 700px at 50% 100%, rgba(150, 120, 190, 0.40), transparent 70%), #1a1228',
+  } as CSSProperties,
+}
+
+function buildCustomThemeVariables(color: string): CSSProperties {
+  const accent = normalizeHexColor(color) ?? '#ffabcc'
+  const rgb = hexToRgb(accent) ?? { r: 255, g: 171, b: 204 }
+  const accentAlpha = (alpha: number) => `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`
+
+  return {
+    '--pink-50': `color-mix(in srgb, ${accent} 9%, #fff)`,
+    '--pink-100': `color-mix(in srgb, ${accent} 16%, #fff)`,
+    '--pink-150': `color-mix(in srgb, ${accent} 22%, #fff)`,
+    '--pink-200': `color-mix(in srgb, ${accent} 30%, #fff)`,
+    '--pink-300': `color-mix(in srgb, ${accent} 44%, #fff)`,
+    '--pink-400': `color-mix(in srgb, ${accent} 68%, #fff)`,
+    '--pink-500': accent,
+    '--pink-600': `color-mix(in srgb, ${accent} 78%, #70394f)`,
+    '--pink-700': `color-mix(in srgb, ${accent} 58%, #3d2230)`,
+    '--ink': `color-mix(in srgb, ${accent} 18%, #2f2730)`,
+    '--ink-secondary': `color-mix(in srgb, ${accent} 28%, #4f3c48)`,
+    '--muted': `color-mix(in srgb, ${accent} 38%, #7a6971)`,
+    '--muted-light': `color-mix(in srgb, ${accent} 28%, #bbaab2)`,
+    '--page-bg': `color-mix(in srgb, ${accent} 7%, #fff)`,
+    '--canvas': `color-mix(in srgb, ${accent} 5%, #fff)`,
+    '--panel': '#fffdfd',
+    '--panel-soft': `color-mix(in srgb, ${accent} 4%, #fff)`,
+    '--rose': accent,
+    '--rose-strong': `color-mix(in srgb, ${accent} 78%, #70394f)`,
+    '--rose-deep': `color-mix(in srgb, ${accent} 62%, #4c2638)`,
+    '--rose-soft': `color-mix(in srgb, ${accent} 16%, #fff)`,
+    '--rose-hover': `color-mix(in srgb, ${accent} 28%, #fff)`,
+    '--rose-hot': `color-mix(in srgb, ${accent} 90%, #fff)`,
+    '--rose-ghost': accentAlpha(0.13),
+    '--rose-glow': accentAlpha(0.22),
+    '--line': accentAlpha(0.26),
+    '--line-soft': accentAlpha(0.14),
+    '--line-strong': accentAlpha(0.42),
+    '--hairline': 'rgba(74, 51, 64, 0.06)',
+    '--soft-shadow': `0 24px 72px ${accentAlpha(0.12)}`,
+    '--grad-pink': `linear-gradient(135deg, color-mix(in srgb, ${accent} 62%, #fff) 0%, ${accent} 52%, color-mix(in srgb, ${accent} 78%, #6e3d52) 100%)`,
+    '--grad-bubble': `linear-gradient(135deg, color-mix(in srgb, ${accent} 70%, #fff) 0%, ${accent} 100%)`,
+    '--grad-page': `radial-gradient(900px 700px at 8% 6%, ${accentAlpha(0.28)}, transparent 65%), radial-gradient(800px 650px at 96% 12%, rgba(226, 205, 255, 0.18), transparent 68%), radial-gradient(900px 700px at 50% 100%, ${accentAlpha(0.18)}, transparent 70%), color-mix(in srgb, ${accent} 7%, #fff)`,
+  } as CSSProperties
+}
+
+function normalizeHexColor(value: string | undefined): string | null {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) return trimmed
+  if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
+    const [, r, g, b] = trimmed
+    return `#${r}${r}${g}${g}${b}${b}`
+  }
+  return null
+}
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const normalized = normalizeHexColor(hex)
+  if (!normalized) return null
+  return {
+    r: Number.parseInt(normalized.slice(1, 3), 16),
+    g: Number.parseInt(normalized.slice(3, 5), 16),
+    b: Number.parseInt(normalized.slice(5, 7), 16),
+  }
 }
 
 const appViews: AppView[] = ['chat', 'group', 'moments', 'memory', 'world', 'model', 'settings', 'trash']
@@ -564,6 +884,12 @@ function App() {
 
   const bootstrapCloudState = useCallback(async (localState: AppState) => {
     if (!isCloudSyncConfigured() || autoCloudReadyRef.current) return
+    if (localState.settings.dataStorageMode === 'local') {
+      setCloudMeta(null)
+      setCloudStatus('当前为仅本地模式，不会自动上传云端')
+      setModelProfileStatus('仅本地模式下不会自动读取云端配置')
+      return
+    }
 
     setCloudStatus('正在自动连接云端...')
     setModelProfileStatus('正在读取模型密钥保险箱...')
@@ -642,12 +968,28 @@ function App() {
       setState(savedState)
       setIsReady(true)
       void refreshLocalBackups()
-      void bootstrapCloudState(savedState)
     })
-  }, [bootstrapCloudState, refreshLocalBackups])
+  }, [refreshLocalBackups])
 
   useEffect(() => {
-    if (!isReady || !isCloudSyncConfigured() || !autoCloudReadyRef.current) return
+    if (!isReady) return
+    if (state.settings.dataStorageMode === 'local') {
+      autoCloudReadyRef.current = false
+      skipNextAutoPushRef.current = false
+      return
+    }
+    if (!autoCloudReadyRef.current) void bootstrapCloudState(state)
+  }, [bootstrapCloudState, isReady, state])
+
+  useEffect(() => {
+    if (
+      !isReady ||
+      state.settings.dataStorageMode === 'local' ||
+      !isCloudSyncConfigured() ||
+      !autoCloudReadyRef.current
+    ) {
+      return
+    }
     if (skipNextAutoPushRef.current) {
       skipNextAutoPushRef.current = false
       return
@@ -678,9 +1020,34 @@ function App() {
   const promptBundle = useMemo(() => buildPromptBundle(state), [state])
   const memoryConflicts = useMemo(() => detectMemoryConflicts(state.memories), [state.memories])
   const appStyle = {
-    ...themeVariables[state.settings.accentTheme],
     '--app-font-size': `${state.settings.fontSize}px`,
   } as CSSProperties
+
+  useEffect(() => {
+    const themeTokens =
+      state.settings.accentTheme === 'custom'
+        ? buildCustomThemeVariables(state.settings.customAccentColor)
+        : themeVariables[state.settings.accentTheme] ?? themeVariables.sakura
+    if (typeof document === 'undefined' || !themeTokens) return
+    const root = document.documentElement
+    const previous: Record<string, string> = {}
+    for (const [key, value] of Object.entries(themeTokens)) {
+      if (typeof value === 'string') {
+        previous[key] = root.style.getPropertyValue(key)
+        root.style.setProperty(key, value)
+      }
+    }
+    root.dataset.theme = state.settings.accentTheme
+    return () => {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value) {
+          root.style.setProperty(key, value)
+        } else {
+          root.style.removeProperty(key)
+        }
+      }
+    }
+  }, [state.settings.accentTheme, state.settings.customAccentColor])
 
   function navigateView(view: AppView, mode: 'push' | 'replace' = 'push') {
     setActiveView(view)
@@ -1150,6 +1517,19 @@ function App() {
   }
 
   function handleUpdateSettings(settings: AppSettings) {
+    if (settings.dataStorageMode === 'local' && state.settings.dataStorageMode !== 'local') {
+      autoCloudReadyRef.current = false
+      skipNextAutoPushRef.current = false
+      setCloudMeta(null)
+      setCloudStatus('当前为仅本地模式，不会自动上传云端')
+      setModelProfileStatus('仅本地模式下不会上传或测试 API Key')
+    }
+
+    if (settings.dataStorageMode === 'cloud' && state.settings.dataStorageMode === 'local') {
+      setCloudStatus('已切回云端同步，正在等待连接')
+      setModelProfileStatus('云端同步开启后会读取模型密钥保险箱')
+    }
+
     setState((currentState) =>
       applyTrashRetention({
         ...currentState,
@@ -1285,6 +1665,11 @@ function App() {
   }
 
   async function handleConnectCloud() {
+    if (state.settings.dataStorageMode === 'local') {
+      setCloudStatus('当前为仅本地模式，不会连接云端')
+      return
+    }
+
     if (!isCloudSyncConfigured()) {
       setCloudStatus('云端后端还没有配置')
       return
@@ -1296,6 +1681,12 @@ function App() {
   }
 
   async function handleSaveModelProfile(profile: ModelProfileInput) {
+    if (state.settings.dataStorageMode === 'local') {
+      setModelProfileStatus('仅本地模式下不会上传 API Key')
+      setNotice('仅本地模式不会上传模型密钥')
+      return
+    }
+
     try {
       const token = cloudToken.trim()
       setModelProfileBusy(true)
@@ -1320,6 +1711,11 @@ function App() {
   }
 
   async function handleDeleteModelProfile(profileId: string) {
+    if (state.settings.dataStorageMode === 'local') {
+      setModelProfileStatus('仅本地模式下不会改动云端模型配置')
+      return
+    }
+
     try {
       const token = cloudToken.trim()
       setModelProfileBusy(true)
@@ -1345,6 +1741,12 @@ function App() {
   }
 
   async function handleTestModelProfile(input: { profileId?: string; profile?: ModelProfileInput }) {
+    if (state.settings.dataStorageMode === 'local') {
+      setModelProfileStatus('仅本地模式下不会把 API Key 发到云端测试')
+      setNotice('仅本地模式不会测试云端模型')
+      return
+    }
+
     try {
       const token = cloudToken.trim()
       setModelProfileBusy(true)
@@ -1362,6 +1764,10 @@ function App() {
 
   async function handlePullCloud() {
     if (cloudBusy) return
+    if (state.settings.dataStorageMode === 'local') {
+      setCloudStatus('当前为仅本地模式，不会从云端读取')
+      return
+    }
 
     try {
       const metadata = cloudMeta ?? (await refreshCloudMetadata(cloudToken))
@@ -1424,6 +1830,10 @@ function App() {
 
   async function handlePushCloud() {
     if (cloudBusy) return
+    if (state.settings.dataStorageMode === 'local') {
+      setCloudStatus('当前为仅本地模式，不会保存到云端')
+      return
+    }
 
     try {
       setCloudBusy('pushing')
@@ -1455,6 +1865,10 @@ function App() {
 
   async function handleCreateCloudBackup() {
     if (cloudBusy) return
+    if (state.settings.dataStorageMode === 'local') {
+      setCloudStatus('当前为仅本地模式，不会创建云端备份')
+      return
+    }
 
     try {
       setCloudBusy('backing-up')
@@ -1510,8 +1924,6 @@ function App() {
         activeCharacterId={state.activeCharacterId}
         activeView={activeView}
         characters={state.characters}
-        modelStatusDetail={cloudToken ? '同步保险箱已连接' : '聊天直连服务器'}
-        modelStatusLabel={getModelStatusLabel(state.settings, modelProfiles)}
         onSelect={handleSelectCharacter}
         onViewChange={navigateView}
       />
@@ -1598,15 +2010,6 @@ function App() {
 function formatCloudStatus(metadata: CloudMetadata): string {
   if (!metadata.hasState) return '云端已连接，暂时还没有保存过数据'
   return `云端有数据 v${metadata.revision}，最后保存 ${formatCloudTime(metadata.updatedAt)}`
-}
-
-function getModelStatusLabel(settings: AppSettings, profiles: ModelProfileSummary[]): string {
-  const profile =
-    profiles.find((item) => item.id === settings.modelProfileId) ??
-    profiles.find((item) => item.isDefault) ??
-    profiles[0]
-  if (profile) return profile.model === '由页面模型栏决定' ? settings.model : profile.model
-  return settings.model || '模型待连接'
 }
 
 function formatCloudTime(value: string | null): string {

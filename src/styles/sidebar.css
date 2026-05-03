@@ -7,7 +7,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 22px 16px 18px;
+  padding: 18px 14px 16px;
   overflow: hidden;
 }
 
@@ -95,11 +95,11 @@
 
 .nav-button.active,
 .character-button.active {
-  background: linear-gradient(135deg, #ffe6f1 0%, #ffd6e7 100%);
-  border-color: rgba(255, 158, 196, 0.35);
+  background: linear-gradient(135deg, var(--pink-150), var(--pink-100));
+  border-color: var(--line-strong);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.7),
-    0 4px 12px rgba(255, 124, 174, 0.14);
+    0 4px 12px var(--rose-glow);
 }
 
 .nav-button svg {
@@ -236,8 +236,199 @@
   transform: scale(1.06);
 }
 
-/* ── 状态卡 (底部模型/同步状态) ── */
+/* ── 模型切换器 (底部可点击) ── */
 
+.model-switcher {
+  position: relative;
+  margin: var(--space-sm) 4px 0;
+}
+
+.model-switcher-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: var(--pink-50);
+  padding: 10px 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-smooth);
+  text-align: left;
+  color: inherit;
+}
+
+.model-switcher-trigger:hover {
+  border-color: var(--line);
+  background: var(--pink-100);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.model-switcher-trigger.open {
+  border-color: var(--rose-strong);
+  background: var(--pink-100);
+  box-shadow: 0 0 0 3px var(--rose-glow);
+}
+
+.model-switcher-chevron {
+  color: var(--rose-strong);
+  transition: transform var(--duration-fast) var(--ease-smooth);
+}
+
+.model-switcher-trigger.open .model-switcher-chevron {
+  transform: rotate(180deg);
+}
+
+/* 弹出层 */
+.model-switcher-popover {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 25;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+  animation: switcher-in var(--duration-fast) var(--ease-spring) both;
+}
+
+@keyframes switcher-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.model-switcher-head {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--line-soft);
+  background: linear-gradient(135deg, var(--pink-100), var(--pink-50));
+}
+
+.model-switcher-head strong {
+  display: block;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: -0.1px;
+}
+
+.model-switcher-head small {
+  display: block;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.model-switcher-list {
+  display: grid;
+  gap: 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.model-switcher-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 10px 14px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ink);
+  transition: background var(--duration-fast) var(--ease-smooth);
+}
+
+.model-switcher-item:last-child {
+  border-bottom: 0;
+}
+
+.model-switcher-item:hover {
+  background: var(--pink-50);
+}
+
+.model-switcher-item.active {
+  background: linear-gradient(135deg, var(--pink-100), var(--pink-50));
+  box-shadow: inset 3px 0 0 var(--rose-strong);
+}
+
+.model-switcher-item.active svg {
+  color: var(--rose-strong);
+}
+
+.model-switcher-info {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.model-switcher-info strong,
+.model-switcher-info small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-switcher-info strong {
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.model-switcher-info small {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.model-switcher-jump {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-top: 1px solid var(--line-soft);
+  background: var(--pink-50);
+  padding: 9px 12px;
+  color: var(--rose-strong);
+  font-size: 11.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-smooth);
+}
+
+.model-switcher-jump:hover {
+  background: var(--pink-100);
+}
+
+.model-switcher-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 14px 16px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.model-switcher-empty svg {
+  flex: 0 0 auto;
+  color: var(--rose-strong);
+}
+
+/* 兼容旧 .status-card 引用 */
 .status-card {
   display: flex;
   align-items: center;

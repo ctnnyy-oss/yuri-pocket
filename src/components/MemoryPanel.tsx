@@ -67,9 +67,13 @@ import { CoreCpProfiles } from './world/CoreCpProfiles'
 import {
   clamp,
   draftToScope,
+  formatBackupCounts,
+  formatBytes,
+  formatCloudTime,
   formatDeletedAt,
   formatScopeDisplay,
   formatShortTime,
+  getCloudBusyLabel,
   isCoolingDown,
   isoToLocalInput,
   localInputToIso,
@@ -133,9 +137,13 @@ interface MemoryPanelProps {
 
 const accentThemes: Array<{ id: AccentTheme; label: string; color: string }> = [
   { id: 'sakura', label: '樱花粉', color: '#ffabcc' },
-  { id: 'peach', label: '蜜桃奶', color: '#ffb6a0' },
-  { id: 'lavender', label: '奶油紫', color: '#d4baff' },
-  { id: 'mint', label: '薄荷奶', color: '#a8dcc6' },
+  { id: 'berry', label: '草莓莓', color: '#e23d72' },
+  { id: 'peach', label: '蜜桃奶', color: '#ffa172' },
+  { id: 'lavender', label: '奶油紫', color: '#a886f0' },
+  { id: 'mint', label: '薄荷奶', color: '#6cc69b' },
+  { id: 'sky', label: '晴空蓝', color: '#6ca5f5' },
+  { id: 'mono', label: '黑白简约', color: '#3d3d45' },
+  { id: 'midnight', label: '深夜紫', color: '#221b30' },
 ]
 
 const memoryKindOptions = Object.keys(memoryKindLabels) as MemoryKind[]
@@ -282,6 +290,11 @@ export function MemoryPanel({
   const candidateMemories = memories.filter((memory) => memory.status === 'candidate')
   const reviewedMemories = memories.filter((memory) => memory.status !== 'candidate')
   const selectedMemory = selectedMemoryId ? memories.find((memory) => memory.id === selectedMemoryId) : null
+  const cloudStorageEnabled = settings.dataStorageMode === 'cloud'
+  const visibleCloudBackups = cloudBackups.slice(0, 3)
+  const visibleLocalBackups = localBackups.slice(0, 3)
+  const hiddenCloudBackupCount = Math.max(0, cloudBackups.length - visibleCloudBackups.length)
+  const hiddenLocalBackupCount = Math.max(0, localBackups.length - visibleLocalBackups.length)
 
   return (
     <main className="workspace detail-workspace">
@@ -817,30 +830,13 @@ export function MemoryPanel({
 
       {activeView === 'model' && (
         <ModelAndDataPanel
-          cloudBackups={cloudBackups}
-          cloudBusy={cloudBusy}
-          cloudMeta={cloudMeta}
-          cloudStatus={cloudStatus}
           cloudSyncConfigured={cloudSyncConfigured}
-          localBackups={localBackups}
           modelProfileBusy={modelProfileBusy}
           modelProfileStatus={modelProfileStatus}
           modelProfiles={modelProfiles}
           onConnectCloud={onConnectCloud}
-          onCreateCloudBackup={onCreateCloudBackup}
-          onCreateLocalBackup={onCreateLocalBackup}
-          onDeleteLocalBackup={onDeleteLocalBackup}
           onDeleteModelProfile={onDeleteModelProfile}
-          onDownloadCloudBackup={onDownloadCloudBackup}
-          onExport={onExport}
-          onImport={onImport}
-          onPullCloud={onPullCloud}
-          onPushCloud={onPushCloud}
-          onRefreshCloud={onRefreshCloud}
-          onRefreshCloudBackups={onRefreshCloudBackups}
           onRefreshModelProfiles={onRefreshModelProfiles}
-          onReset={onReset}
-          onRestoreLocalBackup={onRestoreLocalBackup}
           onSaveModelProfile={onSaveModelProfile}
           onTestModelProfile={onTestModelProfile}
           onUpdateSettings={onUpdateSettings}
@@ -851,7 +847,7 @@ export function MemoryPanel({
       {activeView === 'settings' && (
         <>
           <WorkspaceTitle
-            description="调整输入习惯、字体大小和界面颜色。"
+            description="收纳低频偏好、数据同步、备份迁移和界面颜色。"
             icon={<Settings2 size={20} />}
             title="设置"
           />
@@ -913,6 +909,211 @@ export function MemoryPanel({
                     <span>{theme.label}</span>
                   </button>
                 ))}
+              </div>
+              <label className={`custom-color-control ${settings.accentTheme === 'custom' ? 'active' : ''}`}>
+                <span>
+                  <strong>自定义主色</strong>
+                  <small>选一个妹妹喜欢的颜色，界面会跟着整套换色。</small>
+                </span>
+                <input
+                  aria-label="自定义主题主色"
+                  type="color"
+                  value={settings.customAccentColor || '#ffabcc'}
+                  onChange={(event) =>
+                    onUpdateSettings({
+                      ...settings,
+                      accentTheme: 'custom',
+                      customAccentColor: event.target.value,
+                    })
+                  }
+                />
+              </label>
+            </div>
+
+            <div className="settings-section">
+              <div className="settings-section-title">
+                <Database size={18} />
+                <span>数据与同步</span>
+              </div>
+              <div className="retention-options">
+                <RetentionButton
+                  active={settings.dataStorageMode === 'cloud'}
+                  description="聊天、记忆和设置自动同步到云端"
+                  label="云端同步"
+                  onClick={() => onUpdateSettings({ ...settings, dataStorageMode: 'cloud' })}
+                />
+                <RetentionButton
+                  active={settings.dataStorageMode === 'local'}
+                  description="只存在这台设备的浏览器里"
+                  label="仅本地"
+                  onClick={() => onUpdateSettings({ ...settings, dataStorageMode: 'local' })}
+                />
+              </div>
+              <div className="cloud-meta-strip" aria-label="云端同步状态">
+                <span>
+                  <strong>模式</strong>
+                  {cloudStorageEnabled ? '云端同步' : '仅本地'}
+                </span>
+                <span>
+                  <strong>版本</strong>
+                  {cloudStorageEnabled && cloudMeta ? `v${cloudMeta.revision}` : '未同步'}
+                </span>
+                <span>
+                  <strong>最后保存</strong>
+                  {cloudStorageEnabled && cloudMeta ? formatCloudTime(cloudMeta.updatedAt) : '暂无记录'}
+                </span>
+              </div>
+              <small className="cloud-status-line">
+                {cloudStorageEnabled
+                  ? cloudBusy
+                    ? getCloudBusyLabel(cloudBusy)
+                    : cloudStatus
+                  : '仅本地模式不会自动上传云端；需要迁移时可以用下面的导出。'}
+              </small>
+              <div className="settings-actions">
+                <button
+                  disabled={!cloudStorageEnabled || !cloudSyncConfigured || Boolean(cloudBusy)}
+                  onClick={onConnectCloud}
+                  type="button"
+                >
+                  <Link2 size={15} />
+                  检查连接
+                </button>
+                <button
+                  disabled={!cloudStorageEnabled || !cloudSyncConfigured || Boolean(cloudBusy)}
+                  onClick={onRefreshCloud}
+                  type="button"
+                >
+                  <RotateCcw size={15} />
+                  检查云端
+                </button>
+                <button
+                  disabled={!cloudStorageEnabled || !cloudSyncConfigured || Boolean(cloudBusy)}
+                  onClick={onPushCloud}
+                  type="button"
+                >
+                  <Save size={15} />
+                  保存到云端
+                </button>
+                <button
+                  disabled={!cloudStorageEnabled || !cloudSyncConfigured || Boolean(cloudBusy)}
+                  onClick={onPullCloud}
+                  type="button"
+                >
+                  <RotateCcw size={15} />
+                  从云端读取
+                </button>
+              </div>
+              {cloudStorageEnabled && (
+                <div className="backup-list">
+                  {visibleCloudBackups.length === 0 ? (
+                    <small>还没有读取到云端备份。保存云端或手动创建后，这里会出现下载入口。</small>
+                  ) : (
+                    <>
+                      {visibleCloudBackups.map((backup) => (
+                        <article className="backup-item" key={backup.fileName}>
+                          <div>
+                            <strong>{backup.label}</strong>
+                            <span>
+                              {formatShortTime(backup.createdAt)} / {formatBytes(backup.sizeBytes)}
+                            </span>
+                            <small>{backup.fileName}</small>
+                          </div>
+                          <div className="backup-actions">
+                            <button onClick={() => onDownloadCloudBackup(backup.fileName)} type="button">
+                              下载
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                      {hiddenCloudBackupCount > 0 && (
+                        <small className="backup-more">还有 {hiddenCloudBackupCount} 份旧云端备份已收起。</small>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+              <div className="settings-actions">
+                <button
+                  disabled={!cloudStorageEnabled || !cloudSyncConfigured || Boolean(cloudBusy)}
+                  onClick={onCreateCloudBackup}
+                  type="button"
+                >
+                  <Save size={15} />
+                  创建云端备份
+                </button>
+                <button
+                  disabled={!cloudStorageEnabled || !cloudSyncConfigured || Boolean(cloudBusy)}
+                  onClick={onRefreshCloudBackups}
+                  type="button"
+                >
+                  <RotateCcw size={15} />
+                  刷新云端备份
+                </button>
+              </div>
+            </div>
+
+            <div className="settings-section">
+              <div className="settings-section-title">
+                <Save size={18} />
+                <span>备份与迁移</span>
+              </div>
+              <p className="section-note">
+                从云端读取、导入文件、重置之前会自动留一份本机备份；也可以手动导出，方便自己留底。
+              </p>
+              <div className="settings-actions">
+                <button onClick={onCreateLocalBackup} type="button">
+                  <Save size={15} />
+                  创建本机备份
+                </button>
+                <button onClick={onExport} type="button">
+                  导出 JSON
+                </button>
+                <label className="file-button">
+                  导入 JSON
+                  <input
+                    accept="application/json"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0]
+                      if (file) onImport(file)
+                      event.currentTarget.value = ''
+                    }}
+                    type="file"
+                  />
+                </label>
+                <button className="danger-button" onClick={onReset} type="button">
+                  重置
+                </button>
+              </div>
+              <div className="backup-list">
+                {visibleLocalBackups.length === 0 ? (
+                  <small>还没有本机备份。做一次读取、导入或重置前，姐姐会自动留底。</small>
+                ) : (
+                  <>
+                    {visibleLocalBackups.map((backup) => (
+                      <article className="backup-item" key={backup.id}>
+                        <div>
+                          <strong>{backup.label}</strong>
+                          <span>
+                            {formatShortTime(backup.createdAt)} / {backup.reason}
+                          </span>
+                          <small>{formatBackupCounts(backup)}</small>
+                        </div>
+                        <div className="backup-actions">
+                          <button onClick={() => onRestoreLocalBackup(backup.id)} type="button">
+                            恢复
+                          </button>
+                          <button className="danger-button" onClick={() => onDeleteLocalBackup(backup.id)} type="button">
+                            删除
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                    {hiddenLocalBackupCount > 0 && (
+                      <small className="backup-more">还有 {hiddenLocalBackupCount} 份旧本机备份已收起。</small>
+                    )}
+                  </>
+                )}
               </div>
             </div>
 

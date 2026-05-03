@@ -362,6 +362,8 @@ export function createSeedState(): AppState {
       enterToSend: true,
       fontSize: 15,
       accentTheme: 'sakura',
+      customAccentColor: '#ffabcc',
+      dataStorageMode: 'cloud',
       trashRetentionMode: 'default',
       trashRetentionDays: 30,
       autoMemoryEnabled: true,

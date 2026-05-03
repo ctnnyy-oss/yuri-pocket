@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useRef } from 'react'
-import { Send, Sparkles } from 'lucide-react'
+import { BookHeart, Send, Sparkles } from 'lucide-react'
 import type {
   AppSettings,
   CharacterCard,
@@ -70,16 +70,43 @@ export function ChatPhone({
     })
   }, [messages, isSending])
 
+  const messageCount = messages.length
+  const characterTags = character.tags?.slice(0, 3) ?? []
+  const characterTitle = character.title || character.subtitle || '百合小窝'
+
   return (
     <main className="workspace chat-workspace">
-      <header className="workspace-header">
-        <div className="phone-contact">
-          <span className="avatar large" style={{ '--avatar-accent': character.accent } as CSSProperties}>
-            {character.avatar}
-          </span>
-          <div>
-            <strong>{character.name}</strong>
-            <span>{character.subtitle}</span>
+      <header
+        className="chat-hero"
+        style={{ '--avatar-accent': character.accent } as CSSProperties}
+      >
+        <div className="chat-hero-bg" aria-hidden="true" />
+        <div className="chat-hero-content">
+          <span className="chat-hero-avatar">{character.avatar}</span>
+          <div className="chat-hero-text">
+            <span className="chat-hero-kicker">
+              <BookHeart size={12} />
+              <span>{characterTitle}</span>
+            </span>
+            <h2 className="chat-hero-name">{character.name}</h2>
+            <p className="chat-hero-subtitle">{character.subtitle}</p>
+            {characterTags.length > 0 && (
+              <div className="chat-hero-tags">
+                {characterTags.map((tag) => (
+                  <em key={tag}>{tag}</em>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="chat-hero-stats">
+            <div>
+              <strong>{messageCount}</strong>
+              <span>条对话</span>
+            </div>
+            <div>
+              <strong>{memoryCount}</strong>
+              <span>记忆</span>
+            </div>
           </div>
         </div>
       </header>

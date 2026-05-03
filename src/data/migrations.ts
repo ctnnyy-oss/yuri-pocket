@@ -33,6 +33,8 @@ export function migrateAppState(state: AppState): AppState {
       ...sourceSettings,
       model: normalizeDefaultModel(sourceSettings.model),
       modelProfileId: sourceSettings.modelProfileId || defaults.settings.modelProfileId,
+      customAccentColor: normalizeHexColor(sourceSettings.customAccentColor) ?? defaults.settings.customAccentColor,
+      dataStorageMode: sourceSettings.dataStorageMode === 'local' ? 'local' : defaults.settings.dataStorageMode,
       maxOutputTokens: clampNumber(sourceSettings.maxOutputTokens, 512, 32768, defaults.settings.maxOutputTokens),
     },
   }
@@ -60,6 +62,17 @@ function mergeMissingSeedMemories(memories: LongTermMemory[], seedMemories: Long
 function normalizeDefaultModel(model: string | undefined): string {
   if (!model || model === 'gpt-5.5' || model === 'deepseek/deepseek-v4-pro-free') return 'deepseek-v4-flash'
   return model
+}
+
+function normalizeHexColor(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) return trimmed
+  if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
+    const [, r, g, b] = trimmed
+    return `#${r}${r}${g}${g}${b}${b}`
+  }
+  return null
 }
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {

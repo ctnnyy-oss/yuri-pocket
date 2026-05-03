@@ -8,9 +8,9 @@
   width: 100%;
   height: 100dvh;
   display: grid;
-  grid-template-columns: 296px minmax(0, 1fr);
-  gap: var(--space-2xl);
-  padding: var(--space-2xl);
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: var(--space-lg);
+  padding: var(--space-lg);
   overflow: hidden;
   background: var(--grad-page);
   color: var(--ink);
@@ -59,7 +59,7 @@
   min-width: 0;
   min-height: 0;
   border: 1px solid rgba(255, 255, 255, 0.85);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-xl);
   background: var(--panel);
   box-shadow:
     var(--shadow-lg),
@@ -68,7 +68,7 @@
 
 .left-panel {
   background:
-    linear-gradient(180deg, #fffafd 0%, #fff5fa 100%);
+    linear-gradient(180deg, var(--panel-soft) 0%, var(--pink-50) 100%);
 }
 
 .workspace {
@@ -82,8 +82,8 @@
 .detail-workspace {
   display: flex;
   flex-direction: column;
-  padding: clamp(28px, 3vw, 44px);
-  padding-bottom: 88px;
+  padding: clamp(20px, 2.5vw, 36px);
+  padding-bottom: 60px;
   background:
     radial-gradient(580px 380px at 92% 0%, rgba(255, 233, 244, 0.45), transparent 72%),
     var(--panel);
@@ -110,8 +110,8 @@
   margin-right: auto;
 }
 
-.detail-workspace > .workspace-title { margin-bottom: var(--space-2xl); }
-.detail-workspace > .detail-actions  { margin-bottom: var(--space-lg); }
+.detail-workspace > .workspace-title { margin-bottom: var(--space-lg); }
+.detail-workspace > .detail-actions  { margin-bottom: var(--space-md); }
 
 .chat-workspace {
   animation: workspace-fade-in var(--duration-slow) var(--ease-out) both;
@@ -195,34 +195,97 @@
   overflow: visible;
 }
 
-/* ── 空状态 ── */
+/* ── 空状态 (hero 占位) ── */
 
 .empty-state {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 360px;
   border: 1.5px dashed var(--line-strong);
-  border-radius: var(--radius-xl);
-  background: var(--pink-50);
-  color: var(--muted);
-  padding: var(--space-3xl) var(--space-2xl);
+  border-radius: var(--radius-2xl);
+  background:
+    radial-gradient(540px 360px at 50% 38%,
+      color-mix(in srgb, var(--rose) 18%, transparent),
+      transparent 70%),
+    var(--pink-50);
+  color: var(--ink-secondary);
+  padding: var(--space-4xl) var(--space-2xl);
   line-height: 1.75;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 500;
   text-align: center;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+  isolation: isolate;
 }
 
 .empty-state::before {
   content: '✿';
-  display: block;
-  margin-bottom: 10px;
-  color: var(--pink-400);
-  font-size: 36px;
-  opacity: 0.85;
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
+  margin-bottom: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  background: var(--grad-pink);
+  color: #fff;
+  font-size: 44px;
+  line-height: 1;
+  opacity: 0.96;
+  box-shadow:
+    0 18px 38px color-mix(in srgb, var(--rose-strong) 38%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
   animation: empty-bloom 5s var(--ease-spring) infinite;
 }
 
+.empty-state::after {
+  content: '';
+  position: absolute;
+  inset: -20% -10%;
+  z-index: -1;
+  background:
+    radial-gradient(220px 200px at 18% 12%,
+      color-mix(in srgb, var(--rose) 22%, transparent),
+      transparent 70%),
+    radial-gradient(220px 200px at 82% 88%,
+      color-mix(in srgb, var(--rose) 22%, transparent),
+      transparent 70%);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 @keyframes empty-bloom {
-  0%, 100% { transform: rotate(-8deg) scale(1); opacity: 0.78; }
-  50%      { transform: rotate(8deg) scale(1.18); opacity: 1; }
+  0%, 100% { transform: rotate(-8deg) scale(1); opacity: 0.92; }
+  50%      { transform: rotate(8deg) scale(1.10); opacity: 1; }
+}
+
+/* 空状态在不同容器中撑满，避免下方留白 */
+.detail-workspace > .empty-state {
+  width: 100%;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  flex: 1 1 auto;
+  min-height: 460px;
+}
+
+.moments-feed > .empty-state {
+  grid-column: 1 / -1;
+  min-height: 460px;
+}
+
+.room-message-list > .empty-state {
+  width: 100%;
+  min-height: 360px;
+  margin: auto 0;
+}
+
+.social-layout:has(> .room-chat-panel .empty-state) .room-chat-panel {
+  min-height: 460px;
 }
 
 @keyframes spin {
