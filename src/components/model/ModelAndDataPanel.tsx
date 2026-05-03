@@ -5,7 +5,6 @@ import {
   PlugZap,
   RefreshCw,
   Save,
-  Search,
   ServerCog,
   SlidersHorizontal,
   Trash2,
@@ -59,13 +58,14 @@ export function ModelAndDataPanel({
     modelProfiles.find((profile) => profile.id === settings.modelProfileId) ??
     modelProfiles.find((profile) => profile.isDefault) ??
     modelProfiles[0]
+  const firstOfficialPreset = modelProviderPresets.find((preset) => preset.group === 'official') ?? modelProviderPresets[0]
   const [presetGroup, setPresetGroup] = useState<'official' | 'custom'>('official')
-  const [selectedPresetId, setSelectedPresetId] = useState(modelProviderPresets.find((preset) => preset.group === 'official')?.id ?? modelProviderPresets[0].id)
-  const [draft, setDraft] = useState<ModelProfileInput>(() => createDraftFromPreset(modelProviderPresets.find((preset) => preset.group === 'official') ?? modelProviderPresets[0]))
+  const [selectedPresetId, setSelectedPresetId] = useState(firstOfficialPreset.id)
+  const [draft, setDraft] = useState<ModelProfileInput>(() => createDraftFromPreset(firstOfficialPreset))
   const [catalogModels, setCatalogModels] = useState<ModelCatalogItem[]>([])
   const [catalogStatus, setCatalogStatus] = useState('')
-  const [manualModelMode, setManualModelMode] = useState(false)
   const autoFetchKeyRef = useRef('')
+
   const visiblePresets = useMemo(
     () => modelProviderPresets.filter((preset) => preset.group === presetGroup),
     [presetGroup],
@@ -76,8 +76,6 @@ export function ModelAndDataPanel({
     settings.dataStorageMode === 'local'
       ? '当前是仅本地数据模式，不会把 API Key 发给模型后端。'
       : modelProfileStatus
-  const canFetchCatalog =
-    modelBackendEnabled && !modelProfileBusy && Boolean(draft.baseUrl.trim()) && Boolean((draft.apiKey ?? '').trim() || draft.id)
   const modelOptions = useMemo(() => {
     const options = catalogModels.filter((model) => model.id.trim())
     if (draft.model && !options.some((model) => model.id === draft.model)) {
@@ -101,19 +99,26 @@ export function ModelAndDataPanel({
       try {
         const result = await onFetchModelCatalog({ profile: { ...draft, baseUrl, name: buildProfileName(draft) } })
         setCatalogModels(result.models)
-        setManualModelMode(false)
         setCatalogStatus(`已自动拉取 ${result.models.length} 个模型`)
 
         if (result.models[0]?.id) {
-          setDraft((currentDraft) => (currentDraft.model ? currentDraft : { ...currentDraft, model: result.models[0].id }))
+          setDraft((currentDraft) => {
+            const currentStillExists = result.models.some((model) => model.id === currentDraft.model)
+            return currentDraft.model && currentStillExists ? currentDraft : { ...currentDraft, model: result.models[0].id }
+          })
         }
       } catch (error) {
-        setCatalogStatus(error instanceof Error ? error.message : '自动拉取模型失败，可以手动输入模型 ID')
+        setCatalogStatus(error instanceof Error ? error.message : '自动拉取模型失败，修改 URL 或 API Key 后会重试。')
       }
     }, 900)
 
     return () => window.clearTimeout(timer)
   }, [draft, modelBackendEnabled, modelProfileBusy, onFetchModelCatalog])
+
+  function resetCatalog() {
+    setCatalogModels([])
+    setCatalogStatus('')
+  }
 
   function loadProfileIntoDraft(profile: ModelProfileSummary) {
     setDraft({
@@ -126,8 +131,7 @@ export function ModelAndDataPanel({
       enabled: profile.enabled,
       isDefault: profile.isDefault,
     })
-    setCatalogModels([])
-    setManualModelMode(false)
+    resetCatalog()
   }
 
   function handlePresetGroupChange(nextGroup: 'official' | 'custom') {
@@ -135,18 +139,14 @@ export function ModelAndDataPanel({
     const preset = modelProviderPresets.find((item) => item.group === nextGroup) ?? modelProviderPresets[0]
     setSelectedPresetId(preset.id)
     setDraft(createDraftFromPreset(preset))
-    setCatalogModels([])
-    setCatalogStatus('')
-    setManualModelMode(false)
+    resetCatalog()
   }
 
   function handlePresetChange(presetId: string) {
     setSelectedPresetId(presetId)
     const preset = modelProviderPresets.find((item) => item.id === presetId) ?? modelProviderPresets[0]
     setDraft(createDraftFromPreset(preset))
-    setCatalogModels([])
-    setCatalogStatus('')
-    setManualModelMode(false)
+    resetCatalog()
   }
 
   async function handleSaveProfile() {
@@ -155,18 +155,6 @@ export function ModelAndDataPanel({
 
   async function handleTestDraft() {
     await onTestModelProfile({ profile: { ...draft, name: buildProfileName(draft) } })
-  }
-
-  async function handleFetchModels() {
-    setCatalogStatus('正在从供应商读取模型...')
-    const result = await onFetchModelCatalog({ profile: { ...draft, name: buildProfileName(draft) } })
-    setCatalogModels(result.models)
-    setManualModelMode(false)
-    setCatalogStatus(`已拉取 ${result.models.length} 个模型`)
-
-    if (!draft.model && result.models[0]?.id) {
-      setDraft((currentDraft) => ({ ...currentDraft, model: result.models[0].id }))
-    }
   }
 
   function handleUseProfile(profile: ModelProfileSummary) {
@@ -180,7 +168,7 @@ export function ModelAndDataPanel({
   return (
     <>
       <WorkspaceTitle
-        description="选择官方接口或中转站，填 Base URL 和 API Key 后可以自动拉取模型列表。"
+        description="选择官方接口或中转站，填 Base URL 和 API Key 后会自动拉取模型列表。"
         icon={<SlidersHorizontal size={20} />}
         title="模型接入"
       />
@@ -190,7 +178,7 @@ export function ModelAndDataPanel({
           <div>
             <small>当前模型</small>
             <strong>{activeProfile ? activeProfile.model : settings.model || '未设置'}</strong>
-            <span>{activeProfile ? `${providerKindLabels[activeProfile.kind]} · ${activeProfile.baseUrl}` : modelBackendHint}</span>
+            <span>{activeProfile ? `${providerKindLabels[activeProfile.kind]} / ${activeProfile.baseUrl}` : modelBackendHint}</span>
           </div>
           <div className="model-current-actions">
             <button disabled={!modelBackendEnabled || modelProfileBusy} onClick={onConnectCloud} type="button">
@@ -251,7 +239,7 @@ export function ModelAndDataPanel({
                   value={draft.kind}
                   onChange={(event) => {
                     setDraft({ ...draft, kind: event.target.value as ModelProviderKind })
-                    setCatalogModels([])
+                    resetCatalog()
                   }}
                 >
                   <option value="openai-compatible">OpenAI 兼容</option>
@@ -267,7 +255,7 @@ export function ModelAndDataPanel({
                   value={draft.baseUrl}
                   onChange={(event) => {
                     setDraft({ ...draft, baseUrl: event.target.value })
-                    setCatalogModels([])
+                    resetCatalog()
                   }}
                 />
               </label>
@@ -279,8 +267,7 @@ export function ModelAndDataPanel({
                 autoComplete="off"
                 onChange={(event) => {
                   setDraft({ ...draft, apiKey: event.target.value })
-                  setCatalogModels([])
-                  setCatalogStatus('')
+                  resetCatalog()
                 }}
                 placeholder={draft.id ? '留空则继续使用已保存密钥' : '填入供应商或中转站密钥'}
                 type="password"
@@ -291,42 +278,23 @@ export function ModelAndDataPanel({
             <div className="model-picker-row">
               <label>
                 <span>模型</span>
-                {modelOptions.length > 0 && !manualModelMode ? (
+                {modelOptions.length > 0 ? (
                   <select value={draft.model} onChange={(event) => setDraft({ ...draft, model: event.target.value })}>
                     {modelOptions.map((model) => (
                       <option key={model.id} value={model.id}>
-                        {model.label && model.label !== model.id ? `${model.label} · ${model.id}` : model.id}
+                        {model.label && model.label !== model.id ? `${model.label} / ${model.id}` : model.id}
                       </option>
                     ))}
                   </select>
                 ) : (
-                  <input
-                    autoComplete="off"
-                    placeholder="先拉取，或手动粘贴模型 ID"
-                    value={draft.model}
-                    onChange={(event) => setDraft({ ...draft, model: event.target.value })}
-                  />
+                  <input autoComplete="off" placeholder="填好 URL 和 API Key 后自动加载" readOnly value={draft.model || ''} />
                 )}
               </label>
-              <button
-                disabled={!canFetchCatalog}
-                onClick={handleFetchModels}
-                type="button"
-              >
-                <Search size={15} />
-                拉取模型
-              </button>
             </div>
-
-            {modelOptions.length > 0 && (
-              <button className="model-inline-link" onClick={() => setManualModelMode((value) => !value)} type="button">
-                {manualModelMode ? '改用下拉选择' : '手动输入模型 ID'}
-              </button>
-            )}
 
             <small className="cloud-status-line">{catalogStatus || modelStatusText}</small>
             <small className="model-warning">
-              模型页不会要求妹妹填“显示名称”。保存时会按域名和模型自动生成名称；API Key 只发给模型后端保存，页面不会回显原文。
+              模型会在 URL 和 API Key 可用后自动拉取；页面不会要求填写“显示名称”，也不会回显已保存密钥原文。
             </small>
 
             <div className="settings-actions">
@@ -348,7 +316,7 @@ export function ModelAndDataPanel({
             </div>
             <div className="model-profile-list">
               {modelProfiles.length === 0 ? (
-                <small className="model-empty-note">还没有保存模型。先选官方或中转站，再拉取模型。</small>
+                <small className="model-empty-note">还没有保存模型。填好 URL 和 API Key 后会自动加载模型。</small>
               ) : (
                 modelProfiles.map((profile) => (
                   <article

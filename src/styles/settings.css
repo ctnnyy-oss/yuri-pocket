@@ -331,6 +331,11 @@
   box-sizing: border-box;
 }
 
+.model-picker-row input[readonly] {
+  background: var(--pink-50);
+  color: var(--muted);
+}
+
 .model-picker-row button {
   justify-self: start;
   min-height: 42px;

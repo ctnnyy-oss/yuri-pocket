@@ -9,9 +9,11 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({ memoryTrace, message, onMemoryFeedback }: MessageBubbleProps) {
+  const content = formatDisplayText(message.content)
+
   return (
     <article className={`message message-${message.role}`}>
-      <p>{message.content}</p>
+      <p>{content}</p>
       {message.agent && <AgentTrace trace={message.agent} />}
       {memoryTrace && <MemoryTrace onMemoryFeedback={onMemoryFeedback} trace={memoryTrace} />}
       <time dateTime={message.createdAt}>
@@ -112,7 +114,9 @@ function formatActionDetail(action: AgentAction): string {
 }
 
 function formatToolEvidence(content: string): string {
+  if (looksLikeHtml(content)) return '后台接口暂时没有接通，已隐藏原始错误页面。'
   return content
+    .replace(/\\u([\da-fA-F]{4})/g, (_, code: string) => String.fromCharCode(Number.parseInt(code, 16)))
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
@@ -120,6 +124,20 @@ function formatToolEvidence(content: string): string {
     .slice(0, 3)
     .join(' / ')
     .slice(0, 220)
+}
+
+function formatDisplayText(content: string): string {
+  if (looksLikeHtml(content)) return '后台接口暂时没有接通，刚才收到的是错误页面，姐姐已经拦下不展示原文。'
+  if (!/\\u[\da-fA-F]{4}/.test(content)) return content
+
+  return content
+    .replace(/\\u([\da-fA-F]{4})/g, (_, code: string) => String.fromCharCode(Number.parseInt(code, 16)))
+    .replace(/\\n/g, '\n')
+}
+
+function looksLikeHtml(value: string): boolean {
+  const sample = value.trim().slice(0, 240).toLowerCase()
+  return sample.startsWith('<!doctype html') || sample.startsWith('<html') || sample.includes('<title>site not found')
 }
 
 const memoryFeedbackLabels: Record<MemoryFeedbackAction, string> = {

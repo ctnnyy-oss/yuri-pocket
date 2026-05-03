@@ -254,6 +254,31 @@
     width: 100%;
   }
 
+  .model-settings-stack {
+    gap: 12px;
+  }
+
+  .model-segmented button {
+    font-size: 12px;
+    min-height: 34px;
+  }
+
+  .model-profile-item {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 10px;
+    padding: 13px 14px;
+  }
+
+  .model-profile-item .backup-actions {
+    justify-content: flex-start;
+  }
+
+  .model-warning,
+  .cloud-status-line {
+    overflow-wrap: anywhere;
+  }
+
   .scope-editor-head {
     display: grid;
   }

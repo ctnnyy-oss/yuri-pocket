@@ -201,6 +201,9 @@ export async function fetchModelCatalog(
 
 async function modelFetch(path: string, token: string, init: RequestInit = {}): Promise<Response> {
   const apiBaseUrl = getModelApiBaseUrl()
+  if (!apiBaseUrl && isStaticPreviewHost()) {
+    throw new Error('线上静态版还没有连接模型后端，不能直接拉取模型列表。需要配置云端后端，或在本机预览里使用。')
+  }
   const headers = new Headers(init.headers)
   if (token.trim()) headers.set('Authorization', `Bearer ${token.trim()}`)
 
@@ -221,9 +224,20 @@ function getModelApiBaseUrl(): string {
   return getCloudApiBaseUrl()
 }
 
+function isStaticPreviewHost(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.location.hostname.endsWith('github.io') && !getCloudApiBaseUrl()
+}
+
+function looksLikeHtml(value: string): boolean {
+  const sample = value.trim().slice(0, 200).toLowerCase()
+  return sample.startsWith('<!doctype html') || sample.startsWith('<html') || sample.includes('<title>site not found')
+}
+
 async function readModelError(response: Response): Promise<string> {
   const detail = await response.text()
   if (!detail) return ''
+  if (looksLikeHtml(detail)) return ''
 
   try {
     const parsed = JSON.parse(detail) as { error?: string; message?: string }
@@ -234,6 +248,7 @@ async function readModelError(response: Response): Promise<string> {
 }
 
 function formatModelError(status: number, detail: string): string {
+  if (!detail && status === 404) return '没有找到模型后端接口，当前页面可能只是静态预览。'
   if (status === 401) return '服务器拒绝访问模型保险箱。以后开启登录后，需要重新登录。'
   if (status === 404) return detail || '没有找到这个模型配置'
   if (status >= 500) return `模型服务暂时没接住：${detail || status}`

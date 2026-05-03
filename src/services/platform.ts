@@ -186,6 +186,9 @@ export async function showBrowserNotification(title: string, body: string): Prom
 
 async function platformFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const apiBaseUrl = getPlatformApiBaseUrl()
+  if (!apiBaseUrl && isStaticPreviewHost()) {
+    throw new Error('线上静态版还没有连接后台平台。后台任务、通知和账号连接需要云端后端。')
+  }
   const headers = new Headers(init.headers)
   const token = getSavedCloudToken()
   if (token.trim()) headers.set('Authorization', `Bearer ${token.trim()}`)
@@ -197,6 +200,7 @@ async function platformFetch(path: string, init: RequestInit = {}): Promise<Resp
 
   if (!response.ok) {
     const detail = await readPlatformError(response)
+    if (!detail) throw new Error(`后台平台暂时没有接通：${response.status}`)
     throw new Error(detail || `平台请求失败：${response.status}`)
   }
 
@@ -209,9 +213,15 @@ function getPlatformApiBaseUrl(): string {
   return ''
 }
 
+function isStaticPreviewHost(): boolean {
+  if (typeof window === 'undefined') return false
+  return window.location.hostname.endsWith('github.io') && !getCloudApiBaseUrl()
+}
+
 async function readPlatformError(response: Response): Promise<string> {
   const detail = await response.text()
   if (!detail) return ''
+  if (looksLikeHtml(detail)) return ''
 
   try {
     const parsed = JSON.parse(detail) as { error?: string; message?: string }
@@ -219,6 +229,11 @@ async function readPlatformError(response: Response): Promise<string> {
   } catch {
     return detail
   }
+}
+
+function looksLikeHtml(value: string): boolean {
+  const sample = value.trim().slice(0, 200).toLowerCase()
+  return sample.startsWith('<!doctype html') || sample.startsWith('<html') || sample.includes('<title>site not found')
 }
 
 function normalizeBaseUrl(value: string) {
