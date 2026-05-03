@@ -301,3 +301,39 @@ export interface PromptBundle {
   contextBlocks: PromptContextBlock[]
   messages: ChatMessage[]
 }
+
+export type AgentToolStatus = 'success' | 'needs_input' | 'error'
+
+export interface AgentToolTrace {
+  id: string
+  name: string
+  status: AgentToolStatus
+  title: string
+  summary: string
+  createdAt: string
+}
+
+export type AgentActionType = 'character_profile_update'
+
+export interface AgentAction {
+  id: string
+  type: AgentActionType
+  title: string
+  detail: string
+  payload: {
+    character?: Partial<Pick<CharacterCard, 'name' | 'title' | 'subtitle' | 'avatar'>>
+  }
+  requiresConfirmation: boolean
+  sourceTool: string
+  createdAt: string
+}
+
+export interface AgentRunSummary {
+  tools: AgentToolTrace[]
+  actions: AgentAction[]
+}
+
+export interface AssistantReplyResult {
+  reply: string
+  agent?: AgentRunSummary
+}

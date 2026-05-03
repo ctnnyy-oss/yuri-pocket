@@ -28,6 +28,7 @@ import { migrateAppState } from './data/migrations'
 import { createSeedState } from './data/seed'
 import type {
   AccentTheme,
+  AgentAction,
   AppSettings,
   AppState,
   LocalBackupSummary,
@@ -132,6 +133,56 @@ function addMemoryEventToState(state: AppState, input: CreateMemoryEventInput): 
     ...state,
     memoryEvents: appendMemoryEvent(state.memoryEvents, createMemoryEvent(input)),
   }
+}
+
+function applyAgentActionsToState(
+  state: AppState,
+  actions: AgentAction[] = [],
+  characterId: string,
+): { state: AppState; appliedLabels: string[] } {
+  let nextState = state
+  const appliedLabels: string[] = []
+
+  for (const action of actions) {
+    if (action.requiresConfirmation || action.type !== 'character_profile_update') continue
+
+    const characterPatch = sanitizeCharacterPatch(action.payload.character)
+    if (!characterPatch) continue
+
+    nextState = {
+      ...nextState,
+      characters: nextState.characters.map((character) =>
+        character.id === characterId ? { ...character, ...characterPatch } : character,
+      ),
+    }
+    appliedLabels.push(action.detail || action.title)
+  }
+
+  return { state: nextState, appliedLabels }
+}
+
+function sanitizeCharacterPatch(
+  patch?: AgentAction['payload']['character'],
+): Partial<AppState['characters'][number]> | null {
+  if (!patch) return null
+
+  const sanitized: Partial<AppState['characters'][number]> = {}
+  const name = sanitizeShortText(patch.name, 18)
+  const title = sanitizeShortText(patch.title, 18)
+  const subtitle = sanitizeShortText(patch.subtitle, 28)
+  const avatar = sanitizeShortText(patch.avatar, 2)
+
+  if (name) sanitized.name = name
+  if (title) sanitized.title = title
+  if (subtitle) sanitized.subtitle = subtitle
+  if (avatar) sanitized.avatar = avatar
+
+  return Object.keys(sanitized).length > 0 ? sanitized : null
+}
+
+function sanitizeShortText(value: unknown, maxLength: number): string {
+  if (typeof value !== 'string') return ''
+  return Array.from(value.replace(/[\r\n\t]/g, ' ').trim()).slice(0, maxLength).join('')
 }
 
 function readViewFromLocation(): AppView {
@@ -416,27 +467,31 @@ function App() {
     setNotice(keptMemory ? (keptMemory.status === 'candidate' ? '发现一条待确认记忆' : '已捕捉并归档一条记忆') : '消息已送达')
 
     try {
-      const reply = await requestAssistantReply(requestBundle, nextState.settings)
-      const assistantMessage = createMessage('assistant', reply)
+      const result = await requestAssistantReply(requestBundle, nextState.settings)
+      const assistantMessage = createMessage('assistant', result.reply)
       const repliedConversation = {
         ...nextConversation,
         messages: [...nextConversation.messages, assistantMessage],
         updatedAt: nowIso(),
       }
-      setState(
-        upsertConversation(
-          {
-            ...nextStateWithUsage,
-            memoryUsageLogs: attachAssistantToMemoryUsageLog(
-              nextStateWithUsage.memoryUsageLogs,
-              usageLog.id,
-              assistantMessage.id,
-            ),
-          },
-          repliedConversation,
-        ),
+      const repliedState = upsertConversation(
+        {
+          ...nextStateWithUsage,
+          memoryUsageLogs: attachAssistantToMemoryUsageLog(
+            nextStateWithUsage.memoryUsageLogs,
+            usageLog.id,
+            assistantMessage.id,
+          ),
+        },
+        repliedConversation,
       )
-      setNotice('回复完成')
+      const { state: stateWithAgentActions, appliedLabels } = applyAgentActionsToState(
+        repliedState,
+        result.agent?.actions,
+        character.id,
+      )
+      setState(stateWithAgentActions)
+      setNotice(appliedLabels.length > 0 ? `已执行：${appliedLabels.slice(0, 2).join(' / ')}` : '回复完成')
     } catch (error) {
       const fallbackMessage = createMessage(
         'assistant',

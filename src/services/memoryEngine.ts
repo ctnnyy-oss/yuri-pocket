@@ -171,7 +171,7 @@ function buildRuntimeContextBlock(): PromptContextBlock {
     content: [
       buildCurrentTimeLine(),
       '可直接处理：查当前时间和日期、整理对话、提炼下一步、检查角色/世界观设定、写作构思、前端项目建议。',
-      '不可编造：天气、新闻、价格、网页内容、外部实时资料。遇到这类问题要说明需要真实来源或让用户提供信息。',
+      '如果后台 Agent 工具返回了天气或网页摘录，可以依据工具结果回答；如果没有工具结果，不可编造天气、新闻、价格、网页内容或外部实时资料。',
     ].join('\n'),
     category: 'stable',
     reason: '每轮对话都需要的实时环境和能力边界',

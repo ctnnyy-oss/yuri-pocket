@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
+import { prepareAgentBundle } from './agentTools.mjs'
 
 dotenv.config({ path: '.env.local' })
 dotenv.config()
@@ -160,19 +161,21 @@ app.post('/api/chat', async (request, response) => {
     return
   }
 
-  const agentBundle = attachAgentToolResults(bundle)
+  const agentRun = await prepareAgentBundle(bundle)
+  const agentBundle = agentRun.bundle
   const runtimeProfile = resolveRuntimeProfileForChat(settings)
   if (!runtimeProfile?.apiKey) {
     response.json({
       provider: 'local-demo',
       reply: createDemoReply(agentBundle),
+      agent: agentRun.agent,
     })
     return
   }
 
   try {
     const reply = await callModelChat(agentBundle, settings, runtimeProfile)
-    response.json({ provider: runtimeProfile.name, model: runtimeProfile.model, reply })
+    response.json({ provider: runtimeProfile.name, model: runtimeProfile.model, reply, agent: agentRun.agent })
   } catch (error) {
     console.error(error)
     response.status(502).json({

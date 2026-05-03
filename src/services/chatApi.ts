@@ -1,7 +1,7 @@
-import type { AppSettings, PromptBundle } from '../domain/types'
+import type { AppSettings, AssistantReplyResult, PromptBundle } from '../domain/types'
 import { getSavedCloudToken } from './cloudSync'
 
-export async function requestAssistantReply(bundle: PromptBundle, settings: AppSettings): Promise<string> {
+export async function requestAssistantReply(bundle: PromptBundle, settings: AppSettings): Promise<AssistantReplyResult> {
   let response: Response
   const apiBaseUrl = getApiBaseUrl()
 
@@ -15,18 +15,21 @@ export async function requestAssistantReply(bundle: PromptBundle, settings: AppS
       body: JSON.stringify({ bundle, settings }),
     })
   } catch (error) {
-    if (isStaticPreviewHost()) return createBrowserDemoReply(bundle)
+    if (isStaticPreviewHost()) return { reply: createBrowserDemoReply(bundle) }
     throw error
   }
 
   if (!response.ok) {
-    if (response.status === 404 && isStaticPreviewHost()) return createBrowserDemoReply(bundle)
+    if (response.status === 404 && isStaticPreviewHost()) return { reply: createBrowserDemoReply(bundle) }
     const detail = await readChatError(response)
     throw new Error(formatChatError(response.status, detail))
   }
 
   const data = await response.json()
-  return data.reply
+  return {
+    reply: String(data.reply ?? ''),
+    agent: data.agent,
+  }
 }
 
 function getApiBaseUrl(): string {
