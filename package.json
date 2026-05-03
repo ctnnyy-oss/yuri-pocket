@@ -10,6 +10,7 @@
     "backup:cloud-db": "node server/backup-cloud-db.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test:agent": "node server/agentEval.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

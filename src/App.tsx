@@ -10,8 +10,10 @@ import './styles/modal.css'
 import './styles/buttons.css'
 import './styles/status.css'
 import './styles/social.css'
+import './styles/tasks.css'
 import './styles/mobile.css'
 import { CharacterRail, type AppView } from './components/CharacterRail'
+import { AgentTaskPanel } from './components/agent/AgentTaskPanel'
 import { ChatPhone } from './components/ChatPhone'
 import { MobileNav } from './components/MobileNav'
 import { MemoryPanel } from './components/MemoryPanel'
@@ -36,6 +38,8 @@ import type {
   AgentReminder,
   AgentRoom,
   AgentRoomMessage,
+  AgentTask,
+  AgentTaskStatus,
   AppSettings,
   AppState,
   CharacterCard,
@@ -86,10 +90,13 @@ import { appendMemoryEvent, createMemoryEvent, type CreateMemoryEventInput } fro
 import { applyMemoryFeedback, type MemoryFeedbackAction } from './services/memoryFeedback'
 import {
   deleteModelProfile,
+  fetchModelCatalog,
   listModelProfiles,
   saveModelProfile,
   testModelProfile,
+  type ModelCatalogResult,
 } from './services/modelProfiles'
+import { enqueueAgentTaskAction } from './services/platform'
 import { applyTrashRetention, normalizeTrashRetentionSettings } from './services/trashRetention'
 
 // 每套主题完整覆盖整个 token 集 —— "换主题" 是真的把整个 UI 换色
@@ -455,7 +462,7 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   }
 }
 
-const appViews: AppView[] = ['chat', 'group', 'moments', 'memory', 'world', 'model', 'settings', 'trash']
+const appViews: AppView[] = ['chat', 'group', 'moments', 'tasks', 'memory', 'world', 'model', 'settings', 'trash']
 type CloudBusyTask = 'checking' | 'pulling' | 'pushing' | 'backing-up'
 
 function addMemoryEventToState(state: AppState, input: CreateMemoryEventInput): AppState {
@@ -503,6 +510,18 @@ function applyAgentActionsToState(
         agentReminders: [reminder, ...(nextState.agentReminders ?? [])].slice(0, 80),
       }
       appliedLabels.push(`提醒：${reminder.title}`)
+      continue
+    }
+
+    if (action.type === 'task_create') {
+      const task = createTaskFromAgentAction(action, context)
+      if (!task) continue
+
+      nextState = {
+        ...nextState,
+        agentTasks: [task, ...(nextState.agentTasks ?? [])].slice(0, 120),
+      }
+      appliedLabels.push(`任务：${task.title}`)
       continue
     }
 
@@ -657,6 +676,46 @@ function createReminderFromAgentAction(
   }
 }
 
+function createTaskFromAgentAction(
+  action: AgentAction,
+  context: { character: CharacterCard; conversation: ConversationState },
+): AgentTask | null {
+  const input = action.payload.task
+  const title = sanitizeShortText(input?.title, 68)
+  const detail = sanitizeBlockText(input?.detail, 420)
+  if (!input || !title || !detail) return null
+
+  const steps = Array.isArray(input.steps) ? input.steps : []
+  const normalizedSteps = (steps.length > 0 ? steps : ['确认目标', '执行整理', '汇总交付'])
+    .map((step): AgentTask['steps'][number] | null => {
+      const stepTitle = sanitizeShortText(step, 64)
+      if (!stepTitle) return null
+      return {
+        id: `task-step-${crypto.randomUUID()}`,
+        title: stepTitle,
+        status: 'queued',
+      }
+    })
+    .filter((step): step is AgentTask['steps'][number] => Boolean(step))
+    .slice(0, 6)
+
+  return {
+    id: `task-${crypto.randomUUID()}`,
+    title,
+    detail,
+    status: 'queued',
+    priority: normalizeTaskPriority(input.priority),
+    source: 'agent',
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+    characterId: context.character.id,
+    conversationId: context.conversation.id,
+    handoff: sanitizeShortText(input.handoff, 120),
+    steps: normalizedSteps,
+    logs: ['Agent 已创建任务。'],
+  }
+}
+
 function createMemoryFromAgentAction(
   action: AgentAction,
   context: { character: CharacterCard; conversation: ConversationState; userMessage: ChatMessage },
@@ -687,6 +746,50 @@ function sanitizeIsoDate(value: unknown): string {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
   return date.toISOString()
+}
+
+function normalizeTaskPriority(value: unknown): AgentTask['priority'] {
+  if (value === 'low' || value === 'medium' || value === 'high') return value
+  return 'medium'
+}
+
+function transitionTaskSteps(steps: AgentTask['steps'], status: AgentTaskStatus): AgentTask['steps'] {
+  if (status === 'completed') {
+    return steps.map((step) => ({ ...step, status: 'completed' }))
+  }
+
+  if (status === 'running') {
+    let activated = false
+    return steps.map((step) => {
+      if (step.status === 'completed') return step
+      if (!activated) {
+        activated = true
+        return { ...step, status: 'running' }
+      }
+      return { ...step, status: 'queued' }
+    })
+  }
+
+  if (status === 'queued') {
+    return steps.map((step) => (step.status === 'completed' ? step : { ...step, status: 'queued' }))
+  }
+
+  return steps.map((step) => (step.status === 'running' ? { ...step, status } : step))
+}
+
+function buildTaskStatusLog(status: AgentTaskStatus): string {
+  if (status === 'running') return '任务已开始。'
+  if (status === 'completed') return '任务已完成。'
+  if (status === 'failed') return '任务标记为失败。'
+  if (status === 'blocked') return '任务标记为卡住。'
+  return '任务已放回队列。'
+}
+
+async function enqueueAgentTaskActions(actions: AgentAction[] = []) {
+  const taskActions = actions.filter((action) => action.type === 'task_create')
+  if (taskActions.length === 0) return
+
+  await Promise.allSettled(taskActions.map((action) => enqueueAgentTaskAction(action)))
 }
 
 function sanitizeCharacterPatch(
@@ -807,12 +910,13 @@ function App() {
   const [cloudBackups, setCloudBackups] = useState<CloudBackupSummary[]>([])
   const [modelProfiles, setModelProfiles] = useState<ModelProfileSummary[]>([])
   const [modelProfileStatus, setModelProfileStatus] = useState(() => {
-    if (!isCloudSyncConfigured()) return '模型密钥保险箱需要云端后端'
-    return '模型密钥会直接保存到服务器保险箱'
+    if (!isCloudSyncConfigured()) return '模型后端会优先使用本机 /api'
+    return '模型密钥会保存到服务器保险箱'
   })
   const [modelProfileBusy, setModelProfileBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const autoCloudReadyRef = useRef(false)
+  const autoModelReadyRef = useRef(false)
   const skipNextAutoPushRef = useRef(false)
 
   const refreshLocalBackups = useCallback(async () => {
@@ -833,14 +937,8 @@ function App() {
 
   const refreshModelProfileList = useCallback(async (tokenOverride?: string) => {
     const token = (tokenOverride ?? cloudToken).trim()
-    if (!isCloudSyncConfigured()) {
-      setModelProfiles([])
-      setModelProfileStatus('模型密钥保险箱需要云端后端')
-      return []
-    }
-
     setModelProfileBusy(true)
-    setModelProfileStatus('正在读取模型密钥保险箱...')
+    setModelProfileStatus('正在读取模型配置...')
     try {
       const profiles = await listModelProfiles(token)
       setModelProfiles(profiles)
@@ -887,12 +985,12 @@ function App() {
     if (localState.settings.dataStorageMode === 'local') {
       setCloudMeta(null)
       setCloudStatus('当前为仅本地模式，不会自动上传云端')
-      setModelProfileStatus('仅本地模式下不会自动读取云端配置')
+      setModelProfileStatus('仅本地模式下不会自动上传云端配置')
       return
     }
 
     setCloudStatus('正在自动连接云端...')
-    setModelProfileStatus('正在读取模型密钥保险箱...')
+    setModelProfileStatus('正在读取模型配置...')
     try {
       const snapshot = await pullCloudState(cloudToken)
       if (snapshot.state) {
@@ -918,7 +1016,7 @@ function App() {
     } catch (error) {
       autoCloudReadyRef.current = false
       setCloudStatus(error instanceof Error ? error.message : '自动连接云端失败')
-      setModelProfileStatus('模型保险箱暂时没连上')
+      setModelProfileStatus('模型配置暂时没连上')
     }
   }, [cloudToken, refreshCloudBackups, refreshModelProfileList])
 
@@ -970,6 +1068,13 @@ function App() {
       void refreshLocalBackups()
     })
   }, [refreshLocalBackups])
+
+  useEffect(() => {
+    if (!isReady) return
+    if (autoModelReadyRef.current) return
+    autoModelReadyRef.current = true
+    void refreshModelProfileList(cloudToken)
+  }, [cloudToken, isReady, refreshModelProfileList])
 
   useEffect(() => {
     if (!isReady) return
@@ -1122,7 +1227,10 @@ function App() {
 
     try {
       const result = await requestAssistantReply(requestBundle, nextState.settings)
-      const assistantMessage = createMessage('assistant', result.reply)
+      const assistantMessage = {
+        ...createMessage('assistant', result.reply),
+        agent: result.agent,
+      }
       const repliedConversation = {
         ...nextConversation,
         messages: [...nextConversation.messages, assistantMessage],
@@ -1146,6 +1254,7 @@ function App() {
       )
       setState(stateWithAgentActions)
       setNotice(appliedLabels.length > 0 ? `已执行：${appliedLabels.slice(0, 2).join(' / ')}` : '回复完成')
+      void enqueueAgentTaskActions(result.agent?.actions)
     } catch (error) {
       const fallbackMessage = createMessage(
         'assistant',
@@ -1184,6 +1293,32 @@ function App() {
         activeCharacterId: characterId,
       }
     })
+  }
+
+  function handleUpdateTaskStatus(taskId: string, status: AgentTaskStatus) {
+    setState((currentState) => ({
+      ...currentState,
+      agentTasks: (currentState.agentTasks ?? []).map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              status,
+              steps: transitionTaskSteps(task.steps, status),
+              logs: [...task.logs, buildTaskStatusLog(status)].slice(-8),
+              updatedAt: nowIso(),
+            }
+          : task,
+      ),
+    }))
+    setNotice(buildTaskStatusLog(status))
+  }
+
+  function handleClearCompletedTasks() {
+    setState((currentState) => ({
+      ...currentState,
+      agentTasks: (currentState.agentTasks ?? []).filter((task) => task.status !== 'completed'),
+    }))
+    setNotice('已清理完成任务')
   }
 
   function handleAddMemory() {
@@ -1762,6 +1897,31 @@ function App() {
     }
   }
 
+  async function handleFetchModelCatalog(input: { profileId?: string; profile?: ModelProfileInput }): Promise<ModelCatalogResult> {
+    if (state.settings.dataStorageMode === 'local') {
+      const error = new Error('仅本地模式下不会把 API Key 发到模型后端拉取列表')
+      setModelProfileStatus(error.message)
+      setNotice('仅本地模式不会拉取模型')
+      throw error
+    }
+
+    try {
+      const token = cloudToken.trim()
+      setModelProfileBusy(true)
+      setModelProfileStatus('正在拉取模型列表...')
+      const result = await fetchModelCatalog(token, input)
+      setModelProfileStatus(`已拉取 ${result.models.length} 个模型`)
+      setNotice('模型列表已更新')
+      return result
+    } catch (error) {
+      setModelProfileStatus(error instanceof Error ? error.message : '模型列表拉取失败')
+      setNotice('模型列表拉取失败')
+      throw error
+    } finally {
+      setModelProfileBusy(false)
+    }
+  }
+
   async function handlePullCloud() {
     if (cloudBusy) return
     if (state.settings.dataStorageMode === 'local') {
@@ -1946,6 +2106,13 @@ function App() {
         <GroupChatPanel characters={state.characters} rooms={state.agentRooms} />
       ) : activeView === 'moments' ? (
         <MomentsPanel characters={state.characters} moments={state.agentMoments} />
+      ) : activeView === 'tasks' ? (
+        <AgentTaskPanel
+          characters={state.characters}
+          onClearCompleted={handleClearCompletedTasks}
+          onUpdateTaskStatus={handleUpdateTaskStatus}
+          tasks={state.agentTasks ?? []}
+        />
       ) : (
         <MemoryPanel
           activeView={activeView}
@@ -1978,6 +2145,7 @@ function App() {
           onRefreshModelProfiles={() => void refreshModelProfileList()}
           onSaveModelProfile={handleSaveModelProfile}
           onDeleteModelProfile={handleDeleteModelProfile}
+          onFetchModelCatalog={handleFetchModelCatalog}
           onTestModelProfile={handleTestModelProfile}
           cloudStatus={cloudStatus}
           cloudMeta={cloudMeta}

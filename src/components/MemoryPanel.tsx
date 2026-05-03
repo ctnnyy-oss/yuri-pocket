@@ -38,6 +38,7 @@ import type {
   WorldNode,
 } from '../domain/types'
 import type { CloudBackupSummary, CloudMetadata } from '../services/cloudSync'
+import type { ModelCatalogResult } from '../services/modelProfiles'
 import {
   memoryKindLabels,
   memoryLayerLabels,
@@ -93,7 +94,7 @@ interface MemoryPanelProps {
   activeConversationId: string
   trash: AppTrash
   settings: AppSettings
-  activeView: Exclude<AppView, 'chat' | 'group' | 'moments'>
+  activeView: Exclude<AppView, 'chat' | 'group' | 'moments' | 'tasks'>
   onAddMemory: () => void
   onOrganizeMemories: () => void
   onUpdateMemory: (memory: LongTermMemory) => void
@@ -116,6 +117,7 @@ interface MemoryPanelProps {
   onRefreshModelProfiles: () => void
   onSaveModelProfile: (profile: ModelProfileInput) => Promise<void>
   onDeleteModelProfile: (profileId: string) => Promise<void>
+  onFetchModelCatalog: (input: { profileId?: string; profile?: ModelProfileInput }) => Promise<ModelCatalogResult>
   onTestModelProfile: (input: { profileId?: string; profile?: ModelProfileInput }) => Promise<void>
   cloudStatus: string
   cloudMeta: CloudMetadata | null
@@ -187,6 +189,7 @@ export function MemoryPanel({
   onRefreshModelProfiles,
   onSaveModelProfile,
   onDeleteModelProfile,
+  onFetchModelCatalog,
   onTestModelProfile,
   cloudStatus,
   cloudMeta,
@@ -836,6 +839,7 @@ export function MemoryPanel({
           modelProfiles={modelProfiles}
           onConnectCloud={onConnectCloud}
           onDeleteModelProfile={onDeleteModelProfile}
+          onFetchModelCatalog={onFetchModelCatalog}
           onRefreshModelProfiles={onRefreshModelProfiles}
           onSaveModelProfile={onSaveModelProfile}
           onTestModelProfile={onTestModelProfile}

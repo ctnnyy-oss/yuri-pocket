@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../domain/types'
+import type { AgentAction, AgentRunSummary, AgentToolStatus, ChatMessage } from '../domain/types'
 import type { MemoryFeedbackAction } from '../services/memoryFeedback'
 import type { MessageMemoryTrace } from '../services/memoryTrace'
 
@@ -12,6 +12,7 @@ export function MessageBubble({ memoryTrace, message, onMemoryFeedback }: Messag
   return (
     <article className={`message message-${message.role}`}>
       <p>{message.content}</p>
+      {message.agent && <AgentTrace trace={message.agent} />}
       {memoryTrace && <MemoryTrace onMemoryFeedback={onMemoryFeedback} trace={memoryTrace} />}
       <time dateTime={message.createdAt}>
         {new Intl.DateTimeFormat('zh-CN', {
@@ -21,6 +22,104 @@ export function MessageBubble({ memoryTrace, message, onMemoryFeedback }: Messag
       </time>
     </article>
   )
+}
+
+const toolStatusLabels: Record<AgentToolStatus, string> = {
+  success: '已完成',
+  needs_input: '需确认',
+  error: '未完成',
+}
+
+function AgentTrace({ trace }: { trace: AgentRunSummary }) {
+  const tools = trace.tools ?? []
+  const coreTools = tools.filter((tool) => !isMetaTraceTool(tool.name))
+  const metaTools = tools.filter((tool) => isMetaTraceTool(tool.name))
+  const actions = trace.actions ?? []
+  const visibleActions = actions.filter((action) => !action.requiresConfirmation)
+  const pendingActions = actions.filter((action) => action.requiresConfirmation)
+  const itemCount = tools.length + actions.length
+
+  if (itemCount === 0) return null
+
+  return (
+    <details className="message-agent-trace">
+      <summary>
+        <span>Agent 做了 {itemCount} 件事</span>
+        <small>{buildAgentSummary(coreTools.length, metaTools.length, visibleActions.length, pendingActions.length)}</small>
+      </summary>
+      {tools.length > 0 && (
+        <div className="agent-trace-list">
+          {tools.map((tool) => (
+            <div
+              className={`agent-trace-item agent-trace-${tool.status} ${isMetaTraceTool(tool.name) ? 'agent-trace-meta' : ''}`}
+              key={tool.id}
+            >
+              <strong>{tool.title.replace('Agent 工具：', '')}</strong>
+              <span>{toolStatusLabels[tool.status]}</span>
+              <p>{tool.summary}</p>
+              {tool.content && <small>{formatToolEvidence(tool.content)}</small>}
+            </div>
+          ))}
+        </div>
+      )}
+      {actions.length > 0 && (
+        <div className="agent-trace-list">
+          {actions.map((action) => (
+            <div className="agent-trace-item agent-action-item" key={action.id}>
+              <strong>{action.title}</strong>
+              <span>{action.requiresConfirmation ? '等待妹妹确认' : '已交给小窝处理'}</span>
+              <p>{formatActionDetail(action)}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </details>
+  )
+}
+
+function buildAgentSummary(toolCount: number, metaToolCount: number, actionCount: number, pendingCount: number): string {
+  const parts = []
+  if (toolCount > 0) parts.push(`${toolCount} 个工具`)
+  if (metaToolCount > 0) parts.push(`${metaToolCount} 个整理`)
+  if (actionCount > 0) parts.push(`${actionCount} 个动作`)
+  if (pendingCount > 0) parts.push(`${pendingCount} 个待确认`)
+  return parts.join(' / ') || '普通聊天'
+}
+
+function isMetaTraceTool(name: string): boolean {
+  return [
+    'agent_brief',
+    'capability_guide',
+    'agent_continuity',
+    'memory_bridge',
+    'autonomy_budget',
+    'risk_gate',
+    'task_queue',
+    'workflow_router',
+    'persona_guard',
+    'failure_recovery',
+    'evidence_audit',
+    'answer_composer',
+    'deliverable_contract',
+    'response_quality_gate',
+    'agent_quality_check',
+    'handoff_marker',
+  ].includes(name)
+}
+
+function formatActionDetail(action: AgentAction): string {
+  return action.detail || action.sourceTool || action.type
+}
+
+function formatToolEvidence(content: string): string {
+  return content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !line.startsWith('工具 ') && !line.startsWith('回答时') && !line.startsWith('最终回复'))
+    .slice(0, 3)
+    .join(' / ')
+    .slice(0, 220)
 }
 
 const memoryFeedbackLabels: Record<MemoryFeedbackAction, string> = {

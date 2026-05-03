@@ -6,6 +6,7 @@ export interface ChatMessage {
   content: string
   createdAt: string
   memoryCaptured?: boolean
+  agent?: AgentRunSummary
 }
 
 export interface CharacterCard {
@@ -226,6 +227,32 @@ export interface AgentReminder {
   conversationId?: string
 }
 
+export type AgentTaskStatus = 'queued' | 'running' | 'completed' | 'failed' | 'blocked'
+export type AgentTaskPriority = 'low' | 'medium' | 'high'
+
+export interface AgentTaskStep {
+  id: string
+  title: string
+  status: AgentTaskStatus
+  detail?: string
+}
+
+export interface AgentTask {
+  id: string
+  title: string
+  detail: string
+  status: AgentTaskStatus
+  priority: AgentTaskPriority
+  source: 'agent' | 'user'
+  createdAt: string
+  updatedAt: string
+  characterId?: string
+  conversationId?: string
+  handoff?: string
+  steps: AgentTaskStep[]
+  logs: string[]
+}
+
 export interface AgentMoment {
   id: string
   authorCharacterId: string
@@ -281,7 +308,7 @@ export interface ModelProfileSummary {
 
 export interface ModelProfileInput {
   id?: string
-  name: string
+  name?: string
   kind: ModelProviderKind
   baseUrl: string
   model: string
@@ -319,6 +346,7 @@ export interface AppState {
   memoryUsageLogs: MemoryUsageLog[]
   memoryEvents: MemoryEvent[]
   agentReminders: AgentReminder[]
+  agentTasks: AgentTask[]
   agentMoments: AgentMoment[]
   agentRooms: AgentRoom[]
   settings: AppSettings
@@ -364,6 +392,7 @@ export interface AgentToolTrace {
   name: string
   status: AgentToolStatus
   title: string
+  content?: string
   summary: string
   createdAt: string
 }
@@ -371,6 +400,7 @@ export interface AgentToolTrace {
 export type AgentActionType =
   | 'character_profile_update'
   | 'reminder_create'
+  | 'task_create'
   | 'memory_candidate_create'
   | 'moment_create'
   | 'room_message_create'
@@ -383,6 +413,13 @@ export interface AgentAction {
   payload: {
     character?: Partial<Pick<CharacterCard, 'name' | 'title' | 'subtitle' | 'avatar'>>
     reminder?: Pick<AgentReminder, 'title' | 'detail' | 'remindAt'>
+    task?: {
+      title: string
+      detail: string
+      priority?: AgentTaskPriority
+      steps?: string[]
+      handoff?: string
+    }
     memory?: {
       title: string
       body: string

@@ -51,6 +51,29 @@ interface MemoryContextGroup {
   limit: number
 }
 
+type PromptBlockCategory = NonNullable<PromptContextBlock['category']>
+
+const DEFAULT_PROMPT_BLOCK_CATEGORY: PromptBlockCategory = 'stable'
+const PROMPT_CONTEXT_TOTAL_BUDGET = 8_200
+const PROMPT_CONTEXT_BLOCK_BUDGET: Record<PromptBlockCategory, number> = {
+  boundary: 1_800,
+  stable: 1_800,
+  relationship: 1_500,
+  project: 1_700,
+  event: 1_100,
+  world: 1_500,
+  summary: 1_200,
+}
+const PROMPT_CONTEXT_CATEGORY_BUDGET: Record<PromptBlockCategory, number> = {
+  boundary: 2_200,
+  stable: 2_000,
+  relationship: 1_800,
+  project: 2_000,
+  event: 1_300,
+  world: 1_700,
+  summary: 1_400,
+}
+
 export function nowIso() {
   return new Date().toISOString()
 }
@@ -121,6 +144,27 @@ export function buildPromptBundle(state: AppState): PromptBundle {
   })
   const runtimeContext = buildRuntimeContextBlock()
   const reminderContext = buildReminderContextBlock(state)
+  const contextBlocks = applyPromptContextBudget([
+    runtimeContext,
+    ...(reminderContext ? [reminderContext] : []),
+    ...memoryContextBlocks,
+    ...activeWorldNodes.map((node) => ({
+      title: `世界树：${node.title}`,
+      content: node.content,
+      category: 'world' as const,
+      reason: `命中触发词：${node.keywords.join(' / ')}`,
+    })),
+    ...(conversation.summary
+      ? [
+          {
+            title: '最近摘要',
+            content: conversation.summary,
+            category: 'summary' as const,
+            reason: '压缩当前角色的最近聊天',
+          },
+        ]
+      : []),
+  ])
 
   return {
     characterName: character.name,
@@ -129,32 +173,20 @@ export function buildPromptBundle(state: AppState): PromptBundle {
       buildCurrentTimeInstruction(),
       `你正在${brand.fullName}里与用户聊天。不要暴露内部实现。回复要自然、简体中文、有陪伴感。`,
       '优先保持连续性、情绪承接和可执行性；当用户做项目时给清晰下一步，当用户情绪不好时先接住再处理问题。',
+      '如果本轮上下文里出现 Agent 工具结果，必须以工具结果为准：时间、天气、搜索、网页摘录、计算结果不能凭模型记忆或猜测改写成另一个事实。',
+      '如果工具结果是失败、缺少输入或能力边界，坦诚说明并给用户下一步选择；不要假装已经联网、读完全文、设置系统提醒或操作设备。',
+      '执行型回复要像真人助手：先接住妹妹的话，再自然说明你查看、计算、整理或保存了什么，不要用生硬的“工具调用成功”当作最终回答。',
+      '如果 Agent 提供“本轮工作台、行动清单、澄清缺口”，按它的策略回答：能推进就推进，只在真正卡住时问一个关键问题。',
+      '如果 Agent 提供“默认推进策略、长冲刺续航、多工具综合回复、本轮质量自检”，按它们收束回复：用户说不懂/都听姐姐时采用保守默认，用户要求一次性推进时完成一个完整切片并说明验证结果。',
+      '如果 Agent 提供“多轮任务接力、记忆协同、失败恢复策略、下轮交接标记”，把“继续”理解成接着上一轮推进；用记忆时尊重提及边界；工具失败时换保守方案或只问一个真正阻塞的问题。',
+      '如果 Agent 提供“自治预算、风险闸门、任务队列、证据校验”，按它们控制节奏：在可自治范围内直接推进；遇到删除、发布、付费、隐私、账号密钥等风险必须暂停确认；事实结论要有工具依据或标注不确定。',
+      '如果 Agent 提供“工作流路由、角色与语气守护、交付契约、回复质检”，按它们收口：选择合适输出形状，守住姐姐语气和百合边界，最终回复必须有明确交付物而不是只描述过程。',
       '如果长期记忆和当前用户明确表达冲突，以当前用户表达为准，并在合适时提醒用户可以修改旧记忆。',
       '使用记忆时不要机械复述，也不要炫耀你记得很多。低可信记忆只能温和确认，敏感记忆只能在用户主动相关提及时谨慎使用。',
       '区分记忆层级：稳定事实可以作为长期背景；阶段事件只能当作发生过的脉络，不能升级成永久偏好；临时工作只在当前任务强相关时使用。',
       '遵守每条记忆的提及策略：只做边界的记忆只能保护对话，不要主动说出；问起再提的记忆只有用户明确询问旧事或记忆时才可提起。',
     ].join('\n'),
-    contextBlocks: [
-      runtimeContext,
-      ...(reminderContext ? [reminderContext] : []),
-      ...memoryContextBlocks,
-      ...activeWorldNodes.map((node) => ({
-        title: `世界树：${node.title}`,
-        content: node.content,
-        category: 'world' as const,
-        reason: `命中触发词：${node.keywords.join(' / ')}`,
-      })),
-      ...(conversation.summary
-        ? [
-            {
-              title: '最近摘要',
-              content: conversation.summary,
-              category: 'summary' as const,
-              reason: '压缩当前角色的最近聊天',
-            },
-          ]
-        : []),
-    ],
+    contextBlocks,
     messages: recentMessages,
   }
 }
@@ -175,6 +207,43 @@ function buildReminderContextBlock(state: AppState): PromptContextBlock | null {
     category: 'summary',
     reason: '当前未完成提醒',
   }
+}
+
+function applyPromptContextBudget(blocks: PromptContextBlock[]): PromptContextBlock[] {
+  const usedByCategory = new Map<PromptBlockCategory, number>()
+  const budgetedBlocks: PromptContextBlock[] = []
+  let totalUsed = 0
+
+  for (const block of blocks) {
+    const category = getPromptBlockCategory(block)
+    const categoryUsed = usedByCategory.get(category) ?? 0
+    const categoryRemaining = PROMPT_CONTEXT_CATEGORY_BUDGET[category] - categoryUsed
+    const totalRemaining = PROMPT_CONTEXT_TOTAL_BUDGET - totalUsed
+    const available = Math.min(PROMPT_CONTEXT_BLOCK_BUDGET[category], categoryRemaining, totalRemaining)
+
+    if (available <= 80 && category !== 'boundary') continue
+
+    const content = trimPromptContextContent(block.content, Math.max(120, available))
+    const nextBlock: PromptContextBlock = content === block.content ? block : { ...block, content }
+
+    budgetedBlocks.push(nextBlock)
+    const used = nextBlock.content.length
+    usedByCategory.set(category, categoryUsed + used)
+    totalUsed += used
+  }
+
+  return budgetedBlocks
+}
+
+function getPromptBlockCategory(block: PromptContextBlock): PromptBlockCategory {
+  return block.category ?? DEFAULT_PROMPT_BLOCK_CATEGORY
+}
+
+function trimPromptContextContent(content: string, maxLength: number): string {
+  if (content.length <= maxLength) return content
+  const marker = '\n…（已按本轮提示预算截断，保留更高优先级上下文。）'
+  const sliceLength = Math.max(0, maxLength - marker.length)
+  return `${content.slice(0, sliceLength).trimEnd()}${marker}`
 }
 
 function formatReminderTime(value: string): string {

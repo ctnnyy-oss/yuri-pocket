@@ -1,0 +1,25 @@
+{
+  "name": "百合小窝 · Yuri Nest",
+  "short_name": "百合小窝",
+  "description": "百合陪伴、记忆与 Agent 小助手。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff8fb",
+  "theme_color": "#fff8fb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "48x48",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "favicon.svg",
+      "sizes": "48x48",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

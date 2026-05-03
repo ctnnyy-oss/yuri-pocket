@@ -11,6 +11,84 @@
   max-width: 1280px;
 }
 
+.model-current-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 16px;
+}
+
+.model-current-strip > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.model-current-strip small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.model-current-strip strong {
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-current-strip span {
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.model-current-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.model-current-actions button,
+.model-picker-row button,
+.model-inline-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: var(--pink-50);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 38px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.model-current-actions button:hover:not(:disabled),
+.model-picker-row button:hover:not(:disabled),
+.model-inline-link:hover {
+  border-color: var(--line);
+  background: var(--pink-100);
+}
+
+.model-current-actions button:disabled,
+.model-picker-row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .settings-stack label {
   display: grid;
   gap: 5px;
@@ -185,6 +263,52 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-md);
+}
+
+.model-segmented {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: var(--pink-50);
+  padding: 4px;
+}
+
+.model-segmented button {
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  min-height: 36px;
+  cursor: pointer;
+}
+
+.model-segmented button.active {
+  background: var(--panel);
+  color: var(--pink-700);
+  box-shadow: var(--shadow-xs);
+}
+
+.model-picker-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--space-sm);
+}
+
+.model-picker-row button {
+  min-height: 42px;
+}
+
+.model-inline-link {
+  justify-self: start;
+  min-height: 32px;
+  padding: 6px 10px;
+  color: var(--pink-700);
 }
 
 /* ── 模型档案列表 ── */

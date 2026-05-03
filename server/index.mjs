@@ -6,6 +6,19 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
 import { prepareAgentBundle } from './agentTools.mjs'
+import {
+  createPlatformTask,
+  getPlatformStatus,
+  initializePlatform,
+  listPlatformConnectors,
+  listPlatformExecutors,
+  listPlatformNotifications,
+  listPlatformTasks,
+  markPlatformNotificationsSeen,
+  startPlatformWorker,
+  updatePlatformConnector,
+  updatePlatformTask,
+} from './platform.mjs'
 
 dotenv.config({ path: '.env.local' })
 dotenv.config()
@@ -147,6 +160,90 @@ app.post('/api/model/test', requireCloudAuth, async (request, response) => {
   }
 })
 
+app.post('/api/model/models', requireCloudAuth, async (request, response) => {
+  try {
+    const runtimeProfile = resolveRuntimeProfileForModelCatalog(request.body ?? {})
+    if (!runtimeProfile.apiKey) {
+      response.status(400).json({ error: '拉取模型列表需要先填写或保存 API Key' })
+      return
+    }
+
+    response.json(await fetchProviderModels(runtimeProfile))
+  } catch (error) {
+    response.status(502).json({ error: error instanceof Error ? error.message : '模型列表拉取失败' })
+  }
+})
+
+app.get('/api/platform/status', requireCloudAuth, (_request, response) => {
+  response.json(getPlatformStatus())
+})
+
+app.get('/api/platform/tasks', requireCloudAuth, (request, response) => {
+  response.json({
+    ok: true,
+    tasks: listPlatformTasks(request.query.limit),
+  })
+})
+
+app.post('/api/platform/tasks', requireCloudAuth, (request, response) => {
+  try {
+    response.json({
+      ok: true,
+      task: createPlatformTask(request.body?.task ?? request.body ?? {}),
+    })
+  } catch (error) {
+    response.status(400).json({ error: error instanceof Error ? error.message : '后台任务创建失败' })
+  }
+})
+
+app.patch('/api/platform/tasks/:taskId', requireCloudAuth, (request, response) => {
+  const task = updatePlatformTask(request.params.taskId, request.body ?? {})
+  if (!task) {
+    response.status(404).json({ error: '没有找到这个后台任务' })
+    return
+  }
+
+  response.json({ ok: true, task })
+})
+
+app.get('/api/platform/notifications', requireCloudAuth, (request, response) => {
+  response.json({
+    ok: true,
+    notifications: listPlatformNotifications(request.query.limit),
+  })
+})
+
+app.patch('/api/platform/notifications', requireCloudAuth, (request, response) => {
+  response.json({
+    ok: true,
+    notifications: markPlatformNotificationsSeen(request.body?.ids ?? []),
+  })
+})
+
+app.get('/api/platform/connectors', requireCloudAuth, (_request, response) => {
+  response.json({
+    ok: true,
+    connectors: listPlatformConnectors(),
+  })
+})
+
+app.patch('/api/platform/connectors/:connectorId', requireCloudAuth, (request, response) => {
+  const connector = updatePlatformConnector(request.params.connectorId, request.body ?? {})
+  if (!connector) {
+    response.status(404).json({ error: '没有找到这个连接器' })
+    return
+  }
+
+  response.json({ ok: true, connector, connectors: listPlatformConnectors() })
+})
+
+app.get('/api/platform/executors', requireCloudAuth, (_request, response) => {
+  response.json({
+    ok: true,
+    executors: listPlatformExecutors(),
+  })
+})
+
 app.post('/api/chat', async (request, response) => {
   const { bundle, settings } = request.body ?? {}
 
@@ -187,6 +284,9 @@ app.post('/api/chat', async (request, response) => {
     })
   }
 })
+
+initializePlatform()
+startPlatformWorker()
 
 app.listen(port, '127.0.0.1', () => {
   console.log(`${appName} API listening on http://127.0.0.1:${port}`)
@@ -480,19 +580,18 @@ function clearDefaultModelProfiles() {
   getCloudDatabase().prepare('UPDATE model_profiles SET is_default = 0').run()
 }
 
-function normalizeModelProfileInput(input) {
+function normalizeModelProfileInput(input, options = {}) {
   if (!input || typeof input !== 'object') throw new Error('模型配置格式不对')
 
   const kind = String(input.kind || 'openai-compatible')
   if (!modelProviderKinds.has(kind)) throw new Error('暂不支持这个模型接口类型')
 
-  const name = String(input.name || '').trim()
   const baseUrl = String(input.baseUrl || '').trim()
   const model = String(input.model || '').trim()
+  const name = deriveModelProfileName({ name: input.name, kind, baseUrl, model })
 
-  if (!name) throw new Error('模型配置需要一个名称')
   if (!baseUrl) throw new Error('模型配置需要 Base URL')
-  if (!model) throw new Error('模型配置需要模型名')
+  if (options.requireModel !== false && !model) throw new Error('模型配置需要模型名')
 
   return {
     id: input.id ? String(input.id) : undefined,
@@ -503,6 +602,29 @@ function normalizeModelProfileInput(input) {
     apiKey: typeof input.apiKey === 'string' ? input.apiKey : '',
     enabled: input.enabled !== false,
     isDefault: Boolean(input.isDefault),
+  }
+}
+
+function deriveModelProfileName(input) {
+  const explicitName = String(input.name || '').trim()
+  if (explicitName) return explicitName
+
+  const host = getProfileHostLabel(input.baseUrl)
+  const kindLabel = input.kind === 'anthropic' ? 'Anthropic' : input.kind === 'google-gemini' ? 'Gemini' : 'OpenAI 兼容'
+  const model = String(input.model || '').trim()
+
+  if (model && host) return `${host} / ${model}`
+  if (host) return `${host} / ${kindLabel}`
+  if (model) return model
+  return '我的模型配置'
+}
+
+function getProfileHostLabel(baseUrl) {
+  try {
+    const hostname = new URL(stripTrailingSlash(baseUrl)).hostname
+    return hostname.replace(/^api\./, '').replace(/^www\./, '')
+  } catch {
+    return ''
   }
 }
 
@@ -597,6 +719,26 @@ function resolveRuntimeProfileForTest(input) {
   return storedProfileToRuntime(readStoredModelProfile(input.profileId))
 }
 
+function resolveRuntimeProfileForModelCatalog(input) {
+  if (input.profile) {
+    const normalized = normalizeModelProfileInput(input.profile, { requireModel: false })
+    return {
+      id: normalized.id ?? 'draft',
+      name: normalized.name,
+      kind: normalized.kind,
+      baseUrl: normalized.baseUrl,
+      model: normalized.model,
+      apiKey: normalized.apiKey?.trim() || '',
+    }
+  }
+
+  if (input.profileId === serverEnvProfileId) {
+    return resolveRuntimeProfileForChat({ modelProfileId: serverEnvProfileId, model: process.env.AI_MODEL })
+  }
+
+  return storedProfileToRuntime(readStoredModelProfile(input.profileId))
+}
+
 function storedProfileToRuntime(profile) {
   if (!profile) throw new Error('没有找到这个模型配置')
   if (!profile.enabled) throw new Error('这个模型配置已经停用')
@@ -619,6 +761,71 @@ async function callModelChat(bundle, settings, profile) {
   if (profile.kind === 'anthropic') return callAnthropicChat(bundle, settings, profile)
   if (profile.kind === 'google-gemini') return callGeminiChat(bundle, settings, profile)
   return callOpenAICompatibleChat(bundle, settings, profile)
+}
+
+async function fetchProviderModels(profile) {
+  if (profile.kind === 'google-gemini') return fetchGeminiModels(profile)
+  if (profile.kind === 'anthropic') return fetchAnthropicModels(profile)
+  return fetchOpenAICompatibleModels(profile)
+}
+
+async function fetchOpenAICompatibleModels(profile) {
+  const response = await fetchWithTimeout(`${profile.baseUrl}/models`, {
+    headers: {
+      Authorization: `Bearer ${profile.apiKey}`,
+      Accept: 'application/json',
+    },
+  })
+
+  const data = await readJsonResponse(response, profile)
+  const models = normalizeProviderModelList(data?.data ?? data?.models ?? data)
+
+  if (models.length === 0) {
+    throw new Error(`${profile.name} 没有返回可选模型，请确认这个中转站支持 /models 接口。`)
+  }
+
+  return {
+    ok: true,
+    provider: profile.name,
+    baseUrl: profile.baseUrl,
+    models,
+  }
+}
+
+async function fetchAnthropicModels(profile) {
+  const response = await fetchWithTimeout(`${profile.baseUrl}/models`, {
+    headers: {
+      'x-api-key': profile.apiKey,
+      'anthropic-version': process.env.ANTHROPIC_VERSION || '2023-06-01',
+      Accept: 'application/json',
+    },
+  })
+  const data = await readJsonResponse(response, profile)
+  const models = normalizeProviderModelList(data?.data ?? data?.models ?? data)
+
+  if (models.length === 0) throw new Error(`${profile.name} 没有返回可选模型。`)
+  return { ok: true, provider: profile.name, baseUrl: profile.baseUrl, models }
+}
+
+async function fetchGeminiModels(profile) {
+  const endpoint = `${profile.baseUrl}/models?key=${encodeURIComponent(profile.apiKey)}`
+  const response = await fetchWithTimeout(endpoint, { headers: { Accept: 'application/json' } })
+  const data = await readJsonResponse(response, profile)
+  const rawModels = Array.isArray(data?.models) ? data.models : []
+  const models = rawModels
+    .filter((model) => {
+      const methods = model?.supportedGenerationMethods
+      return !Array.isArray(methods) || methods.includes('generateContent')
+    })
+    .map((model) => ({
+      id: String(model?.name || '').replace(/^models\//, ''),
+      label: String(model?.displayName || model?.name || '').replace(/^models\//, ''),
+      ownedBy: 'google',
+    }))
+    .filter((model) => model.id)
+
+  if (models.length === 0) throw new Error(`${profile.name} 没有返回可生成文本的模型。`)
+  return { ok: true, provider: profile.name, baseUrl: profile.baseUrl, models: dedupeProviderModels(models) }
 }
 
 async function callOpenAICompatibleChat(bundle, settings, profile) {
@@ -652,6 +859,61 @@ async function callOpenAICompatibleChat(bundle, settings, profile) {
   }
 
   return reply
+}
+
+async function fetchWithTimeout(url, init = {}, timeoutMs = 12_000) {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal })
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+async function readJsonResponse(response, profile) {
+  const text = await response.text()
+
+  if (!response.ok) {
+    throw new Error(formatProviderError(response.status, text, profile))
+  }
+
+  try {
+    return text ? JSON.parse(text) : {}
+  } catch {
+    throw new Error(`${profile.name} 返回的模型列表不是 JSON。`)
+  }
+}
+
+function normalizeProviderModelList(value) {
+  const list = Array.isArray(value) ? value : []
+  return dedupeProviderModels(
+    list
+      .map((model) => {
+        if (typeof model === 'string') return { id: model, label: model }
+        const id = String(model?.id || model?.name || model?.model || '').replace(/^models\//, '')
+        if (!id) return null
+        return {
+          id,
+          label: String(model?.display_name || model?.displayName || model?.name || id).replace(/^models\//, ''),
+          ownedBy: typeof model?.owned_by === 'string' ? model.owned_by : typeof model?.ownedBy === 'string' ? model.ownedBy : undefined,
+        }
+      })
+      .filter(Boolean),
+  )
+}
+
+function dedupeProviderModels(models) {
+  const seen = new Set()
+  return models
+    .filter((model) => {
+      if (!model?.id || seen.has(model.id)) return false
+      seen.add(model.id)
+      return true
+    })
+    .sort((left, right) => left.id.localeCompare(right.id))
+    .slice(0, 500)
 }
 
 async function callAnthropicChat(bundle, settings, profile) {
@@ -877,13 +1139,46 @@ function getToolRoleLabel(role) {
   return '消息'
 }
 
+const DEMO_META_AGENT_REASONS = new Set([
+  'agent_brief',
+  'capability_guide',
+  'agent_continuity',
+  'memory_bridge',
+  'autonomy_budget',
+  'risk_gate',
+  'task_queue',
+  'workflow_router',
+  'persona_guard',
+  'failure_recovery',
+  'evidence_audit',
+  'answer_composer',
+  'deliverable_contract',
+  'response_quality_gate',
+  'agent_quality_check',
+  'handoff_marker',
+  'tool_governance',
+])
+
 function createDemoReply(bundle) {
   const lastUserMessage = [...bundle.messages].reverse().find((message) => message.role === 'user')
   const characterName = bundle.characterName || appName
+  const agentBlocks = bundle.contextBlocks.filter((block) => block.title?.startsWith('Agent '))
+  const visibleAgentBlocks = agentBlocks.filter((block) => !DEMO_META_AGENT_REASONS.has(block.reason))
   const memoryHint = bundle.contextBlocks
+    .filter((block) => !block.title?.startsWith('Agent '))
     .map((block) => block.title)
     .slice(0, 2)
     .join(' / ')
+
+  if (agentBlocks.length > 0) {
+    return [
+      `${characterName}看了一眼本地 agent 工具结果：`,
+      ...(visibleAgentBlocks.length > 0 ? visibleAgentBlocks : agentBlocks)
+        .slice(0, 4)
+        .map((block) => `${cleanDemoAgentTitle(block.title)}：${extractDemoAgentLine(block.content)}`),
+      '现在是本地演示模式，还没有接入真实大模型；接上模型后，这些工具结果会被自然揉进角色回复里。',
+    ].join('\n\n')
+  }
 
   return [
     `[${characterName}] local demo received: ${lastUserMessage?.content ?? 'hello'}`,
@@ -892,19 +1187,54 @@ function createDemoReply(bundle) {
   ].join('\n\n')
 }
 
+function cleanDemoAgentTitle(title) {
+  return String(title || '').replace(/^Agent (工具|动作)：/, '')
+}
+
+function extractDemoAgentLine(content) {
+  const lines = String(content || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/^工具 .*已执行。$/.test(line))
+    .filter((line) => !/^回答时|^请|^前端收到|^当前|^你可以/.test(line))
+
+  return lines[0]?.slice(0, 220) || '工具已运行，但没有返回可展示摘要。'
+}
+
 function createProviderFallbackReply(error, agent) {
   const actionCount = Array.isArray(agent?.actions) ? agent.actions.filter((action) => !action.requiresConfirmation).length : 0
-  const toolCount = Array.isArray(agent?.tools) ? agent.tools.length : 0
+  const tools = Array.isArray(agent?.tools) ? agent.tools : []
+  const toolCount = tools.filter((tool) => !DEMO_META_AGENT_REASONS.has(tool.name)).length
   const reason = error instanceof Error ? error.message : '模型供应商暂时没有接住请求'
+  const usefulToolLines = buildProviderFallbackToolLines(tools)
 
   return [
-    '模型供应商刚才没有接住请求，但本地聊天、记忆和 Agent 工具没有丢。',
+    usefulToolLines.length > 0
+      ? '模型供应商刚才没有接住请求，不过本地 Agent 已经先把能办的部分做完了。'
+      : '模型供应商刚才没有接住请求，但本地聊天、记忆和 Agent 工具没有丢。',
+    ...usefulToolLines,
     actionCount > 0 ? `姐姐已经把 ${actionCount} 个可执行动作交给网页处理。` : '',
-    toolCount > 0 ? `这轮后台工具已执行 ${toolCount} 项，等模型恢复后就能自然回答。` : '',
+    usefulToolLines.length === 0 && toolCount > 0 ? `这轮后台工具已执行 ${toolCount} 项，等模型恢复后就能自然回答。` : '',
     `错误提示：${reason}`,
   ]
     .filter(Boolean)
     .join('\n\n')
+}
+
+function buildProviderFallbackToolLines(tools) {
+  return tools
+    .filter((tool) => tool?.name && !DEMO_META_AGENT_REASONS.has(tool.name))
+    .slice(0, 4)
+    .map((tool) => {
+      const label = String(tool.title || tool.name).replace(/^Agent 工具：/, '')
+      const summary = String(tool.summary || '').trim()
+      if (!summary) return ''
+      if (tool.status === 'success') return `${label}：${summary}`
+      if (tool.status === 'needs_input') return `${label}：还缺关键信息，${summary}`
+      return `${label}：这次没查成，${summary}`
+    })
+    .filter(Boolean)
 }
 
 function createModelTestBundle() {

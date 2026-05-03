@@ -5,13 +5,14 @@ import {
   PlugZap,
   RefreshCw,
   Save,
+  Search,
   ServerCog,
   SlidersHorizontal,
   Trash2,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import type { AppSettings, ModelProfileInput, ModelProfileSummary, ModelProviderKind } from '../../domain/types'
-import { modelProviderPresets } from '../../services/modelProfiles'
+import { modelProviderPresets, type ModelCatalogItem, type ModelCatalogResult } from '../../services/modelProfiles'
 import { WorkspaceTitle } from '../memory/atoms'
 
 interface ModelAndDataPanelProps {
@@ -25,6 +26,7 @@ interface ModelAndDataPanelProps {
   onRefreshModelProfiles: () => void
   onSaveModelProfile: (profile: ModelProfileInput) => Promise<void>
   onDeleteModelProfile: (profileId: string) => Promise<void>
+  onFetchModelCatalog: (input: { profileId?: string; profile?: ModelProfileInput }) => Promise<ModelCatalogResult>
   onTestModelProfile: (input: { profileId?: string; profile?: ModelProfileInput }) => Promise<void>
 }
 
@@ -33,6 +35,11 @@ const providerKindLabels: Record<ModelProviderKind, string> = {
   anthropic: 'Anthropic',
   'google-gemini': 'Gemini',
 }
+
+const presetGroupLabels = {
+  official: '官方接口',
+  custom: '中转站/自定义',
+} as const
 
 export function ModelAndDataPanel({
   settings,
@@ -45,28 +52,41 @@ export function ModelAndDataPanel({
   onRefreshModelProfiles,
   onSaveModelProfile,
   onDeleteModelProfile,
+  onFetchModelCatalog,
   onTestModelProfile,
 }: ModelAndDataPanelProps) {
   const activeProfile =
     modelProfiles.find((profile) => profile.id === settings.modelProfileId) ??
     modelProfiles.find((profile) => profile.isDefault) ??
     modelProfiles[0]
-  const [selectedPresetId, setSelectedPresetId] = useState(modelProviderPresets[0].id)
-  const [draft, setDraft] = useState<ModelProfileInput>(() => createDraftFromPreset(modelProviderPresets[0]))
-  const savedEditableProfiles = useMemo(
-    () => modelProfiles.filter((profile) => profile.id !== 'server-env'),
-    [modelProfiles],
+  const [presetGroup, setPresetGroup] = useState<'official' | 'custom'>('official')
+  const [selectedPresetId, setSelectedPresetId] = useState(modelProviderPresets.find((preset) => preset.group === 'official')?.id ?? modelProviderPresets[0].id)
+  const [draft, setDraft] = useState<ModelProfileInput>(() => createDraftFromPreset(modelProviderPresets.find((preset) => preset.group === 'official') ?? modelProviderPresets[0]))
+  const [catalogModels, setCatalogModels] = useState<ModelCatalogItem[]>([])
+  const [catalogStatus, setCatalogStatus] = useState('')
+  const [manualModelMode, setManualModelMode] = useState(false)
+  const visiblePresets = useMemo(
+    () => modelProviderPresets.filter((preset) => preset.group === presetGroup),
+    [presetGroup],
   )
-  const modelCloudEnabled = settings.dataStorageMode === 'cloud' && cloudSyncConfigured
-  const modelCloudStatus =
+  const modelBackendEnabled = settings.dataStorageMode === 'cloud'
+  const modelBackendHint = cloudSyncConfigured ? '远端模型后端' : '本机 /api 模型后端'
+  const modelStatusText =
     settings.dataStorageMode === 'local'
-      ? '当前是仅本地模式，不会提交 API Key 到云端。需要密钥保险箱时，先到设置里切回云端同步。'
+      ? '当前是仅本地数据模式，不会把 API Key 发给模型后端。'
       : modelProfileStatus
+  const modelOptions = useMemo(() => {
+    const options = catalogModels.filter((model) => model.id.trim())
+    if (draft.model && !options.some((model) => model.id === draft.model)) {
+      return [{ id: draft.model, label: draft.model }, ...options]
+    }
+    return options
+  }, [catalogModels, draft.model])
 
   function loadProfileIntoDraft(profile: ModelProfileSummary) {
     setDraft({
       id: profile.id === 'server-env' ? undefined : profile.id,
-      name: profile.id === 'server-env' ? '我的模型配置' : profile.name,
+      name: profile.id === 'server-env' ? undefined : profile.name,
       kind: profile.kind,
       baseUrl: profile.baseUrl,
       model: profile.model === '由页面模型栏决定' ? settings.model : profile.model,
@@ -74,20 +94,47 @@ export function ModelAndDataPanel({
       enabled: profile.enabled,
       isDefault: profile.isDefault,
     })
+    setCatalogModels([])
+    setManualModelMode(false)
+  }
+
+  function handlePresetGroupChange(nextGroup: 'official' | 'custom') {
+    setPresetGroup(nextGroup)
+    const preset = modelProviderPresets.find((item) => item.group === nextGroup) ?? modelProviderPresets[0]
+    setSelectedPresetId(preset.id)
+    setDraft(createDraftFromPreset(preset))
+    setCatalogModels([])
+    setCatalogStatus('')
+    setManualModelMode(false)
   }
 
   function handlePresetChange(presetId: string) {
     setSelectedPresetId(presetId)
     const preset = modelProviderPresets.find((item) => item.id === presetId) ?? modelProviderPresets[0]
     setDraft(createDraftFromPreset(preset))
+    setCatalogModels([])
+    setCatalogStatus('')
+    setManualModelMode(false)
   }
 
   async function handleSaveProfile() {
-    await onSaveModelProfile({ ...draft, isDefault: true, enabled: true })
+    await onSaveModelProfile({ ...draft, name: buildProfileName(draft), isDefault: true, enabled: true })
   }
 
   async function handleTestDraft() {
-    await onTestModelProfile({ profile: draft })
+    await onTestModelProfile({ profile: { ...draft, name: buildProfileName(draft) } })
+  }
+
+  async function handleFetchModels() {
+    setCatalogStatus('正在从供应商读取模型...')
+    const result = await onFetchModelCatalog({ profile: { ...draft, name: buildProfileName(draft) } })
+    setCatalogModels(result.models)
+    setManualModelMode(false)
+    setCatalogStatus(`已拉取 ${result.models.length} 个模型`)
+
+    if (!draft.model && result.models[0]?.id) {
+      setDraft((currentDraft) => ({ ...currentDraft, model: result.models[0].id }))
+    }
   }
 
   function handleUseProfile(profile: ModelProfileSummary) {
@@ -101,226 +148,260 @@ export function ModelAndDataPanel({
   return (
     <>
       <WorkspaceTitle
-        description="只管理模型接入、密钥保险箱和生成参数；备份、导入导出这些数据工具不再挤在这里。"
+        description="选择官方接口或中转站，填 Base URL 和 API Key 后可以自动拉取模型列表。"
         icon={<SlidersHorizontal size={20} />}
         title="模型接入"
       />
 
       <section className="settings-stack model-settings-stack model-connect-stack">
-        <section className="settings-section model-hero-section">
-          <div className="settings-section-title">
-            <ServerCog size={18} />
-            <span>当前连接</span>
+        <section className="model-current-strip" aria-label="当前模型状态">
+          <div>
+            <small>当前模型</small>
+            <strong>{activeProfile ? activeProfile.model : settings.model || '未设置'}</strong>
+            <span>{activeProfile ? `${providerKindLabels[activeProfile.kind]} · ${activeProfile.baseUrl}` : modelBackendHint}</span>
           </div>
-          <p className="section-note">
-            {activeProfile ? `正在使用：${activeProfile.name} / ${activeProfile.model}` : '还没有选择模型配置。'}
-          </p>
-          <div className="model-status-grid">
-            <span>
-              <strong>密钥保险箱</strong>
-              {savedEditableProfiles.length > 0 ? `${savedEditableProfiles.length} 组配置` : '等待添加'}
-            </span>
-            <span>
-              <strong>接口类型</strong>
-              {activeProfile ? providerKindLabels[activeProfile.kind] : '未选择'}
-            </span>
-            <span>
-              <strong>默认模型</strong>
-              {settings.model || '未设置'}
-            </span>
-          </div>
-          <small className="cloud-status-line">{modelCloudStatus}</small>
-          <small className="model-warning">
-            API Key 只用于提交到云端保险箱，前端不会把已保存的密钥原文展示回来。后续服务器侧加固可以单独做。
-          </small>
-          <div className="settings-actions">
-            <button disabled={!modelCloudEnabled || modelProfileBusy} onClick={onConnectCloud} type="button">
+          <div className="model-current-actions">
+            <button disabled={!modelBackendEnabled || modelProfileBusy} onClick={onConnectCloud} type="button">
               <Link2 size={15} />
-              检查连接
+              检查
             </button>
-            <button disabled={!modelCloudEnabled || modelProfileBusy} onClick={onRefreshModelProfiles} type="button">
+            <button disabled={!modelBackendEnabled || modelProfileBusy} onClick={onRefreshModelProfiles} type="button">
               <RefreshCw size={15} />
-              刷新模型
+              刷新
             </button>
             <button
-              disabled={!modelCloudEnabled || !activeProfile || !activeProfile.hasApiKey || modelProfileBusy}
+              disabled={!modelBackendEnabled || !activeProfile || !activeProfile.hasApiKey || modelProfileBusy}
               onClick={() => activeProfile && onTestModelProfile({ profileId: activeProfile.id })}
               type="button"
             >
               <PlugZap size={15} />
-              测试当前
+              测试
             </button>
           </div>
         </section>
 
-        <section className="settings-section">
-          <div className="settings-section-title">
-            <KeyRound size={18} />
-            <span>新增或编辑模型</span>
-          </div>
-          <label>
-            <span>供应商模板</span>
-            <select value={selectedPresetId} onChange={(event) => handlePresetChange(event.target.value)}>
-              {modelProviderPresets.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.label}
-                </option>
-              ))}
-            </select>
-            <small>{modelProviderPresets.find((preset) => preset.id === selectedPresetId)?.description}</small>
-          </label>
-          <div className="model-form-grid">
-            <label>
-              <span>显示名称</span>
-              <input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
-            </label>
-            <label>
-              <span>接口类型</span>
-              <select
-                value={draft.kind}
-                onChange={(event) => setDraft({ ...draft, kind: event.target.value as ModelProviderKind })}
-              >
-                <option value="openai-compatible">OpenAI 兼容</option>
-                <option value="anthropic">Anthropic 官方</option>
-                <option value="google-gemini">Gemini 官方</option>
-              </select>
-            </label>
-          </div>
-          <label>
-            <span>Base URL</span>
-            <input value={draft.baseUrl} onChange={(event) => setDraft({ ...draft, baseUrl: event.target.value })} />
-          </label>
-          <label>
-            <span>模型 ID</span>
-            <input value={draft.model} onChange={(event) => setDraft({ ...draft, model: event.target.value })} />
-          </label>
-          <label>
-            <span>API Key</span>
-            <input
-              autoComplete="off"
-              onChange={(event) => setDraft({ ...draft, apiKey: event.target.value })}
-              placeholder={draft.id ? '留空则继续使用云端原密钥' : '只会发送到云端保险箱'}
-              type="password"
-              value={draft.apiKey ?? ''}
-            />
-          </label>
-          <div className="settings-actions">
-            <button disabled={!modelCloudEnabled || modelProfileBusy} onClick={handleSaveProfile} type="button">
-              <Save size={15} />
-              保存并启用
-            </button>
-            <button disabled={!modelCloudEnabled || modelProfileBusy} onClick={handleTestDraft} type="button">
-              <PlugZap size={15} />
-              测试草稿
-            </button>
-          </div>
-          {!modelCloudEnabled && (
-            <small className="model-empty-note">
-              {settings.dataStorageMode === 'local'
-                ? '仅本地模式会保留当前生成参数，但不会上传或测试 API Key。'
-                : '云端后端配置完成后，保存和测试按钮会自动启用。'}
-            </small>
-          )}
-        </section>
+        <div className="model-layout">
+          <section className="settings-section model-column">
+            <div className="settings-section-title">
+              <KeyRound size={18} />
+              <span>新增或编辑模型</span>
+            </div>
 
-        <section className="settings-section">
-          <div className="settings-section-title">
-            <CheckCircle2 size={18} />
-            <span>已保存模型</span>
-          </div>
-          <div className="model-profile-list">
-            {modelProfiles.length === 0 ? (
-              <small className="model-empty-note">还没有保存模型。先填上方表单，再点保存并启用。</small>
-            ) : (
-              modelProfiles.map((profile) => (
-                <article
-                  className={`model-profile-item ${profile.id === settings.modelProfileId ? 'active' : ''}`}
-                  key={profile.id}
+            <div className="model-segmented" role="tablist" aria-label="模型来源">
+              {Object.entries(presetGroupLabels).map(([group, label]) => (
+                <button
+                  className={presetGroup === group ? 'active' : ''}
+                  key={group}
+                  onClick={() => handlePresetGroupChange(group as 'official' | 'custom')}
+                  type="button"
                 >
-                  <div>
-                    <strong>{profile.name}</strong>
-                    <span>
-                      {providerKindLabels[profile.kind]} / {profile.model}
-                    </span>
-                    <small>
-                      {profile.baseUrl} / {profile.hasApiKey ? '已保存密钥' : '没有密钥'}
-                    </small>
-                  </div>
-                  <div className="backup-actions">
-                    <button onClick={() => handleUseProfile(profile)} type="button">
-                      使用
-                    </button>
-                    <button onClick={() => loadProfileIntoDraft(profile)} type="button">
-                      编辑
-                    </button>
-                    <button
-                      disabled={!profile.hasApiKey}
-                      onClick={() => onTestModelProfile({ profileId: profile.id })}
-                      type="button"
-                    >
-                      测试
-                    </button>
-                    {profile.id !== 'server-env' && (
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <label>
+              <span>{presetGroup === 'official' ? '官方供应商' : '中转站模板'}</span>
+              <select value={selectedPresetId} onChange={(event) => handlePresetChange(event.target.value)}>
+                {visiblePresets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.label}
+                  </option>
+                ))}
+              </select>
+              <small>{modelProviderPresets.find((preset) => preset.id === selectedPresetId)?.description}</small>
+            </label>
+
+            <div className="model-form-grid">
+              <label>
+                <span>接口类型</span>
+                <select
+                  value={draft.kind}
+                  onChange={(event) => {
+                    setDraft({ ...draft, kind: event.target.value as ModelProviderKind })
+                    setCatalogModels([])
+                  }}
+                >
+                  <option value="openai-compatible">OpenAI 兼容</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="google-gemini">Gemini</option>
+                </select>
+              </label>
+              <label>
+                <span>Base URL</span>
+                <input
+                  autoComplete="off"
+                  placeholder="https://example.com/v1"
+                  value={draft.baseUrl}
+                  onChange={(event) => {
+                    setDraft({ ...draft, baseUrl: event.target.value })
+                    setCatalogModels([])
+                  }}
+                />
+              </label>
+            </div>
+
+            <label>
+              <span>API Key</span>
+              <input
+                autoComplete="off"
+                onChange={(event) => setDraft({ ...draft, apiKey: event.target.value })}
+                placeholder={draft.id ? '留空则继续使用已保存密钥' : '填入供应商或中转站密钥'}
+                type="password"
+                value={draft.apiKey ?? ''}
+              />
+            </label>
+
+            <div className="model-picker-row">
+              <label>
+                <span>模型</span>
+                {modelOptions.length > 0 && !manualModelMode ? (
+                  <select value={draft.model} onChange={(event) => setDraft({ ...draft, model: event.target.value })}>
+                    {modelOptions.map((model) => (
+                      <option key={model.id} value={model.id}>
+                        {model.label && model.label !== model.id ? `${model.label} · ${model.id}` : model.id}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    autoComplete="off"
+                    placeholder="先拉取，或手动粘贴模型 ID"
+                    value={draft.model}
+                    onChange={(event) => setDraft({ ...draft, model: event.target.value })}
+                  />
+                )}
+              </label>
+              <button
+                disabled={!modelBackendEnabled || modelProfileBusy || !draft.baseUrl || (!draft.apiKey && !draft.id)}
+                onClick={handleFetchModels}
+                type="button"
+              >
+                <Search size={15} />
+                拉取模型
+              </button>
+            </div>
+
+            {modelOptions.length > 0 && (
+              <button className="model-inline-link" onClick={() => setManualModelMode((value) => !value)} type="button">
+                {manualModelMode ? '改用下拉选择' : '手动输入模型 ID'}
+              </button>
+            )}
+
+            <small className="cloud-status-line">{catalogStatus || modelStatusText}</small>
+            <small className="model-warning">
+              模型页不会要求妹妹填“显示名称”。保存时会按域名和模型自动生成名称；API Key 只发给模型后端保存，页面不会回显原文。
+            </small>
+
+            <div className="settings-actions">
+              <button disabled={!modelBackendEnabled || modelProfileBusy || !draft.baseUrl || !draft.model} onClick={handleSaveProfile} type="button">
+                <Save size={15} />
+                保存并启用
+              </button>
+              <button disabled={!modelBackendEnabled || modelProfileBusy || !draft.baseUrl || !draft.model} onClick={handleTestDraft} type="button">
+                <PlugZap size={15} />
+                测试草稿
+              </button>
+            </div>
+          </section>
+
+          <section className="settings-section model-column">
+            <div className="settings-section-title">
+              <CheckCircle2 size={18} />
+              <span>已保存模型</span>
+            </div>
+            <div className="model-profile-list">
+              {modelProfiles.length === 0 ? (
+                <small className="model-empty-note">还没有保存模型。先选官方或中转站，再拉取模型。</small>
+              ) : (
+                modelProfiles.map((profile) => (
+                  <article
+                    className={`model-profile-item ${profile.id === settings.modelProfileId ? 'active' : ''}`}
+                    key={profile.id}
+                  >
+                    <div>
+                      <strong>{profile.model}</strong>
+                      <span>
+                        {providerKindLabels[profile.kind]} / {profile.name}
+                      </span>
+                      <small>
+                        {profile.baseUrl} / {profile.hasApiKey ? '已保存密钥' : '没有密钥'}
+                      </small>
+                    </div>
+                    <div className="backup-actions">
+                      <button onClick={() => handleUseProfile(profile)} type="button">
+                        使用
+                      </button>
+                      <button onClick={() => loadProfileIntoDraft(profile)} type="button">
+                        编辑
+                      </button>
                       <button
-                        className="danger-button"
-                        onClick={() => {
-                          if (window.confirm(`删除“${profile.name}”这组模型配置吗？云端保存的密钥也会一起删除。`)) {
-                            void onDeleteModelProfile(profile.id)
-                          }
-                        }}
+                        disabled={!profile.hasApiKey}
+                        onClick={() => onTestModelProfile({ profileId: profile.id })}
                         type="button"
                       >
-                        <Trash2 size={13} />
+                        测试
                       </button>
-                    )}
-                  </div>
-                </article>
-              ))
-            )}
-          </div>
-        </section>
+                      {profile.id !== 'server-env' && (
+                        <button
+                          className="danger-button"
+                          onClick={() => {
+                            if (window.confirm(`删除“${profile.model}”这组模型配置吗？云端保存的密钥也会一起删除。`)) {
+                              void onDeleteModelProfile(profile.id)
+                            }
+                          }}
+                          type="button"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
 
-        <section className="settings-section">
-          <div className="settings-section-title">
-            <SlidersHorizontal size={18} />
-            <span>生成参数</span>
-          </div>
-          <div className="model-form-grid">
-            <label>
-              <span>温柔度</span>
-              <input
-                max="2"
-                min="0"
-                onChange={(event) => onUpdateSettings({ ...settings, temperature: Number(event.target.value) })}
-                step="0.1"
-                type="number"
-                value={settings.temperature}
-              />
-            </label>
-            <label>
-              <span>短期记忆</span>
-              <input
-                max="60"
-                min="4"
-                onChange={(event) => onUpdateSettings({ ...settings, maxContextMessages: Number(event.target.value) })}
-                step="1"
-                type="number"
-                value={settings.maxContextMessages}
-              />
-            </label>
-            <label>
-              <span>回复上限</span>
-              <input
-                max="65536"
-                min="256"
-                onChange={(event) => onUpdateSettings({ ...settings, maxOutputTokens: Number(event.target.value) })}
-                step="256"
-                type="number"
-                value={settings.maxOutputTokens}
-              />
-            </label>
-          </div>
-        </section>
+            <div className="settings-section-title">
+              <ServerCog size={18} />
+              <span>生成参数</span>
+            </div>
+            <div className="model-form-grid">
+              <label>
+                <span>温度</span>
+                <input
+                  max="2"
+                  min="0"
+                  onChange={(event) => onUpdateSettings({ ...settings, temperature: Number(event.target.value) })}
+                  step="0.1"
+                  type="number"
+                  value={settings.temperature}
+                />
+              </label>
+              <label>
+                <span>回复上限</span>
+                <input
+                  max="65536"
+                  min="256"
+                  onChange={(event) => onUpdateSettings({ ...settings, maxOutputTokens: Number(event.target.value) })}
+                  step="256"
+                  type="number"
+                  value={settings.maxOutputTokens}
+                />
+              </label>
+              <label>
+                <span>短期记忆</span>
+                <input
+                  max="60"
+                  min="4"
+                  onChange={(event) => onUpdateSettings({ ...settings, maxContextMessages: Number(event.target.value) })}
+                  step="1"
+                  type="number"
+                  value={settings.maxContextMessages}
+                />
+              </label>
+            </div>
+          </section>
+        </div>
       </section>
     </>
   )
@@ -328,12 +409,29 @@ export function ModelAndDataPanel({
 
 function createDraftFromPreset(preset: (typeof modelProviderPresets)[number]): ModelProfileInput {
   return {
-    name: preset.label,
+    name: undefined,
     kind: preset.kind,
     baseUrl: preset.baseUrl,
     model: preset.model,
     apiKey: '',
     enabled: true,
     isDefault: true,
+  }
+}
+
+function buildProfileName(profile: ModelProfileInput): string {
+  if (profile.name?.trim()) return profile.name.trim()
+
+  const host = getHostLabel(profile.baseUrl)
+  if (host && profile.model) return `${host} / ${profile.model}`
+  if (host) return `${host} / ${providerKindLabels[profile.kind]}`
+  return profile.model || '我的模型配置'
+}
+
+function getHostLabel(value: string): string {
+  try {
+    return new URL(value).hostname.replace(/^api\./, '').replace(/^www\./, '')
+  } catch {
+    return ''
   }
 }

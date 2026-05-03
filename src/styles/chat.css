@@ -499,6 +499,126 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
+/* ── 消息内的 Agent 行动轨迹 ── */
+
+.message-agent-trace {
+  border-top: 1px solid rgba(122, 184, 255, 0.22);
+  padding-top: var(--space-sm);
+  margin-top: 6px;
+}
+
+.message-agent-trace summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+  color: var(--sky-ink);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 2px 0;
+}
+
+.message-agent-trace summary::-webkit-details-marker {
+  display: none;
+}
+
+.message-agent-trace summary::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  background: var(--sky);
+  box-shadow: 0 0 0 3px rgba(122, 184, 255, 0.18);
+  transition: transform var(--duration-fast) var(--ease-spring);
+}
+
+.message-agent-trace[open] summary::before {
+  transform: scale(1.4);
+}
+
+.message-agent-trace summary small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-trace-list {
+  display: grid;
+  gap: 6px;
+  margin-top: var(--space-sm);
+}
+
+.agent-trace-item {
+  min-width: 0;
+  border: 1px solid rgba(122, 184, 255, 0.24);
+  border-radius: 12px;
+  background: var(--sky-soft);
+  padding: 8px 12px;
+}
+
+.agent-trace-meta {
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.agent-trace-item strong,
+.agent-trace-item span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-trace-item strong {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.agent-trace-item span {
+  color: var(--sky-ink);
+  font-size: 11px;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.agent-trace-item small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.agent-trace-item p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--ink-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.agent-trace-needs_input,
+.agent-action-item {
+  border-color: rgba(255, 199, 122, 0.34);
+  background: var(--peach-soft);
+}
+
+.agent-trace-error {
+  border-color: rgba(226, 92, 112, 0.24);
+  background: rgba(255, 240, 244, 0.84);
+}
+
 /* ── 助手气泡的小装饰条 (左上一抹粉) ── */
 
 .message-assistant::before {

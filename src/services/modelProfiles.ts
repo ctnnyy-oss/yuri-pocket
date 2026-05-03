@@ -5,6 +5,7 @@ export interface ModelProviderPreset {
   id: string
   label: string
   description: string
+  group: 'official' | 'custom'
   kind: ModelProviderKind
   baseUrl: string
   model: string
@@ -23,27 +24,25 @@ export interface ModelProfileTestResult {
   preview: string
 }
 
+export interface ModelCatalogItem {
+  id: string
+  label: string
+  ownedBy?: string
+}
+
+export interface ModelCatalogResult {
+  ok: boolean
+  provider: string
+  baseUrl: string
+  models: ModelCatalogItem[]
+}
+
 export const modelProviderPresets: ModelProviderPreset[] = [
-  {
-    id: 'yop-free',
-    label: 'YOP 中转 / DeepSeek Flash',
-    description: '当前已验证可用的不带 Go/ 的 DeepSeek 路线，适合先作为默认模型。',
-    kind: 'openai-compatible',
-    baseUrl: 'https://api.yop.mom/v1',
-    model: 'deepseek-v4-flash',
-  },
-  {
-    id: 'yop-pro',
-    label: 'YOP 中转 / DeepSeek Pro',
-    description: '已验证可用的不带 Go/ 的 Pro 路线，妹妹确认成本后再手动启用。',
-    kind: 'openai-compatible',
-    baseUrl: 'https://api.yop.mom/v1',
-    model: 'deepseek-v4-pro',
-  },
   {
     id: 'openai',
     label: 'OpenAI 官方',
     description: '官方 OpenAI API，使用 OpenAI-compatible 格式。',
+    group: 'official',
     kind: 'openai-compatible',
     baseUrl: 'https://api.openai.com/v1',
     model: 'gpt-5.5',
@@ -52,46 +51,43 @@ export const modelProviderPresets: ModelProviderPreset[] = [
     id: 'deepseek',
     label: 'DeepSeek 官方',
     description: 'DeepSeek 官方接口，适合国内常用模型。',
+    group: 'official',
     kind: 'openai-compatible',
     baseUrl: 'https://api.deepseek.com/v1',
     model: 'deepseek-chat',
   },
   {
-    id: 'openrouter',
-    label: 'OpenRouter 中转',
-    description: '一个密钥接多家模型，模型名按 OpenRouter 后台填写。',
-    kind: 'openai-compatible',
-    baseUrl: 'https://openrouter.ai/api/v1',
-    model: 'openai/gpt-5.5',
-  },
-  {
     id: 'siliconflow',
-    label: '硅基流动',
-    description: '国内 OpenAI-compatible 中转，模型名按控制台复制。',
+    label: '硅基流动官方',
+    description: '国内 OpenAI-compatible 官方平台。',
+    group: 'official',
     kind: 'openai-compatible',
     baseUrl: 'https://api.siliconflow.cn/v1',
     model: 'deepseek-ai/DeepSeek-V3',
   },
   {
     id: 'dashscope',
-    label: '阿里百炼 / DashScope',
+    label: '阿里百炼官方',
     description: '百炼兼容模式，模型名如 qwen-plus。',
+    group: 'official',
     kind: 'openai-compatible',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
     model: 'qwen-plus',
   },
   {
     id: 'moonshot',
-    label: '月之暗面 / Kimi',
+    label: '月之暗面官方',
     description: 'Kimi 官方 OpenAI-compatible 接口。',
+    group: 'official',
     kind: 'openai-compatible',
     baseUrl: 'https://api.moonshot.cn/v1',
     model: 'moonshot-v1-8k',
   },
   {
     id: 'zhipu',
-    label: '智谱 AI',
+    label: '智谱官方',
     description: '智谱兼容接口，模型名按控制台复制。',
+    group: 'official',
     kind: 'openai-compatible',
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
     model: 'glm-4-flash',
@@ -100,6 +96,7 @@ export const modelProviderPresets: ModelProviderPreset[] = [
     id: 'anthropic',
     label: 'Anthropic 官方',
     description: 'Claude 官方 messages 接口，不走 OpenAI 格式。',
+    group: 'official',
     kind: 'anthropic',
     baseUrl: 'https://api.anthropic.com/v1',
     model: 'claude-sonnet-4-5',
@@ -108,22 +105,43 @@ export const modelProviderPresets: ModelProviderPreset[] = [
     id: 'gemini',
     label: 'Google Gemini 官方',
     description: 'Gemini generateContent 接口，密钥走 query 参数。',
+    group: 'official',
     kind: 'google-gemini',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
     model: 'gemini-2.5-pro',
   },
   {
+    id: 'openrouter',
+    label: 'OpenRouter 中转',
+    description: '一个密钥接多家模型，支持从 /models 自动拉取列表。',
+    group: 'custom',
+    kind: 'openai-compatible',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    model: '',
+  },
+  {
+    id: 'yop-relay',
+    label: 'YOP 中转',
+    description: 'OpenAI-compatible 中转站，填 Key 后可尝试自动拉模型。',
+    group: 'custom',
+    kind: 'openai-compatible',
+    baseUrl: 'https://api.yop.mom/v1',
+    model: '',
+  },
+  {
     id: 'local-proxy',
-    label: '本机代理',
+    label: '本机代理 / 酒馆转发',
     description: '适合酒馆、代理或本机转发器，手机端通常需要改成云端地址。',
+    group: 'custom',
     kind: 'openai-compatible',
     baseUrl: 'http://127.0.0.1:18788/v1',
     model: 'deepseek/deepseek-v4-pro-free',
   },
   {
     id: 'custom',
-    label: '自定义',
+    label: '自定义中转站',
     description: '任何 OpenAI-compatible、Anthropic 或 Gemini 形态都可以手填。',
+    group: 'custom',
     kind: 'openai-compatible',
     baseUrl: '',
     model: '',
@@ -167,9 +185,22 @@ export async function testModelProfile(
   return response.json()
 }
 
+export async function fetchModelCatalog(
+  token: string,
+  input: { profileId?: string; profile?: ModelProfileInput },
+): Promise<ModelCatalogResult> {
+  const response = await modelFetch('/api/model/models', token, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  })
+  return response.json()
+}
+
 async function modelFetch(path: string, token: string, init: RequestInit = {}): Promise<Response> {
-  const apiBaseUrl = getCloudApiBaseUrl()
-  if (!apiBaseUrl) throw new Error('云端后端还没有配置')
+  const apiBaseUrl = getModelApiBaseUrl()
   const headers = new Headers(init.headers)
   if (token.trim()) headers.set('Authorization', `Bearer ${token.trim()}`)
 
@@ -184,6 +215,10 @@ async function modelFetch(path: string, token: string, init: RequestInit = {}): 
   }
 
   return response
+}
+
+function getModelApiBaseUrl(): string {
+  return getCloudApiBaseUrl()
 }
 
 async function readModelError(response: Response): Promise<string> {

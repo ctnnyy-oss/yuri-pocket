@@ -337,7 +337,7 @@ export function createSeedState(): AppState {
   }))
 
   return {
-    version: 17,
+    version: 18,
     activeCharacterId: characters[0].id,
     characters,
     conversations,
@@ -351,6 +351,7 @@ export function createSeedState(): AppState {
     memoryUsageLogs: [],
     memoryEvents: [],
     agentReminders: [],
+    agentTasks: [],
     agentMoments: [],
     agentRooms,
     settings: {

@@ -1,9 +1,11 @@
 import {
   Brain,
+  ClipboardList,
   Images,
   MessageCircle,
   MessagesSquare,
   Palette,
+  SlidersHorizontal,
   Sprout,
   type LucideIcon,
 } from 'lucide-react'
@@ -18,8 +20,10 @@ const mobileNavItems: Array<{ id: AppView; label: string; icon: LucideIcon }> = 
   { id: 'chat', label: '单聊', icon: MessageCircle },
   { id: 'group', label: '群聊', icon: MessagesSquare },
   { id: 'moments', label: '动态', icon: Images },
+  { id: 'tasks', label: '任务', icon: ClipboardList },
   { id: 'memory', label: '记忆', icon: Brain },
   { id: 'world', label: '世界树', icon: Sprout },
+  { id: 'model', label: '模型', icon: SlidersHorizontal },
   { id: 'settings', label: '设置', icon: Palette },
 ]
 
