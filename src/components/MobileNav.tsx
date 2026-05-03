@@ -1,10 +1,11 @@
 import {
-  ArchiveRestore,
   Brain,
+  Images,
   MessageCircle,
+  MessagesSquare,
   Palette,
-  SlidersHorizontal,
   Sprout,
+  type LucideIcon,
 } from 'lucide-react'
 import type { AppView } from './CharacterRail'
 
@@ -13,13 +14,13 @@ interface MobileNavProps {
   onViewChange: (view: AppView) => void
 }
 
-const mobileNavItems: Array<{ id: AppView; label: string; icon: typeof MessageCircle }> = [
-  { id: 'chat', label: '聊天', icon: MessageCircle },
+const mobileNavItems: Array<{ id: AppView; label: string; icon: LucideIcon }> = [
+  { id: 'chat', label: '单聊', icon: MessageCircle },
+  { id: 'group', label: '群聊', icon: MessagesSquare },
+  { id: 'moments', label: '动态', icon: Images },
   { id: 'memory', label: '记忆', icon: Brain },
   { id: 'world', label: '世界树', icon: Sprout },
-  { id: 'model', label: '模型', icon: SlidersHorizontal },
   { id: 'settings', label: '设置', icon: Palette },
-  { id: 'trash', label: '回收', icon: ArchiveRestore },
 ]
 
 export function MobileNav({ activeView, onViewChange }: MobileNavProps) {

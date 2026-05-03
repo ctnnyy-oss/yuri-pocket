@@ -4,7 +4,9 @@ import {
   Brain,
   ArchiveRestore,
   HeartHandshake,
+  Images,
   MessageCircle,
+  MessagesSquare,
   Palette,
   Signal,
   SlidersHorizontal,
@@ -14,7 +16,7 @@ import {
 import { brand } from '../config/brand'
 import type { CharacterCard } from '../domain/types'
 
-export type AppView = 'chat' | 'memory' | 'world' | 'model' | 'settings' | 'trash'
+export type AppView = 'chat' | 'group' | 'moments' | 'memory' | 'world' | 'model' | 'settings' | 'trash'
 
 interface CharacterRailProps {
   characters: CharacterCard[]
@@ -27,7 +29,9 @@ interface CharacterRailProps {
 }
 
 const navigationItems: Array<{ id: AppView; label: string; description: string; icon: LucideIcon }> = [
-  { id: 'chat', label: '聊天', description: '和当前角色对话', icon: MessageCircle },
+  { id: 'chat', label: '单聊', description: '和当前角色一对一', icon: MessageCircle },
+  { id: 'group', label: '群聊', description: '多人角色房间', icon: MessagesSquare },
+  { id: 'moments', label: '动态', description: '朋友圈式展示', icon: Images },
   { id: 'memory', label: '记忆', description: '长期记忆和摘要', icon: Brain },
   { id: 'world', label: '世界树', description: '世界观和触发词', icon: Sprout },
   { id: 'trash', label: '回收', description: '误删后找回', icon: ArchiveRestore },

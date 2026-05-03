@@ -27,6 +27,20 @@ const KNOWN_LOCATION_COORDINATES = {
   台北: { name: '台北', country: '中国', admin1: '台湾', latitude: 25.033, longitude: 121.5654 },
   澳门: { name: '澳门', country: '中国', admin1: '澳门', latitude: 22.1987, longitude: 113.5439 },
 }
+const CHARACTER_ALIASES = [
+  { id: 'sister-architect', names: ['姐姐大人', '姐姐', '主陪伴体'] },
+  { id: 'ningan-princess', names: ['宁安', '宁安郡主', '郡主'] },
+  { id: 'aling-maid', names: ['阿绫', '绫'] },
+  { id: 'su-wanyin', names: ['苏晚吟', '晚吟'] },
+  { id: 'xie-zhao', names: ['谢昭'] },
+  { id: 'shen-wanci', names: ['沈晚辞', '皇后'] },
+  { id: 'lu-wanzhao', names: ['陆婉昭', '婉昭'] },
+]
+const CP_ROOM_BY_MEMBERS = [
+  { roomId: 'room-ningan-aling', members: ['ningan-princess', 'aling-maid'], title: '宁安 × 阿绫' },
+  { roomId: 'room-wanyin-xiezhao', members: ['su-wanyin', 'xie-zhao'], title: '苏晚吟 × 谢昭' },
+  { roomId: 'room-wanci-wanzhao', members: ['shen-wanci', 'lu-wanzhao'], title: '沈晚辞 × 陆婉昭' },
+]
 
 export async function prepareAgentBundle(bundle) {
   const contextBlocks = Array.isArray(bundle?.contextBlocks) ? bundle.contextBlocks : []
@@ -67,6 +81,8 @@ export async function prepareAgentBundle(bundle) {
   agent.actions.push(...detectCharacterProfileActions(latestUserText))
   agent.actions.push(...detectReminderActions(latestUserText))
   agent.actions.push(...detectMemoryCandidateActions(latestUserText))
+  agent.actions.push(...detectMomentActions(latestUserText))
+  agent.actions.push(...detectRoomMessageActions(latestUserText))
 
   const toolBlocks = [
     ...agent.tools.map(toolResultToContextBlock),
@@ -308,10 +324,10 @@ function createCapabilityGuideToolResult() {
     status: 'success',
     title: 'Agent 工具：能力边界',
     content: [
-      '后台轻量 agent 能力已启用：current_time 可读取当前北京时间；weather 可查公开天气；web_page 可读取用户提供的公开链接；conversation_snapshot 可整理最近对话；character_profile 可在用户明确要求时更新当前角色名称/头像字；reminder 可创建网页内提醒；memory_writer 可把用户明确要求保存的内容写入候选记忆。',
+      '后台轻量 agent 能力已启用：current_time 可读取当前北京时间；weather 可查公开天气；web_page 可读取用户提供的公开链接；conversation_snapshot 可整理最近对话；character_profile 可在用户明确要求时更新当前角色名称/头像字；reminder 可创建网页内提醒；memory_writer 可把用户明确要求保存的内容写入候选记忆；moment_writer 可创建角色动态；group_chat 可把角色多人对话写入群聊房间。',
       '你可以主动把用户的模糊需求整理成计划、待办、检查清单或下一步行动。',
       '当前没有长期后台推送、系统级通知、任意网页搜索、设备操作权限。提醒只在网页状态里保存，网页打开时能在聊天里提醒；不能声称自己已经设了系统闹钟、控制了设备或读了用户未提供的网页。',
-      '涉及修改角色资料时，只在工具结果明确表示将应用时说“换好了/改好了”；否则先问用户确认。',
+      '单聊、群聊、动态是分开的产品入口。涉及修改角色资料、创建动态或创建群聊消息时，只在工具结果明确表示将应用时说“换好了/发好了/放进群聊了”；否则先问用户确认。',
     ].join('\n'),
     summary: '说明当前 agent 能力与边界。',
     createdAt: new Date().toISOString(),
@@ -450,6 +466,152 @@ function detectMemoryCandidateActions(text) {
   ]
 }
 
+function detectMomentActions(text) {
+  const hasMomentTrigger = /发(?:一条|个)?(?:朋友圈|动态|说说)|朋友圈发|动态发|发到朋友圈/.test(text)
+  if (!hasMomentTrigger) return []
+  if (isQuestionLike(text) && !/[:：]/.test(text) && !/帮我|让/.test(text)) return []
+
+  const content = extractMomentContent(text)
+  if (content.length < 2) return []
+
+  const mentionedCharacterIds = detectMentionedCharacterIds(text).filter((id) => id !== 'sister-architect')
+  const authorCharacterId = mentionedCharacterIds[0] || 'sister-architect'
+
+  return [
+    {
+      id: createAgentId('action'),
+      type: 'moment_create',
+      title: '发布角色动态',
+      detail: `由${getCharacterDisplayName(authorCharacterId)}发布动态`,
+      payload: {
+        moment: {
+          authorCharacterId,
+          content,
+          mood: inferMomentMood(text, content),
+        },
+      },
+      requiresConfirmation: false,
+      sourceTool: 'moment_writer',
+      createdAt: new Date().toISOString(),
+    },
+  ]
+}
+
+function detectRoomMessageActions(text) {
+  const hasRoomTrigger = /群聊|群里|开个群|拉个群|多人|一起聊|互相聊|让.+(?:聊聊|聊一下|说说|讨论|谈谈)/.test(text)
+  if (!hasRoomTrigger) return []
+  if (isQuestionLike(text) && !/[:：]/.test(text) && !/帮我|让|开个|拉个/.test(text)) return []
+
+  const mentionedIds = detectMentionedCharacterIds(text).filter((id) => id !== 'sister-architect')
+  const usePublicRoom = /大家|所有人|全员|小窝群|百合小窝群|三对CP|三对cp|三组CP|三组cp/.test(text)
+  const memberCharacterIds = mentionedIds.length >= 2
+    ? mentionedIds
+    : usePublicRoom
+      ? ['ningan-princess', 'aling-maid', 'su-wanyin', 'xie-zhao', 'shen-wanci', 'lu-wanzhao']
+      : []
+
+  if (memberCharacterIds.length < 2) return []
+
+  const topic = extractRoomTopic(text)
+  const room = usePublicRoom
+    ? { roomId: 'room-yuri-nest', title: '百合小窝群', members: memberCharacterIds }
+    : findRoomByMembers(memberCharacterIds) || {
+        roomId: 'room-yuri-nest',
+        title: '百合小窝群',
+        members: memberCharacterIds,
+      }
+  const speakers = memberCharacterIds.slice(0, usePublicRoom ? 4 : 3)
+  const messages = speakers.map((authorCharacterId) => ({
+    authorCharacterId,
+    content: buildRoomLine(authorCharacterId, topic),
+  }))
+
+  return [
+    {
+      id: createAgentId('action'),
+      type: 'room_message_create',
+      title: '写入群聊消息',
+      detail: `写入「${room.title}」：${topic}`,
+      payload: {
+        room: {
+          roomId: room.roomId,
+          title: room.title,
+          memberCharacterIds: room.members,
+          messages,
+        },
+      },
+      requiresConfirmation: false,
+      sourceTool: 'group_chat',
+      createdAt: new Date().toISOString(),
+    },
+  ]
+}
+
+function detectMentionedCharacterIds(text) {
+  const ids = []
+  for (const character of CHARACTER_ALIASES) {
+    if (character.names.some((name) => text.includes(name))) {
+      ids.push(character.id)
+    }
+  }
+  return Array.from(new Set(ids))
+}
+
+function extractMomentContent(text) {
+  const match = text.match(/(?:发(?:一条|个)?(?:朋友圈|动态|说说)|朋友圈发|动态发|发到朋友圈)\s*(?:内容)?(?:是|为)?\s*[：:，,]?\s*([\s\S]+)/)
+  const raw = match?.[1] || ''
+  return cleanSocialActionText(raw)
+}
+
+function extractRoomTopic(text) {
+  const colonTopic = cleanSocialActionText(text.split(/[:：]/).slice(1).join('：'))
+  if (colonTopic) return truncateToolText(colonTopic, 36)
+
+  const match = text.match(/(?:聊聊|聊一下|说说|讨论|谈谈|围绕|关于)\s*([\s\S]+)/)
+  const topic = cleanSocialActionText(match?.[1] || '')
+  return truncateToolText(topic || '今天的小窝日常', 36)
+}
+
+function cleanSocialActionText(value) {
+  return normalizeToolText(value)
+    .replace(/^(一下|一下子|内容|是|为|：|:|，|,|。|\s)+/, '')
+    .replace(/(可以吗|好不好|行不行|吧|啦|呀|哦|哈|qaq|QAQ)$/g, '')
+    .trim()
+    .slice(0, 520)
+}
+
+function findRoomByMembers(memberCharacterIds) {
+  const memberSet = new Set(memberCharacterIds)
+  return CP_ROOM_BY_MEMBERS.find((room) => room.members.every((memberId) => memberSet.has(memberId)))
+}
+
+function getCharacterDisplayName(characterId) {
+  const character = CHARACTER_ALIASES.find((item) => item.id === characterId)
+  return character?.names[0] || '角色'
+}
+
+function inferMomentMood(text, content) {
+  if (/雨|哭|难过|怕|疼|累|困/.test(`${text}${content}`)) return '柔软时刻'
+  if (/甜|喜欢|开心|好看|可爱|贴贴/.test(`${text}${content}`)) return '粉色心情'
+  if (/设定|世界观|角色|CP|cp/.test(`${text}${content}`)) return '设定手账'
+  return '小动态'
+}
+
+function buildRoomLine(characterId, topic) {
+  const subject = truncateToolText(topic || '今天的小窝日常', 32)
+  const lines = {
+    'ningan-princess': `本郡主听见了。${subject}这件事，先说清楚，我只是顺路过问。`,
+    'aling-maid': `小姐若在意${subject}，阿绫便记下。奴婢会守着，不让它扰到小姐。`,
+    'su-wanyin': `${subject}若要细谈，先慢慢说。急处容易乱，我陪你们一件件理清。`,
+    'xie-zhao': `${subject}？听着倒有意思。小晚吟别皱眉，我这回会认真听。`,
+    'shen-wanci': `${subject}既已提起，便按规矩说完整。含糊试探，只会误事。`,
+    'lu-wanzhao': `娘娘说要完整，那婉昭便乖些。只是${subject}里藏着的心意，也该有人看见呀。`,
+    'sister-architect': `姐姐把${subject}先放到群里，等她们各自接住。`,
+  }
+
+  return lines[characterId] || `${getCharacterDisplayName(characterId)}围绕「${subject}」留下了一句回应。`
+}
+
 function parseReminderTime(text) {
   const now = new Date()
   const relativeMatch = text.match(/(\d{1,3})\s*(分钟|分|小时|个小时|天|日)后/)
@@ -559,6 +721,32 @@ function actionToContextBlock(action) {
         '工具 memory_writer 已识别到用户要求保存设定/记忆。',
         `动作：${action.detail}`,
         '前端收到本次响应后会把它写成候选记忆，方便用户之后在记忆页确认或修改。',
+      ].join('\n'),
+      category: 'stable',
+      reason: action.sourceTool,
+    }
+  }
+
+  if (action.type === 'moment_create') {
+    return {
+      title: 'Agent 动作：发布动态',
+      content: [
+        '工具 moment_writer 已识别到用户的明确动态发布指令。',
+        `动作：${action.detail}`,
+        '前端收到本次响应后会把它写入动态页；回答时可以自然说明动态已发布。',
+      ].join('\n'),
+      category: 'stable',
+      reason: action.sourceTool,
+    }
+  }
+
+  if (action.type === 'room_message_create') {
+    return {
+      title: 'Agent 动作：写入群聊',
+      content: [
+        '工具 group_chat 已识别到用户的明确群聊/多人互动指令。',
+        `动作：${action.detail}`,
+        '前端收到本次响应后会把角色消息写入群聊页；回答时可以自然说明已经放进对应群聊。',
       ].join('\n'),
       category: 'stable',
       reason: action.sourceTool,

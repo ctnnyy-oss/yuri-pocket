@@ -9,11 +9,14 @@ import './styles/settings.css'
 import './styles/modal.css'
 import './styles/buttons.css'
 import './styles/status.css'
+import './styles/social.css'
 import './styles/mobile.css'
 import { CharacterRail, type AppView } from './components/CharacterRail'
 import { ChatPhone } from './components/ChatPhone'
 import { MobileNav } from './components/MobileNav'
 import { MemoryPanel } from './components/MemoryPanel'
+import { GroupChatPanel } from './components/social/GroupChatPanel'
+import { MomentsPanel } from './components/social/MomentsPanel'
 import { brand } from './config/brand'
 import {
   createLocalBackup,
@@ -29,7 +32,10 @@ import { createSeedState } from './data/seed'
 import type {
   AccentTheme,
   AgentAction,
+  AgentMoment,
   AgentReminder,
+  AgentRoom,
+  AgentRoomMessage,
   AppSettings,
   AppState,
   CharacterCard,
@@ -129,7 +135,7 @@ const themeVariables: Record<AccentTheme, CSSProperties> = {
   } as CSSProperties,
 }
 
-const appViews: AppView[] = ['chat', 'memory', 'world', 'model', 'settings', 'trash']
+const appViews: AppView[] = ['chat', 'group', 'moments', 'memory', 'world', 'model', 'settings', 'trash']
 type CloudBusyTask = 'checking' | 'pulling' | 'pushing' | 'backing-up'
 
 function addMemoryEventToState(state: AppState, input: CreateMemoryEventInput): AppState {
@@ -200,10 +206,113 @@ function applyAgentActionsToState(
         },
       )
       appliedLabels.push(`候选记忆：${memory.title}`)
+      continue
+    }
+
+    if (action.type === 'moment_create') {
+      const moment = createMomentFromAgentAction(action, nextState, context)
+      if (!moment) continue
+
+      nextState = {
+        ...nextState,
+        agentMoments: [moment, ...(nextState.agentMoments ?? [])].slice(0, 120),
+      }
+      appliedLabels.push(`动态：${moment.mood || '已发布'}`)
+      continue
+    }
+
+    if (action.type === 'room_message_create') {
+      const roomUpdate = createRoomUpdateFromAgentAction(action, nextState)
+      if (!roomUpdate) continue
+
+      const existingRoom = nextState.agentRooms.find((room) => room.id === roomUpdate.id)
+      const nextRooms = existingRoom
+        ? nextState.agentRooms.map((room) =>
+            room.id === roomUpdate.id
+              ? {
+                  ...room,
+                  title: roomUpdate.title || room.title,
+                  description: roomUpdate.description || room.description,
+                  memberCharacterIds: mergeUnique([...room.memberCharacterIds, ...roomUpdate.memberCharacterIds]),
+                  messages: [...room.messages, ...roomUpdate.messages].slice(-240),
+                  updatedAt: roomUpdate.updatedAt,
+                }
+              : room,
+          )
+        : [roomUpdate, ...nextState.agentRooms]
+
+      nextState = {
+        ...nextState,
+        agentRooms: nextRooms,
+      }
+      appliedLabels.push(`群聊：${roomUpdate.title}`)
     }
   }
 
   return { state: nextState, appliedLabels }
+}
+
+function createMomentFromAgentAction(
+  action: AgentAction,
+  state: AppState,
+  context: { character: CharacterCard },
+): AgentMoment | null {
+  const input = action.payload.moment
+  const content = sanitizeBlockText(input?.content, 520)
+  if (!input || !content) return null
+
+  return {
+    id: `moment-${crypto.randomUUID()}`,
+    authorCharacterId: getKnownCharacterId(input.authorCharacterId, state.characters) ?? context.character.id,
+    content,
+    mood: sanitizeShortText(input.mood, 42) || '小动态',
+    createdAt: nowIso(),
+    source: 'agent',
+  }
+}
+
+function createRoomUpdateFromAgentAction(action: AgentAction, state: AppState): AgentRoom | null {
+  const input = action.payload.room
+  if (!input || !Array.isArray(input.messages)) return null
+
+  const messages = input.messages
+    .map((message): AgentRoomMessage | null => {
+      const authorCharacterId = getKnownCharacterId(message.authorCharacterId, state.characters)
+      const content = sanitizeBlockText(message.content, 420)
+      if (!authorCharacterId || !content) return null
+
+      return {
+        id: `room-message-${crypto.randomUUID()}`,
+        authorCharacterId,
+        content,
+        createdAt: nowIso(),
+        source: 'agent',
+      }
+    })
+    .filter((message): message is AgentRoomMessage => Boolean(message))
+
+  if (messages.length === 0) return null
+
+  const explicitMembers = Array.isArray(input.memberCharacterIds)
+    ? input.memberCharacterIds
+        .map((characterId) => getKnownCharacterId(characterId, state.characters))
+        .filter((characterId): characterId is string => Boolean(characterId))
+    : []
+  const memberCharacterIds = mergeUnique([...explicitMembers, ...messages.map((message) => message.authorCharacterId)])
+  const roomId =
+    sanitizeShortText(input.roomId, 80) ||
+    findExistingRoomIdByMembers(state.agentRooms, memberCharacterIds) ||
+    `room-agent-${crypto.randomUUID()}`
+  const existingRoom = state.agentRooms.find((room) => room.id === roomId)
+
+  return {
+    id: roomId,
+    title: sanitizeShortText(input.title, 42) || existingRoom?.title || '临时群聊',
+    description: existingRoom?.description || '角色之间的多人对话',
+    memberCharacterIds,
+    messages,
+    updatedAt: nowIso(),
+  }
 }
 
 function createReminderFromAgentAction(
@@ -282,6 +391,28 @@ function sanitizeCharacterPatch(
 function sanitizeShortText(value: unknown, maxLength: number): string {
   if (typeof value !== 'string') return ''
   return Array.from(value.replace(/[\r\n\t]/g, ' ').trim()).slice(0, maxLength).join('')
+}
+
+function sanitizeBlockText(value: unknown, maxLength: number): string {
+  if (typeof value !== 'string') return ''
+  return Array.from(value.replace(/\r\n/g, '\n').replace(/\t/g, ' ').trim()).slice(0, maxLength).join('')
+}
+
+function getKnownCharacterId(value: unknown, characters: CharacterCard[]): string | null {
+  if (typeof value !== 'string') return null
+  return characters.some((character) => character.id === value) ? value : null
+}
+
+function mergeUnique(values: string[]): string[] {
+  return Array.from(new Set(values.filter(Boolean)))
+}
+
+function findExistingRoomIdByMembers(rooms: AgentRoom[], memberCharacterIds: string[]): string {
+  if (memberCharacterIds.length === 0) return ''
+  const memberSet = new Set(memberCharacterIds)
+  const room = rooms.find((item) => memberCharacterIds.every((id) => item.memberCharacterIds.includes(id)))
+  if (!room) return ''
+  return room.memberCharacterIds.length === memberSet.size ? room.id : ''
 }
 
 function deliverDueReminders(state: AppState, currentTime = Date.now()): { state: AppState; delivered: AgentReminder[] } {
@@ -1399,6 +1530,10 @@ function App() {
           onSend={handleSend}
           settings={state.settings}
         />
+      ) : activeView === 'group' ? (
+        <GroupChatPanel characters={state.characters} rooms={state.agentRooms} />
+      ) : activeView === 'moments' ? (
+        <MomentsPanel characters={state.characters} moments={state.agentMoments} />
       ) : (
         <MemoryPanel
           activeView={activeView}

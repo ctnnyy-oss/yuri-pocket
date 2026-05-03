@@ -226,6 +226,32 @@ export interface AgentReminder {
   conversationId?: string
 }
 
+export interface AgentMoment {
+  id: string
+  authorCharacterId: string
+  content: string
+  mood: string
+  createdAt: string
+  source: 'seed' | 'agent' | 'user'
+}
+
+export interface AgentRoomMessage {
+  id: string
+  authorCharacterId: string
+  content: string
+  createdAt: string
+  source: 'seed' | 'agent' | 'user'
+}
+
+export interface AgentRoom {
+  id: string
+  title: string
+  description: string
+  memberCharacterIds: string[]
+  messages: AgentRoomMessage[]
+  updatedAt: string
+}
+
 export type AccentTheme = 'sakura' | 'peach' | 'lavender' | 'mint'
 export type TrashRetentionMode = 'forever' | 'default' | 'custom'
 export type ModelProviderKind = 'openai-compatible' | 'anthropic' | 'google-gemini'
@@ -281,6 +307,8 @@ export interface AppState {
   memoryUsageLogs: MemoryUsageLog[]
   memoryEvents: MemoryEvent[]
   agentReminders: AgentReminder[]
+  agentMoments: AgentMoment[]
+  agentRooms: AgentRoom[]
   settings: AppSettings
 }
 
@@ -328,7 +356,12 @@ export interface AgentToolTrace {
   createdAt: string
 }
 
-export type AgentActionType = 'character_profile_update' | 'reminder_create' | 'memory_candidate_create'
+export type AgentActionType =
+  | 'character_profile_update'
+  | 'reminder_create'
+  | 'memory_candidate_create'
+  | 'moment_create'
+  | 'room_message_create'
 
 export interface AgentAction {
   id: string
@@ -345,6 +378,13 @@ export interface AgentAction {
       kind?: MemoryKind
       layer?: MemoryLayer
       priority?: number
+    }
+    moment?: Pick<AgentMoment, 'content' | 'mood'> & { authorCharacterId?: string }
+    room?: {
+      roomId?: string
+      title?: string
+      memberCharacterIds?: string[]
+      messages: Array<Pick<AgentRoomMessage, 'authorCharacterId' | 'content'>>
     }
   }
   requiresConfirmation: boolean

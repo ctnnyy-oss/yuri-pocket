@@ -89,7 +89,7 @@ interface MemoryPanelProps {
   activeConversationId: string
   trash: AppTrash
   settings: AppSettings
-  activeView: Exclude<AppView, 'chat'>
+  activeView: Exclude<AppView, 'chat' | 'group' | 'moments'>
   onAddMemory: () => void
   onOrganizeMemories: () => void
   onUpdateMemory: (memory: LongTermMemory) => void

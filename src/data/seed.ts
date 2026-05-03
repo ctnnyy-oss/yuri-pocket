@@ -1,4 +1,4 @@
-import type { AppState, CharacterCard, ConversationState, LongTermMemory, WorldNode } from '../domain/types'
+import type { AgentRoom, AppState, CharacterCard, ConversationState, LongTermMemory, WorldNode } from '../domain/types'
 import { brand } from '../config/brand'
 import { createId, nowIso } from '../services/memoryEngine'
 
@@ -169,6 +169,41 @@ export const worldNodes: WorldNode[] = [
   },
 ]
 
+export const agentRooms: AgentRoom[] = [
+  {
+    id: 'room-ningan-aling',
+    title: '宁安 × 阿绫',
+    description: '傲娇郡主与贴身侍女的小房间',
+    memberCharacterIds: ['ningan-princess', 'aling-maid'],
+    messages: [],
+    updatedAt: nowIso(),
+  },
+  {
+    id: 'room-wanyin-xiezhao',
+    title: '苏晚吟 × 谢昭',
+    description: '乖乖女与不良少女将军的青梅房间',
+    memberCharacterIds: ['su-wanyin', 'xie-zhao'],
+    messages: [],
+    updatedAt: nowIso(),
+  },
+  {
+    id: 'room-wanci-wanzhao',
+    title: '沈晚辞 × 陆婉昭',
+    description: '冰山皇后与绿茶婉仪的试探房间',
+    memberCharacterIds: ['shen-wanci', 'lu-wanzhao'],
+    messages: [],
+    updatedAt: nowIso(),
+  },
+  {
+    id: 'room-yuri-nest',
+    title: '百合小窝群',
+    description: '默认角色和三对 CP 的公共小群',
+    memberCharacterIds: characters.map((character) => character.id),
+    messages: [],
+    updatedAt: nowIso(),
+  },
+]
+
 export const memories: LongTermMemory[] = [
   {
     id: 'memory-product-direction',
@@ -302,7 +337,7 @@ export function createSeedState(): AppState {
   }))
 
   return {
-    version: 16,
+    version: 17,
     activeCharacterId: characters[0].id,
     characters,
     conversations,
@@ -316,6 +351,8 @@ export function createSeedState(): AppState {
     memoryUsageLogs: [],
     memoryEvents: [],
     agentReminders: [],
+    agentMoments: [],
+    agentRooms,
     settings: {
       model: 'deepseek-v4-flash',
       modelProfileId: '',

@@ -1,9 +1,9 @@
 import type { AppState, LongTermMemory } from '../domain/types'
 import { normalizeMemories } from '../services/memoryEngine'
 import { normalizeTrashRetentionSettings } from '../services/trashRetention'
-import { createSeedState } from './seed'
+import { agentRooms, createSeedState } from './seed'
 
-const currentStateVersion = 16
+const currentStateVersion = 17
 
 export function migrateAppState(state: AppState): AppState {
   const defaults = createSeedState()
@@ -26,6 +26,8 @@ export function migrateAppState(state: AppState): AppState {
     memoryUsageLogs: Array.isArray(state.memoryUsageLogs) ? state.memoryUsageLogs : defaults.memoryUsageLogs,
     memoryEvents: Array.isArray(state.memoryEvents) ? state.memoryEvents : defaults.memoryEvents,
     agentReminders: Array.isArray(state.agentReminders) ? state.agentReminders : defaults.agentReminders,
+    agentMoments: Array.isArray(state.agentMoments) ? state.agentMoments : defaults.agentMoments,
+    agentRooms: mergeSeedAgentRooms(Array.isArray(state.agentRooms) ? state.agentRooms : defaults.agentRooms),
     settings: {
       ...defaults.settings,
       ...sourceSettings,
@@ -41,6 +43,12 @@ export function migrateAppState(state: AppState): AppState {
     ? defaults.settings.memoryConfidenceFloor
     : Math.min(Math.max(memoryConfidenceFloor, 0.5), 0.95)
   return migrated
+}
+
+function mergeSeedAgentRooms(rooms: AppState['agentRooms']): AppState['agentRooms'] {
+  const existingIds = new Set(rooms.map((room) => room.id))
+  const missingRooms = agentRooms.filter((room) => !existingIds.has(room.id))
+  return [...rooms, ...missingRooms]
 }
 
 function mergeMissingSeedMemories(memories: LongTermMemory[], seedMemories: LongTermMemory[]): LongTermMemory[] {
