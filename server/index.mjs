@@ -178,8 +178,12 @@ app.post('/api/chat', async (request, response) => {
     response.json({ provider: runtimeProfile.name, model: runtimeProfile.model, reply, agent: agentRun.agent })
   } catch (error) {
     console.error(error)
-    response.status(502).json({
-      error: error instanceof Error ? error.message : 'Model request failed',
+    response.json({
+      provider: 'agent-fallback',
+      model: runtimeProfile.model,
+      reply: createProviderFallbackReply(error, agentRun.agent),
+      agent: agentRun.agent,
+      warning: error instanceof Error ? error.message : 'Model request failed',
     })
   }
 })
@@ -886,6 +890,21 @@ function createDemoReply(bundle) {
     memoryHint ? `Context loaded: ${memoryHint}` : 'No extra memory was triggered yet.',
     'Add AI_API_KEY in .env.local to switch from demo mode to the real model.',
   ].join('\n\n')
+}
+
+function createProviderFallbackReply(error, agent) {
+  const actionCount = Array.isArray(agent?.actions) ? agent.actions.filter((action) => !action.requiresConfirmation).length : 0
+  const toolCount = Array.isArray(agent?.tools) ? agent.tools.length : 0
+  const reason = error instanceof Error ? error.message : '模型供应商暂时没有接住请求'
+
+  return [
+    '模型供应商刚才没有接住请求，但本地聊天、记忆和 Agent 工具没有丢。',
+    actionCount > 0 ? `姐姐已经把 ${actionCount} 个可执行动作交给网页处理。` : '',
+    toolCount > 0 ? `这轮后台工具已执行 ${toolCount} 项，等模型恢复后就能自然回答。` : '',
+    `错误提示：${reason}`,
+  ]
+    .filter(Boolean)
+    .join('\n\n')
 }
 
 function createModelTestBundle() {
