@@ -212,6 +212,20 @@ export interface MemoryEvent {
   conversationId?: string
 }
 
+export type AgentReminderStatus = 'pending' | 'delivered' | 'cancelled'
+
+export interface AgentReminder {
+  id: string
+  title: string
+  detail: string
+  remindAt: string
+  createdAt: string
+  status: AgentReminderStatus
+  deliveredAt?: string
+  characterId?: string
+  conversationId?: string
+}
+
 export type AccentTheme = 'sakura' | 'peach' | 'lavender' | 'mint'
 export type TrashRetentionMode = 'forever' | 'default' | 'custom'
 export type ModelProviderKind = 'openai-compatible' | 'anthropic' | 'google-gemini'
@@ -266,6 +280,7 @@ export interface AppState {
   memoryTombstones: MemoryTombstone[]
   memoryUsageLogs: MemoryUsageLog[]
   memoryEvents: MemoryEvent[]
+  agentReminders: AgentReminder[]
   settings: AppSettings
 }
 
@@ -313,7 +328,7 @@ export interface AgentToolTrace {
   createdAt: string
 }
 
-export type AgentActionType = 'character_profile_update'
+export type AgentActionType = 'character_profile_update' | 'reminder_create' | 'memory_candidate_create'
 
 export interface AgentAction {
   id: string
@@ -322,6 +337,15 @@ export interface AgentAction {
   detail: string
   payload: {
     character?: Partial<Pick<CharacterCard, 'name' | 'title' | 'subtitle' | 'avatar'>>
+    reminder?: Pick<AgentReminder, 'title' | 'detail' | 'remindAt'>
+    memory?: {
+      title: string
+      body: string
+      tags?: string[]
+      kind?: MemoryKind
+      layer?: MemoryLayer
+      priority?: number
+    }
   }
   requiresConfirmation: boolean
   sourceTool: string

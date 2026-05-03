@@ -120,6 +120,7 @@ export function buildPromptBundle(state: AppState): PromptBundle {
     characterName: character.name,
   })
   const runtimeContext = buildRuntimeContextBlock()
+  const reminderContext = buildReminderContextBlock(state)
 
   return {
     characterName: character.name,
@@ -135,6 +136,7 @@ export function buildPromptBundle(state: AppState): PromptBundle {
     ].join('\n'),
     contextBlocks: [
       runtimeContext,
+      ...(reminderContext ? [reminderContext] : []),
       ...memoryContextBlocks,
       ...activeWorldNodes.map((node) => ({
         title: `世界树：${node.title}`,
@@ -155,6 +157,37 @@ export function buildPromptBundle(state: AppState): PromptBundle {
     ],
     messages: recentMessages,
   }
+}
+
+function buildReminderContextBlock(state: AppState): PromptContextBlock | null {
+  const pendingReminders = (state.agentReminders ?? [])
+    .filter((reminder) => reminder.status === 'pending')
+    .sort((a, b) => new Date(a.remindAt).getTime() - new Date(b.remindAt).getTime())
+    .slice(0, 6)
+
+  if (pendingReminders.length === 0) return null
+
+  return {
+    title: 'Agent 提醒',
+    content: pendingReminders
+      .map((reminder) => `- ${formatReminderTime(reminder.remindAt)}：${reminder.title}`)
+      .join('\n'),
+    category: 'summary',
+    reason: '当前未完成提醒',
+  }
+}
+
+function formatReminderTime(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '时间未知'
+  return new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date)
 }
 
 function buildCurrentTimeInstruction(): string {

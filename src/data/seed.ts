@@ -302,7 +302,7 @@ export function createSeedState(): AppState {
   }))
 
   return {
-    version: 15,
+    version: 16,
     activeCharacterId: characters[0].id,
     characters,
     conversations,
@@ -315,6 +315,7 @@ export function createSeedState(): AppState {
     memoryTombstones: [],
     memoryUsageLogs: [],
     memoryEvents: [],
+    agentReminders: [],
     settings: {
       model: 'deepseek-v4-flash',
       modelProfileId: '',

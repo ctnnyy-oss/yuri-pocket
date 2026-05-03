@@ -65,6 +65,8 @@ export async function prepareAgentBundle(bundle) {
   }
 
   agent.actions.push(...detectCharacterProfileActions(latestUserText))
+  agent.actions.push(...detectReminderActions(latestUserText))
+  agent.actions.push(...detectMemoryCandidateActions(latestUserText))
 
   const toolBlocks = [
     ...agent.tools.map(toolResultToContextBlock),
@@ -306,9 +308,9 @@ function createCapabilityGuideToolResult() {
     status: 'success',
     title: 'Agent 工具：能力边界',
     content: [
-      '后台轻量 agent 能力已启用：current_time 可读取当前北京时间；weather 可查公开天气；web_page 可读取用户提供的公开链接；conversation_snapshot 可整理最近对话；character_profile 可在用户明确要求时更新当前角色名称/头像字。',
+      '后台轻量 agent 能力已启用：current_time 可读取当前北京时间；weather 可查公开天气；web_page 可读取用户提供的公开链接；conversation_snapshot 可整理最近对话；character_profile 可在用户明确要求时更新当前角色名称/头像字；reminder 可创建网页内提醒；memory_writer 可把用户明确要求保存的内容写入候选记忆。',
       '你可以主动把用户的模糊需求整理成计划、待办、检查清单或下一步行动。',
-      '当前没有长期后台推送、系统级通知、任意网页搜索、设备操作权限。不能声称自己已经查了新闻热搜、设了系统提醒、控制了设备或读了用户未提供的网页。',
+      '当前没有长期后台推送、系统级通知、任意网页搜索、设备操作权限。提醒只在网页状态里保存，网页打开时能在聊天里提醒；不能声称自己已经设了系统闹钟、控制了设备或读了用户未提供的网页。',
       '涉及修改角色资料时，只在工具结果明确表示将应用时说“换好了/改好了”；否则先问用户确认。',
     ].join('\n'),
     summary: '说明当前 agent 能力与边界。',
@@ -368,7 +370,201 @@ function detectCharacterProfileActions(text) {
   ]
 }
 
+function detectReminderActions(text) {
+  if (!/提醒我|记得提醒|到点叫我|到时候叫我|叫我去|提醒一下/.test(text)) return []
+
+  const parsedTime = parseReminderTime(text)
+  if (!parsedTime.remindAt) {
+    return [
+      {
+        id: createAgentId('action'),
+        type: 'reminder_create',
+        title: '创建提醒',
+        detail: '提醒缺少明确时间',
+        payload: {
+          reminder: {
+            title: extractReminderTitle(text),
+            detail: text,
+            remindAt: '',
+          },
+        },
+        requiresConfirmation: true,
+        sourceTool: 'reminder',
+        createdAt: new Date().toISOString(),
+      },
+    ]
+  }
+
+  const title = extractReminderTitle(text)
+  return [
+    {
+      id: createAgentId('action'),
+      type: 'reminder_create',
+      title: '创建提醒',
+      detail: `提醒「${title}」：${formatBeijingDateTime(new Date(parsedTime.remindAt))}`,
+      payload: {
+        reminder: {
+          title,
+          detail: text,
+          remindAt: parsedTime.remindAt,
+        },
+      },
+      requiresConfirmation: false,
+      sourceTool: 'reminder',
+      createdAt: new Date().toISOString(),
+    },
+  ]
+}
+
+function detectMemoryCandidateActions(text) {
+  if (!/记住|帮我记住|写进记忆|记进记忆|加入记忆|保存到记忆|存成回忆|写进设定|加入设定|这个设定/.test(text)) {
+    return []
+  }
+
+  const body = extractMemoryBody(text)
+  if (body.length < 6) return []
+
+  const kind = inferActionMemoryKind(text)
+  const title = buildMemoryActionTitle(body, kind)
+
+  return [
+    {
+      id: createAgentId('action'),
+      type: 'memory_candidate_create',
+      title: '写入候选记忆',
+      detail: `候选记忆「${title}」`,
+      payload: {
+        memory: {
+          title,
+          body,
+          tags: ['Agent整理'],
+          kind,
+          layer: kind === 'event' ? 'episode' : 'stable',
+          priority: kind === 'world' || kind === 'relationship' ? 4 : 3,
+        },
+      },
+      requiresConfirmation: false,
+      sourceTool: 'memory_writer',
+      createdAt: new Date().toISOString(),
+    },
+  ]
+}
+
+function parseReminderTime(text) {
+  const now = new Date()
+  const relativeMatch = text.match(/(\d{1,3})\s*(分钟|分|小时|个小时|天|日)后/)
+  if (relativeMatch) {
+    const amount = Number(relativeMatch[1])
+    const unit = relativeMatch[2]
+    const multiplier = unit.includes('分')
+      ? 60_000
+      : unit.includes('小时')
+        ? 3_600_000
+        : 86_400_000
+    return { remindAt: new Date(now.getTime() + amount * multiplier).toISOString() }
+  }
+
+  const parts = getBeijingDateParts(now)
+  let dayOffset = 0
+  if (/后天/.test(text)) dayOffset = 2
+  else if (/明天|明早|明晚/.test(text)) dayOffset = 1
+
+  const timeMatch = text.match(/(\d{1,2})(?:[:：点时])\s*(\d{1,2})?/)
+  const hasSoftTime = /今晚|晚上|明晚|早上|明早|中午|下午/.test(text)
+  if (!timeMatch && !hasSoftTime && !/今天|明天|后天/.test(text)) return { remindAt: '' }
+
+  let hour = timeMatch ? Number(timeMatch[1]) : getDefaultReminderHour(text)
+  const minute = timeMatch?.[2] ? Number(timeMatch[2]) : 0
+
+  if (/下午|晚上|今晚|明晚/.test(text) && hour < 12) hour += 12
+  if (hour > 23 || minute > 59) return { remindAt: '' }
+
+  let target = createDateFromBeijingParts(parts.year, parts.month, parts.day + dayOffset, hour, minute)
+  if (target.getTime() <= now.getTime() && dayOffset === 0) {
+    target = createDateFromBeijingParts(parts.year, parts.month, parts.day + 1, hour, minute)
+  }
+
+  return { remindAt: target.toISOString() }
+}
+
+function getDefaultReminderHour(text) {
+  if (/早上|明早/.test(text)) return 9
+  if (/中午/.test(text)) return 12
+  if (/下午/.test(text)) return 15
+  if (/晚上|今晚|明晚/.test(text)) return 21
+  return 9
+}
+
+function extractReminderTitle(text) {
+  const reminderSegment = text.split(/。还有|。另外|；|;/)[0] || text
+  const cleaned = reminderSegment
+    .replace(/请|麻烦|姐姐|妹妹/g, '')
+    .replace(/(提醒我|记得提醒|到点叫我|到时候叫我|提醒一下|叫我去)/g, '')
+    .replace(/(\d{1,3}\s*(分钟|分|小时|个小时|天|日)后)/g, '')
+    .replace(/(今天|明天|后天|今晚|明早|明晚|早上|中午|下午|晚上|凌晨)/g, '')
+    .replace(/\d{1,2}(?:[:：点时])\s*\d{0,2}/g, '')
+    .replace(/[，。！？!?、]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  return cleaned ? truncateToolText(cleaned, 36) : '该做约定的事'
+}
+
+function extractMemoryBody(text) {
+  const triggerPattern = /(帮我记住|记住|写进记忆|记进记忆|加入记忆|保存到记忆|存成回忆|写进设定|加入设定|这个设定)/g
+  const matches = Array.from(text.matchAll(triggerPattern))
+  const lastMatch = matches.at(-1)
+  const textAfterTrigger = lastMatch ? text.slice(lastMatch.index + lastMatch[0].length) : text
+
+  return textAfterTrigger
+    .replace(/^(姐姐|妹妹|请|麻烦|帮我|可以)/, '')
+    .replace(/^(这个)?(设定|记忆|内容)(是|为)?/, '')
+    .replace(/^(：|:|，|,|。|\s)+/, '')
+    .trim()
+    .slice(0, 320)
+}
+
+function inferActionMemoryKind(text) {
+  if (/世界观|设定|角色|CP|剧情|大纲|人设|百合|帝国/.test(text)) return 'world'
+  if (/喜欢|不喜欢|偏好|讨厌|想要|希望/.test(text)) return 'preference'
+  if (/姐姐|妹妹|关系|称呼|陪伴/.test(text)) return 'relationship'
+  return 'event'
+}
+
+function buildMemoryActionTitle(body, kind) {
+  const prefix = kind === 'world' ? '设定' : kind === 'preference' ? '偏好' : kind === 'relationship' ? '关系' : '记录'
+  return `${prefix}：${truncateToolText(body.replace(/\s+/g, ' '), 22)}`
+}
+
 function actionToContextBlock(action) {
+  if (action.type === 'reminder_create') {
+    return {
+      title: 'Agent 动作：创建提醒',
+      content: [
+        '工具 reminder 已识别到用户的明确提醒指令。',
+        `动作：${action.detail}`,
+        action.requiresConfirmation
+          ? '这个提醒缺少明确时间，需要先向用户确认。'
+          : '前端收到本次响应后会保存这个提醒；网页打开时到点会在聊天里提醒用户。',
+      ].join('\n'),
+      category: action.requiresConfirmation ? 'boundary' : 'stable',
+      reason: action.sourceTool,
+    }
+  }
+
+  if (action.type === 'memory_candidate_create') {
+    return {
+      title: 'Agent 动作：写入候选记忆',
+      content: [
+        '工具 memory_writer 已识别到用户要求保存设定/记忆。',
+        `动作：${action.detail}`,
+        '前端收到本次响应后会把它写成候选记忆，方便用户之后在记忆页确认或修改。',
+      ].join('\n'),
+      category: 'stable',
+      reason: action.sourceTool,
+    }
+  }
+
   return {
     title: 'Agent 动作：角色资料更新',
     content: [
@@ -659,6 +855,25 @@ function formatBeijingDateTime(date) {
 
   const value = (type) => parts.find((part) => part.type === type)?.value ?? ''
   return `北京时间 ${value('year')}-${value('month')}-${value('day')} ${value('weekday')} ${value('hour')}:${value('minute')}:${value('second')}`
+}
+
+function getBeijingDateParts(date) {
+  const parts = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: BEIJING_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date)
+  const value = (type) => Number(parts.find((part) => part.type === type)?.value || 0)
+  return {
+    year: value('year'),
+    month: value('month'),
+    day: value('day'),
+  }
+}
+
+function createDateFromBeijingParts(year, month, day, hour, minute) {
+  return new Date(Date.UTC(year, month - 1, day, hour - 8, minute, 0))
 }
 
 function formatToolMessageTime(value) {

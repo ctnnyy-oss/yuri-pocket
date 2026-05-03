@@ -29,8 +29,12 @@ import { createSeedState } from './data/seed'
 import type {
   AccentTheme,
   AgentAction,
+  AgentReminder,
   AppSettings,
   AppState,
+  CharacterCard,
+  ChatMessage,
+  ConversationState,
   LocalBackupSummary,
   LongTermMemory,
   ModelProfileInput,
@@ -138,27 +142,122 @@ function addMemoryEventToState(state: AppState, input: CreateMemoryEventInput): 
 function applyAgentActionsToState(
   state: AppState,
   actions: AgentAction[] = [],
-  characterId: string,
+  context: {
+    character: CharacterCard
+    conversation: ConversationState
+    userMessage: ChatMessage
+  },
 ): { state: AppState; appliedLabels: string[] } {
   let nextState = state
   const appliedLabels: string[] = []
 
   for (const action of actions) {
-    if (action.requiresConfirmation || action.type !== 'character_profile_update') continue
+    if (action.requiresConfirmation) continue
 
-    const characterPatch = sanitizeCharacterPatch(action.payload.character)
-    if (!characterPatch) continue
+    if (action.type === 'character_profile_update') {
+      const characterPatch = sanitizeCharacterPatch(action.payload.character)
+      if (!characterPatch) continue
 
-    nextState = {
-      ...nextState,
-      characters: nextState.characters.map((character) =>
-        character.id === characterId ? { ...character, ...characterPatch } : character,
-      ),
+      nextState = {
+        ...nextState,
+        characters: nextState.characters.map((character) =>
+          character.id === context.character.id ? { ...character, ...characterPatch } : character,
+        ),
+      }
+      appliedLabels.push(action.detail || action.title)
+      continue
     }
-    appliedLabels.push(action.detail || action.title)
+
+    if (action.type === 'reminder_create') {
+      const reminder = createReminderFromAgentAction(action, context)
+      if (!reminder) continue
+
+      nextState = {
+        ...nextState,
+        agentReminders: [reminder, ...(nextState.agentReminders ?? [])].slice(0, 80),
+      }
+      appliedLabels.push(`提醒：${reminder.title}`)
+      continue
+    }
+
+    if (action.type === 'memory_candidate_create') {
+      const memory = createMemoryFromAgentAction(action, context)
+      if (!memory) continue
+
+      nextState = addMemoryEventToState(
+        {
+          ...nextState,
+          memories: integrateMemoryCandidate(nextState.memories, memory),
+        },
+        {
+          type: 'captured',
+          actor: 'assistant',
+          title: memory.title,
+          detail: 'Agent 根据妹妹的明确要求写入候选记忆，等待确认或修改。',
+          memoryIds: [memory.id],
+          characterId: context.character.id,
+          conversationId: context.conversation.id,
+        },
+      )
+      appliedLabels.push(`候选记忆：${memory.title}`)
+    }
   }
 
   return { state: nextState, appliedLabels }
+}
+
+function createReminderFromAgentAction(
+  action: AgentAction,
+  context: { character: CharacterCard; conversation: ConversationState },
+): AgentReminder | null {
+  const reminder = action.payload.reminder
+  const remindAt = sanitizeIsoDate(reminder?.remindAt)
+  const title = sanitizeShortText(reminder?.title, 48)
+
+  if (!reminder || !remindAt || !title) return null
+
+  return {
+    id: `reminder-${crypto.randomUUID()}`,
+    title,
+    detail: sanitizeShortText(reminder.detail, 160),
+    remindAt,
+    createdAt: nowIso(),
+    status: 'pending',
+    characterId: context.character.id,
+    conversationId: context.conversation.id,
+  }
+}
+
+function createMemoryFromAgentAction(
+  action: AgentAction,
+  context: { character: CharacterCard; conversation: ConversationState; userMessage: ChatMessage },
+) {
+  const input = action.payload.memory
+  const body = sanitizeShortText(input?.body, 320)
+  const title = sanitizeShortText(input?.title, 64)
+
+  if (!input || !body || !title) return null
+
+  return createManualMemory({
+    title,
+    body,
+    tags: [...(input.tags ?? []), context.character.name].slice(0, 8),
+    priority: input.priority ?? 3,
+    pinned: false,
+    kind: input.kind ?? 'event',
+    layer: input.layer ?? 'episode',
+    confidence: 0.82,
+    status: 'candidate',
+    sources: [createMemorySourceFromMessage(context.userMessage, context.conversation, context.character)],
+    reason: 'Agent 根据用户明确要求写入候选记忆',
+  })
+}
+
+function sanitizeIsoDate(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toISOString()
 }
 
 function sanitizeCharacterPatch(
@@ -183,6 +282,42 @@ function sanitizeCharacterPatch(
 function sanitizeShortText(value: unknown, maxLength: number): string {
   if (typeof value !== 'string') return ''
   return Array.from(value.replace(/[\r\n\t]/g, ' ').trim()).slice(0, maxLength).join('')
+}
+
+function deliverDueReminders(state: AppState, currentTime = Date.now()): { state: AppState; delivered: AgentReminder[] } {
+  const reminders = state.agentReminders ?? []
+  const dueReminders = reminders
+    .filter((reminder) => reminder.status === 'pending')
+    .filter((reminder) => new Date(reminder.remindAt).getTime() <= currentTime)
+    .slice(0, 3)
+
+  if (dueReminders.length === 0) return { state, delivered: [] }
+
+  const deliveredIds = new Set(dueReminders.map((reminder) => reminder.id))
+  const deliveredAt = nowIso()
+  let nextState: AppState = {
+    ...state,
+    agentReminders: reminders.map((reminder) =>
+      deliveredIds.has(reminder.id) ? { ...reminder, status: 'delivered', deliveredAt } : reminder,
+    ),
+  }
+
+  for (const reminder of dueReminders) {
+    const characterId = reminder.characterId || nextState.activeCharacterId
+    const reminderConversation = getConversation(nextState, characterId)
+    const reminderMessage = createMessage(
+      'assistant',
+      [`提醒妹妹：${reminder.title}`, reminder.detail ? `当时妹妹说：${reminder.detail}` : ''].filter(Boolean).join('\n\n'),
+    )
+
+    nextState = upsertConversation(nextState, {
+      ...reminderConversation,
+      messages: [...reminderConversation.messages, reminderMessage],
+      updatedAt: nowIso(),
+    })
+  }
+
+  return { state: nextState, delivered: dueReminders }
 }
 
 function readViewFromLocation(): AppView {
@@ -351,6 +486,27 @@ function App() {
   }, [notice])
 
   useEffect(() => {
+    if (!isReady) return
+
+    function checkReminders() {
+      let deliveredCount = 0
+      setState((currentState) => {
+        const result = deliverDueReminders(currentState)
+        deliveredCount = result.delivered.length
+        return result.state
+      })
+
+      if (deliveredCount > 0) {
+        setNotice(deliveredCount === 1 ? '有一条提醒到时间了' : `有 ${deliveredCount} 条提醒到时间了`)
+      }
+    }
+
+    checkReminders()
+    const timer = window.setInterval(checkReminders, 30_000)
+    return () => window.clearInterval(timer)
+  }, [isReady])
+
+  useEffect(() => {
     loadAppState().then((savedState) => {
       setState(savedState)
       setIsReady(true)
@@ -488,7 +644,7 @@ function App() {
       const { state: stateWithAgentActions, appliedLabels } = applyAgentActionsToState(
         repliedState,
         result.agent?.actions,
-        character.id,
+        { character, conversation: nextConversation, userMessage },
       )
       setState(stateWithAgentActions)
       setNotice(appliedLabels.length > 0 ? `已执行：${appliedLabels.slice(0, 2).join(' / ')}` : '回复完成')
