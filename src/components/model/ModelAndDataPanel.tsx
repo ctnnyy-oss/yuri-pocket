@@ -10,7 +10,7 @@ import {
   SlidersHorizontal,
   Trash2,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AppSettings, ModelProfileInput, ModelProfileSummary, ModelProviderKind } from '../../domain/types'
 import { modelProviderPresets, type ModelCatalogItem, type ModelCatalogResult } from '../../services/modelProfiles'
 import { WorkspaceTitle } from '../memory/atoms'
@@ -65,6 +65,7 @@ export function ModelAndDataPanel({
   const [catalogModels, setCatalogModels] = useState<ModelCatalogItem[]>([])
   const [catalogStatus, setCatalogStatus] = useState('')
   const [manualModelMode, setManualModelMode] = useState(false)
+  const autoFetchKeyRef = useRef('')
   const visiblePresets = useMemo(
     () => modelProviderPresets.filter((preset) => preset.group === presetGroup),
     [presetGroup],
@@ -75,6 +76,8 @@ export function ModelAndDataPanel({
     settings.dataStorageMode === 'local'
       ? '当前是仅本地数据模式，不会把 API Key 发给模型后端。'
       : modelProfileStatus
+  const canFetchCatalog =
+    modelBackendEnabled && !modelProfileBusy && Boolean(draft.baseUrl.trim()) && Boolean((draft.apiKey ?? '').trim() || draft.id)
   const modelOptions = useMemo(() => {
     const options = catalogModels.filter((model) => model.id.trim())
     if (draft.model && !options.some((model) => model.id === draft.model)) {
@@ -82,6 +85,35 @@ export function ModelAndDataPanel({
     }
     return options
   }, [catalogModels, draft.model])
+
+  useEffect(() => {
+    const baseUrl = draft.baseUrl.trim()
+    const apiKey = (draft.apiKey ?? '').trim()
+    if (!modelBackendEnabled || modelProfileBusy || !baseUrl || (!apiKey && !draft.id)) return
+
+    const fetchKey = `${draft.kind}|${baseUrl}|${apiKey ? apiKey.slice(0, 12) : `saved:${draft.id}`}`
+    if (autoFetchKeyRef.current === fetchKey) return
+
+    const timer = window.setTimeout(async () => {
+      autoFetchKeyRef.current = fetchKey
+      setCatalogStatus('正在自动拉取模型...')
+
+      try {
+        const result = await onFetchModelCatalog({ profile: { ...draft, baseUrl, name: buildProfileName(draft) } })
+        setCatalogModels(result.models)
+        setManualModelMode(false)
+        setCatalogStatus(`已自动拉取 ${result.models.length} 个模型`)
+
+        if (result.models[0]?.id) {
+          setDraft((currentDraft) => (currentDraft.model ? currentDraft : { ...currentDraft, model: result.models[0].id }))
+        }
+      } catch (error) {
+        setCatalogStatus(error instanceof Error ? error.message : '自动拉取模型失败，可以手动输入模型 ID')
+      }
+    }, 900)
+
+    return () => window.clearTimeout(timer)
+  }, [draft, modelBackendEnabled, modelProfileBusy, onFetchModelCatalog])
 
   function loadProfileIntoDraft(profile: ModelProfileSummary) {
     setDraft({
@@ -245,7 +277,11 @@ export function ModelAndDataPanel({
               <span>API Key</span>
               <input
                 autoComplete="off"
-                onChange={(event) => setDraft({ ...draft, apiKey: event.target.value })}
+                onChange={(event) => {
+                  setDraft({ ...draft, apiKey: event.target.value })
+                  setCatalogModels([])
+                  setCatalogStatus('')
+                }}
                 placeholder={draft.id ? '留空则继续使用已保存密钥' : '填入供应商或中转站密钥'}
                 type="password"
                 value={draft.apiKey ?? ''}
@@ -273,7 +309,7 @@ export function ModelAndDataPanel({
                 )}
               </label>
               <button
-                disabled={!modelBackendEnabled || modelProfileBusy || !draft.baseUrl || (!draft.apiKey && !draft.id)}
+                disabled={!canFetchCatalog}
                 onClick={handleFetchModels}
                 type="button"
               >
