@@ -2142,7 +2142,6 @@ function App() {
           modelProfiles={modelProfiles}
           modelProfileStatus={modelProfileStatus}
           modelProfileBusy={modelProfileBusy}
-          onRefreshModelProfiles={() => void refreshModelProfileList()}
           onSaveModelProfile={handleSaveModelProfile}
           onDeleteModelProfile={handleDeleteModelProfile}
           onFetchModelCatalog={handleFetchModelCatalog}

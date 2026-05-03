@@ -3,7 +3,6 @@ import {
   KeyRound,
   Link2,
   PlugZap,
-  RefreshCw,
   Save,
   ServerCog,
   SlidersHorizontal,
@@ -22,7 +21,6 @@ interface ModelAndDataPanelProps {
   modelProfileBusy: boolean
   cloudSyncConfigured: boolean
   onConnectCloud: () => void
-  onRefreshModelProfiles: () => void
   onSaveModelProfile: (profile: ModelProfileInput) => Promise<void>
   onDeleteModelProfile: (profileId: string) => Promise<void>
   onFetchModelCatalog: (input: { profileId?: string; profile?: ModelProfileInput }) => Promise<ModelCatalogResult>
@@ -48,7 +46,6 @@ export function ModelAndDataPanel({
   modelProfileBusy,
   cloudSyncConfigured,
   onConnectCloud,
-  onRefreshModelProfiles,
   onSaveModelProfile,
   onDeleteModelProfile,
   onFetchModelCatalog,
@@ -184,10 +181,6 @@ export function ModelAndDataPanel({
             <button disabled={!modelBackendEnabled || modelProfileBusy} onClick={onConnectCloud} type="button">
               <Link2 size={15} />
               检查
-            </button>
-            <button disabled={!modelBackendEnabled || modelProfileBusy} onClick={onRefreshModelProfiles} type="button">
-              <RefreshCw size={15} />
-              刷新
             </button>
             <button
               disabled={!modelBackendEnabled || !activeProfile || !activeProfile.hasApiKey || modelProfileBusy}

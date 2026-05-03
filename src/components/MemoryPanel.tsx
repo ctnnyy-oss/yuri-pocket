@@ -114,7 +114,6 @@ interface MemoryPanelProps {
   modelProfiles: ModelProfileSummary[]
   modelProfileStatus: string
   modelProfileBusy: boolean
-  onRefreshModelProfiles: () => void
   onSaveModelProfile: (profile: ModelProfileInput) => Promise<void>
   onDeleteModelProfile: (profileId: string) => Promise<void>
   onFetchModelCatalog: (input: { profileId?: string; profile?: ModelProfileInput }) => Promise<ModelCatalogResult>
@@ -186,7 +185,6 @@ export function MemoryPanel({
   modelProfiles,
   modelProfileStatus,
   modelProfileBusy,
-  onRefreshModelProfiles,
   onSaveModelProfile,
   onDeleteModelProfile,
   onFetchModelCatalog,
@@ -840,7 +838,6 @@ export function MemoryPanel({
           onConnectCloud={onConnectCloud}
           onDeleteModelProfile={onDeleteModelProfile}
           onFetchModelCatalog={onFetchModelCatalog}
-          onRefreshModelProfiles={onRefreshModelProfiles}
           onSaveModelProfile={onSaveModelProfile}
           onTestModelProfile={onTestModelProfile}
           onUpdateSettings={onUpdateSettings}
