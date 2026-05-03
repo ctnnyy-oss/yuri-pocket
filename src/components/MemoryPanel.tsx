@@ -1,25 +1,9 @@
 import {
-  ArchiveRestore,
   BookOpen,
-  Database,
-  FileText,
-  History,
-  Keyboard,
-  Link2,
-  Palette,
-  Pencil,
-  RotateCcw,
-  Save,
-  Settings2,
-  ShieldCheck,
   Sparkles,
-  Trash2,
-  Type,
-  X,
 } from 'lucide-react'
 import { useState } from 'react'
 import type {
-  AccentTheme,
   AppSettings,
   AppTrash,
   CharacterCard,
@@ -27,11 +11,6 @@ import type {
   LongTermMemory,
   MemoryConflict,
   MemoryEvent,
-  MemoryKind,
-  MemoryLayer,
-  MemoryMentionPolicy,
-  MemorySensitivity,
-  MemoryStatus,
   MemoryUsageLog,
   ModelProfileInput,
   ModelProfileSummary,
@@ -39,50 +18,27 @@ import type {
 } from '../domain/types'
 import type { CloudBackupSummary, CloudMetadata } from '../services/cloudSync'
 import type { ModelCatalogResult } from '../services/modelProfiles'
-import {
-  memoryKindLabels,
-  memoryLayerLabels,
-  memoryMentionPolicyLabels,
-  memorySensitivityLabels,
-  memoryStatusLabels,
-} from '../domain/memoryLabels'
 import type { MemoryDraft, WorldDraft } from './memory/memoryPanelTypes'
+import { ErrorBoundary } from './ErrorBoundary'
 import { MemoryGuardianPanel } from './memory/MemoryGuardianPanel'
-import { MemoryScopeEditor } from './memory/MemoryScopeEditor'
-import {
-  EmptyState,
-  IconTextButton,
-  MemoryLayerQuickActions,
-  MemoryMentionQuickActions,
-  MemoryScopeQuickActions,
-  RetentionButton,
-  WorkspaceTitle,
-} from './memory/atoms'
+import { WorkspaceTitle } from './memory/atoms'
+import { MemoryList } from './memory/MemoryList'
 import { MemoryArchiveModal } from './memory/sections/MemoryArchiveModal'
 import { MemoryCandidateReview } from './memory/sections/MemoryCandidateReview'
 import { MemoryDiagnostics } from './memory/sections/MemoryDiagnostics'
 import { MemoryGardenInsight } from './memory/sections/MemoryGardenInsight'
 import { MemorySpaceOverview } from './memory/sections/MemorySpaceOverview'
 import { ModelAndDataPanel } from './model/ModelAndDataPanel'
-import { CoreCpProfiles } from './world/CoreCpProfiles'
+import { SettingsPanel } from './settings/SettingsPanel'
+import { TrashGardenPanel } from './trash/TrashGardenPanel'
+import { WorldTreePanel } from './world/WorldTreePanel'
 import {
   clamp,
   draftToScope,
-  formatBackupCounts,
-  formatBytes,
-  formatCloudTime,
-  formatDeletedAt,
-  formatScopeDisplay,
-  formatShortTime,
-  getCloudBusyLabel,
-  isCoolingDown,
-  isoToLocalInput,
-  localInputToIso,
   scopeToDraft,
   splitList,
 } from './memory/memoryPanelUtils'
 import type { AppView } from './CharacterRail'
-
 interface MemoryPanelProps {
   memories: LongTermMemory[]
   memoryConflicts: MemoryConflict[]
@@ -135,25 +91,6 @@ interface MemoryPanelProps {
   onRestoreLocalBackup: (backupId: string) => void
   onDeleteLocalBackup: (backupId: string) => void
 }
-
-const accentThemes: Array<{ id: AccentTheme; label: string; color: string }> = [
-  { id: 'sakura', label: '樱花粉', color: '#ffabcc' },
-  { id: 'berry', label: '草莓莓', color: '#e23d72' },
-  { id: 'peach', label: '蜜桃奶', color: '#ffa172' },
-  { id: 'lavender', label: '奶油紫', color: '#a886f0' },
-  { id: 'mint', label: '薄荷奶', color: '#6cc69b' },
-  { id: 'sky', label: '晴空蓝', color: '#6ca5f5' },
-  { id: 'mono', label: '黑白简约', color: '#3d3d45' },
-  { id: 'midnight', label: '深夜紫', color: '#221b30' },
-]
-
-const memoryKindOptions = Object.keys(memoryKindLabels) as MemoryKind[]
-const memoryLayerOptions = Object.keys(memoryLayerLabels) as MemoryLayer[]
-const memoryStatusOptions = Object.keys(memoryStatusLabels).filter(
-  (status) => status !== 'trashed' && status !== 'permanently_deleted',
-) as MemoryStatus[]
-const memorySensitivityOptions = Object.keys(memorySensitivityLabels) as MemorySensitivity[]
-const memoryMentionPolicyOptions = Object.keys(memoryMentionPolicyLabels) as MemoryMentionPolicy[]
 export function MemoryPanel({
   memories,
   memoryConflicts,
@@ -211,7 +148,6 @@ export function MemoryPanel({
   const [editingWorldId, setEditingWorldId] = useState<string | null>(null)
   const [worldDraft, setWorldDraft] = useState<WorldDraft | null>(null)
   const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null)
-
   function startMemoryEdit(memory: LongTermMemory) {
     const scopeDraft = scopeToDraft(memory.scope)
     setEditingMemoryId(memory.id)
@@ -231,10 +167,8 @@ export function MemoryPanel({
       ...scopeDraft,
     })
   }
-
   function saveMemoryEdit(memory: LongTermMemory) {
     if (!memoryDraft) return
-
     onUpdateMemory({
       ...memory,
       title: memoryDraft.title.trim() || '未命名记忆',
@@ -254,7 +188,6 @@ export function MemoryPanel({
     setEditingMemoryId(null)
     setMemoryDraft(null)
   }
-
   function startWorldEdit(node: WorldNode) {
     setEditingWorldId(node.id)
     setWorldDraft({
@@ -265,10 +198,8 @@ export function MemoryPanel({
       enabled: node.enabled,
     })
   }
-
   function saveWorldEdit(node: WorldNode) {
     if (!worldDraft) return
-
     onUpdateWorldNode({
       ...node,
       title: worldDraft.title.trim() || '未命名节点',
@@ -280,23 +211,15 @@ export function MemoryPanel({
     setEditingWorldId(null)
     setWorldDraft(null)
   }
-
   function cancelEdit() {
     setEditingMemoryId(null)
     setMemoryDraft(null)
     setEditingWorldId(null)
     setWorldDraft(null)
   }
-
   const candidateMemories = memories.filter((memory) => memory.status === 'candidate')
   const reviewedMemories = memories.filter((memory) => memory.status !== 'candidate')
   const selectedMemory = selectedMemoryId ? memories.find((memory) => memory.id === selectedMemoryId) : null
-  const cloudStorageEnabled = settings.dataStorageMode === 'cloud'
-  const visibleCloudBackups = cloudBackups.slice(0, 3)
-  const visibleLocalBackups = localBackups.slice(0, 3)
-  const hiddenCloudBackupCount = Math.max(0, cloudBackups.length - visibleCloudBackups.length)
-  const hiddenLocalBackupCount = Math.max(0, localBackups.length - visibleLocalBackups.length)
-
   return (
     <main className="workspace detail-workspace">
       {activeView === 'memory' && (
@@ -321,18 +244,23 @@ export function MemoryPanel({
             characters={characters}
             memories={memories}
           />
-          <MemoryGuardianPanel
-            activeCharacterId={activeCharacterId}
-            characters={characters}
-            conflicts={memoryConflicts}
-            memoryEvents={memoryEvents}
-            memories={memories}
-            onEditMemory={startMemoryEdit}
-            onOpenMemory={(memory) => setSelectedMemoryId(memory.id)}
-            onUpdateMemory={onUpdateMemory}
-            trash={trash}
-            usageLogs={memoryUsageLogs}
-          />
+          <ErrorBoundary
+            fallbackTitle="记忆守护台暂时罢工啦"
+            fallbackHint="花园其他地方都还在哟。点一下再试一次，或者刷新整个页面就能恢复。"
+          >
+            <MemoryGuardianPanel
+              activeCharacterId={activeCharacterId}
+              characters={characters}
+              conflicts={memoryConflicts}
+              memoryEvents={memoryEvents}
+              memories={memories}
+              onEditMemory={startMemoryEdit}
+              onOpenMemory={(memory) => setSelectedMemoryId(memory.id)}
+              onUpdateMemory={onUpdateMemory}
+              trash={trash}
+              usageLogs={memoryUsageLogs}
+            />
+          </ErrorBoundary>
           <MemoryCandidateReview
             candidates={candidateMemories}
             characters={characters}
@@ -362,288 +290,24 @@ export function MemoryPanel({
             onUpdateMemory={onUpdateMemory}
             usageLogs={memoryUsageLogs}
           />
-          <section className="panel-stack">
-            {memories.length === 0 && <EmptyState text="当前没有记忆。删掉的内容可以去回收花园找回。" />}
-            {memories.length > 0 && reviewedMemories.length === 0 && (
-              <EmptyState text="当前只有待确认记忆。确认后，它们才会进入长期记忆列表。" />
-            )}
-            {reviewedMemories.map((memory) => (
-              <article className="memory-item" key={memory.id}>
-                {editingMemoryId === memory.id && memoryDraft ? (
-                  <div className="edit-form">
-                    <label>
-                      <span>标题</span>
-                      <input
-                        onChange={(event) => setMemoryDraft({ ...memoryDraft, title: event.target.value })}
-                        value={memoryDraft.title}
-                      />
-                    </label>
-                    <label>
-                      <span>内容</span>
-                      <textarea
-                        onChange={(event) => setMemoryDraft({ ...memoryDraft, body: event.target.value })}
-                        rows={4}
-                        value={memoryDraft.body}
-                      />
-                    </label>
-                    <label>
-                      <span>标签</span>
-                      <input
-                        onChange={(event) => setMemoryDraft({ ...memoryDraft, tags: event.target.value })}
-                        value={memoryDraft.tags}
-                      />
-                    </label>
-                    <MemoryScopeEditor
-                      activeCharacterId={activeCharacterId}
-                      activeConversationId={activeConversationId}
-                      characters={characters}
-                      draft={memoryDraft}
-                      onChange={setMemoryDraft}
-                      worldNodes={worldNodes}
-                    />
-                    <div className="edit-row">
-                      <label>
-                        <span>类型</span>
-                        <select
-                          onChange={(event) =>
-                            setMemoryDraft({ ...memoryDraft, kind: event.target.value as MemoryKind })
-                          }
-                          value={memoryDraft.kind}
-                        >
-                          {memoryKindOptions.map((kind) => (
-                            <option key={kind} value={kind}>
-                              {memoryKindLabels[kind]}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        <span>层级</span>
-                        <select
-                          onChange={(event) =>
-                            setMemoryDraft({ ...memoryDraft, layer: event.target.value as MemoryLayer })
-                          }
-                          value={memoryDraft.layer}
-                        >
-                          {memoryLayerOptions.map((layer) => (
-                            <option key={layer} value={layer}>
-                              {memoryLayerLabels[layer]}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    <div className="edit-row">
-                      <label>
-                        <span>可信度</span>
-                        <input
-                          max="1"
-                          min="0.1"
-                          onChange={(event) =>
-                            setMemoryDraft({ ...memoryDraft, confidence: Number(event.target.value) })
-                          }
-                          step="0.05"
-                          type="number"
-                          value={memoryDraft.confidence}
-                        />
-                      </label>
-                      <label>
-                        <span>状态</span>
-                        <select
-                          onChange={(event) =>
-                            setMemoryDraft({ ...memoryDraft, status: event.target.value as MemoryStatus })
-                          }
-                          value={memoryDraft.status}
-                        >
-                          {memoryStatusOptions.map((status) => (
-                            <option key={status} value={status}>
-                              {memoryStatusLabels[status]}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        <span>敏感度</span>
-                        <select
-                          onChange={(event) =>
-                            setMemoryDraft({
-                              ...memoryDraft,
-                              sensitivity: event.target.value as MemorySensitivity,
-                            })
-                          }
-                          value={memoryDraft.sensitivity}
-                        >
-                          {memorySensitivityOptions.map((sensitivity) => (
-                            <option key={sensitivity} value={sensitivity}>
-                              {memorySensitivityLabels[sensitivity]}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    <div className="edit-row">
-                      <label>
-                        <span>提及时机</span>
-                        <select
-                          onChange={(event) =>
-                            setMemoryDraft({
-                              ...memoryDraft,
-                              mentionPolicy: event.target.value as MemoryMentionPolicy,
-                            })
-                          }
-                          value={memoryDraft.mentionPolicy}
-                        >
-                          {memoryMentionPolicyOptions.map((policy) => (
-                            <option key={policy} value={policy}>
-                              {memoryMentionPolicyLabels[policy]}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label>
-                        <span>冷却到</span>
-                        <input
-                          onChange={(event) =>
-                            setMemoryDraft({
-                              ...memoryDraft,
-                              cooldownUntil: localInputToIso(event.target.value),
-                            })
-                          }
-                          type="datetime-local"
-                          value={isoToLocalInput(memoryDraft.cooldownUntil)}
-                        />
-                      </label>
-                    </div>
-                    <div className="edit-row">
-                      <label>
-                        <span>权重</span>
-                        <input
-                          max="5"
-                          min="1"
-                          onChange={(event) =>
-                            setMemoryDraft({ ...memoryDraft, priority: Number(event.target.value) })
-                          }
-                          type="number"
-                          value={memoryDraft.priority}
-                        />
-                      </label>
-                      <label className="compact-check">
-                        <input
-                          checked={memoryDraft.pinned}
-                          onChange={(event) => setMemoryDraft({ ...memoryDraft, pinned: event.target.checked })}
-                          type="checkbox"
-                        />
-                        <span>置顶</span>
-                      </label>
-                    </div>
-                    <div className="item-actions">
-                      <IconTextButton icon={<Save size={16} />} label="保存" onClick={() => saveMemoryEdit(memory)} />
-                      <IconTextButton icon={<X size={16} />} label="取消" onClick={cancelEdit} />
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="item-head">
-                      <strong>{memory.title}</strong>
-                      <span>权重 {memory.priority} / {Math.round(memory.confidence * 100)}%</span>
-                    </div>
-                    <div className="memory-meta">
-                      <span>{memoryKindLabels[memory.kind]}</span>
-                      <span>{memoryLayerLabels[memory.layer]}</span>
-                      <span>{memoryStatusLabels[memory.status]}</span>
-                      <span>{formatScopeDisplay(memory.scope, characters)}</span>
-                      <span>{memorySensitivityLabels[memory.sensitivity]}</span>
-                      <span>{memoryMentionPolicyLabels[memory.mentionPolicy]}</span>
-                      {memory.pinned && <span>置顶</span>}
-                      {isCoolingDown(memory.cooldownUntil) && <span>冷却中</span>}
-                      <span>来源 {memory.sources.length}</span>
-                      <span>版本 {memory.revisions.length}</span>
-                      {memory.lastAccessedAt && <span>最近调用 {formatShortTime(memory.lastAccessedAt)}</span>}
-                    </div>
-                    <p>{memory.body}</p>
-                    <footer>{memory.tags.join(' / ')}</footer>
-                    <details className="memory-details">
-                      <summary>
-                        <Link2 size={15} />
-                        来源与版本
-                      </summary>
-                      <div className="detail-grid">
-                        <section>
-                          <h3>
-                            <ShieldCheck size={15} />
-                            证据来源
-                          </h3>
-                          {memory.sources.length === 0 ? (
-                            <small>这条记忆来自旧版本，暂时没有原始来源。</small>
-                          ) : (
-                            memory.sources.slice(0, 4).map((source) => (
-                              <blockquote key={source.id}>
-                                <span>{source.kind === 'message' ? '聊天原文' : source.kind}</span>
-                                {source.excerpt}
-                              </blockquote>
-                            ))
-                          )}
-                        </section>
-                        <section>
-                          <h3>
-                            <History size={15} />
-                            版本记录
-                          </h3>
-                          {memory.revisions
-                            .slice()
-                            .reverse()
-                            .slice(0, 5)
-                            .map((revision) => (
-                              <div className="revision-row" key={revision.id}>
-                                <span>
-                                  {formatShortTime(revision.createdAt)} / {revision.reason}
-                                </span>
-                                <button
-                                  onClick={() => onRestoreMemoryRevision(memory.id, revision.id)}
-                                  type="button"
-                                >
-                                  回滚
-                                </button>
-                              </div>
-                            ))}
-                        </section>
-                      </div>
-                    </details>
-                    <div className="item-actions">
-                      {memory.status === 'candidate' && (
-                        <IconTextButton
-                          icon={<ShieldCheck size={16} />}
-                          label="确认保存"
-                          onClick={() =>
-                            onUpdateMemory({
-                              ...memory,
-                              status: 'active',
-                              confidence: Math.max(memory.confidence, 0.9),
-                              userEdited: true,
-                            })
-                          }
-                        />
-                      )}
-                      <IconTextButton
-                        icon={<FileText size={16} />}
-                        label="档案"
-                        onClick={() => setSelectedMemoryId(memory.id)}
-                      />
-                      <IconTextButton icon={<Pencil size={16} />} label="编辑" onClick={() => startMemoryEdit(memory)} />
-                      <MemoryScopeQuickActions
-                        activeCharacterId={activeCharacterId}
-                        memory={memory}
-                        onUpdateMemory={onUpdateMemory}
-                      />
-                      <MemoryLayerQuickActions memory={memory} onUpdateMemory={onUpdateMemory} />
-                      <MemoryMentionQuickActions memory={memory} onUpdateMemory={onUpdateMemory} />
-                      <IconTextButton icon={<Trash2 size={16} />} label="删除" onClick={() => onTrashMemory(memory.id)} />
-                    </div>
-                  </>
-                )}
-              </article>
-            ))}
-          </section>
+          <MemoryList
+            activeCharacterId={activeCharacterId}
+            activeConversationId={activeConversationId}
+            characters={characters}
+            editingMemoryId={editingMemoryId}
+            memories={memories}
+            memoryDraft={memoryDraft}
+            onCancelEdit={cancelEdit}
+            onDraftChange={setMemoryDraft}
+            onOpenMemory={setSelectedMemoryId}
+            onRestoreMemoryRevision={onRestoreMemoryRevision}
+            onSaveMemory={saveMemoryEdit}
+            onStartMemoryEdit={startMemoryEdit}
+            onTrashMemory={onTrashMemory}
+            onUpdateMemory={onUpdateMemory}
+            reviewedMemories={reviewedMemories}
+            worldNodes={worldNodes}
+          />
           {selectedMemory && (
             <MemoryArchiveModal
               memory={selectedMemory}
@@ -663,172 +327,28 @@ export function MemoryPanel({
           )}
         </>
       )}
-
       {activeView === 'world' && (
-        <>
-          <WorkspaceTitle
-            description="三对核心 CP、世界观规则和触发词先放在这里，后续可以慢慢补全。"
-            icon={<Database size={20} />}
-            title="百合小窝"
-          />
-          <CoreCpProfiles />
-          <section className="panel-stack">
-            {worldNodes.length === 0 && <EmptyState text="当前没有世界树节点。删掉的内容可以去回收花园找回。" />}
-            {worldNodes.map((node) => (
-              <article className="memory-item" key={node.id}>
-                {editingWorldId === node.id && worldDraft ? (
-                  <div className="edit-form">
-                    <label>
-                      <span>标题</span>
-                      <input
-                        onChange={(event) => setWorldDraft({ ...worldDraft, title: event.target.value })}
-                        value={worldDraft.title}
-                      />
-                    </label>
-                    <label>
-                      <span>触发词</span>
-                      <input
-                        onChange={(event) => setWorldDraft({ ...worldDraft, keywords: event.target.value })}
-                        value={worldDraft.keywords}
-                      />
-                    </label>
-                    <label>
-                      <span>内容</span>
-                      <textarea
-                        onChange={(event) => setWorldDraft({ ...worldDraft, content: event.target.value })}
-                        rows={4}
-                        value={worldDraft.content}
-                      />
-                    </label>
-                    <div className="edit-row">
-                      <label>
-                        <span>权重</span>
-                        <input
-                          max="5"
-                          min="1"
-                          onChange={(event) => setWorldDraft({ ...worldDraft, priority: Number(event.target.value) })}
-                          type="number"
-                          value={worldDraft.priority}
-                        />
-                      </label>
-                      <label className="compact-check">
-                        <input
-                          checked={worldDraft.enabled}
-                          onChange={(event) => setWorldDraft({ ...worldDraft, enabled: event.target.checked })}
-                          type="checkbox"
-                        />
-                        <span>启用</span>
-                      </label>
-                    </div>
-                    <div className="item-actions">
-                      <IconTextButton icon={<Save size={16} />} label="保存" onClick={() => saveWorldEdit(node)} />
-                      <IconTextButton icon={<X size={16} />} label="取消" onClick={cancelEdit} />
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="item-head">
-                      <strong>{node.title}</strong>
-                      <span>{node.enabled ? '启用' : '关闭'} / 权重 {node.priority}</span>
-                    </div>
-                    <p>{node.content}</p>
-                    <footer>{node.keywords.join(' / ')}</footer>
-                    <div className="item-actions">
-                      <IconTextButton icon={<Pencil size={16} />} label="编辑" onClick={() => startWorldEdit(node)} />
-                      <IconTextButton icon={<Trash2 size={16} />} label="删除" onClick={() => onTrashWorldNode(node.id)} />
-                    </div>
-                  </>
-                )}
-              </article>
-            ))}
-          </section>
-        </>
+        <WorldTreePanel
+          editingWorldId={editingWorldId}
+          onCancelEdit={cancelEdit}
+          onDraftChange={setWorldDraft}
+          onSaveWorld={saveWorldEdit}
+          onStartWorldEdit={startWorldEdit}
+          onTrashWorldNode={onTrashWorldNode}
+          worldDraft={worldDraft}
+          worldNodes={worldNodes}
+        />
       )}
-
       {activeView === 'trash' && (
-        <>
-          <WorkspaceTitle
-            description="删掉的记忆和世界树先睡在这里，后悔了可以恢复。"
-            icon={<ArchiveRestore size={20} />}
-            title="回收花园"
-          />
-          {(trash.memories.length > 0 || trash.worldNodes.length > 0) && (
-            <div className="detail-actions">
-              <button
-                className="danger-button secondary-danger"
-                onClick={() => {
-                  if (window.confirm('回收花园里的内容会全部彻底删除，不能再恢复。确定吗？')) {
-                    onEmptyTrash()
-                  }
-                }}
-                type="button"
-              >
-                清空回收花园
-              </button>
-            </div>
-          )}
-          <section className="panel-stack">
-            {trash.memories.length === 0 && trash.worldNodes.length === 0 && (
-              <EmptyState text="回收花园是空的。以后误删了，姐姐会先放到这里。" />
-            )}
-            {trash.memories.map((memory) => (
-              <article className="memory-item muted-item" key={`trash-memory-${memory.id}`}>
-                <div className="item-head">
-                  <strong>记忆 / {memory.title}</strong>
-                  <span>{formatDeletedAt(memory.deletedAt)}</span>
-                </div>
-                <p>{memory.body}</p>
-                <footer>{memory.tags.join(' / ')}</footer>
-                <div className="item-actions">
-                  <IconTextButton
-                    icon={<RotateCcw size={16} />}
-                    label="恢复"
-                    onClick={() => onRestoreMemory(memory.id)}
-                  />
-                  <IconTextButton
-                    danger
-                    icon={<Trash2 size={16} />}
-                    label="彻底删除"
-                    onClick={() => {
-                      if (window.confirm('这条记忆会被彻底删除，不能再恢复。确定吗？')) {
-                        onDeleteTrashedMemory(memory.id)
-                      }
-                    }}
-                  />
-                </div>
-              </article>
-            ))}
-            {trash.worldNodes.map((node) => (
-              <article className="memory-item muted-item" key={`trash-world-${node.id}`}>
-                <div className="item-head">
-                  <strong>世界树 / {node.title}</strong>
-                  <span>{formatDeletedAt(node.deletedAt)}</span>
-                </div>
-                <p>{node.content}</p>
-                <footer>{node.keywords.join(' / ')}</footer>
-                <div className="item-actions">
-                  <IconTextButton
-                    icon={<RotateCcw size={16} />}
-                    label="恢复"
-                    onClick={() => onRestoreWorldNode(node.id)}
-                  />
-                  <IconTextButton
-                    danger
-                    icon={<Trash2 size={16} />}
-                    label="彻底删除"
-                    onClick={() => {
-                      if (window.confirm('这个世界树节点会被彻底删除，不能再恢复。确定吗？')) {
-                        onDeleteTrashedWorldNode(node.id)
-                      }
-                    }}
-                  />
-                </div>
-              </article>
-            ))}
-          </section>
-        </>
+        <TrashGardenPanel
+          onDeleteTrashedMemory={onDeleteTrashedMemory}
+          onDeleteTrashedWorldNode={onDeleteTrashedWorldNode}
+          onEmptyTrash={onEmptyTrash}
+          onRestoreMemory={onRestoreMemory}
+          onRestoreWorldNode={onRestoreWorldNode}
+          trash={trash}
+        />
       )}
-
       {activeView === 'model' && (
         <ModelAndDataPanel
           cloudSyncConfigured={cloudSyncConfigured}
@@ -844,361 +364,30 @@ export function MemoryPanel({
           settings={settings}
         />
       )}
-
       {activeView === 'settings' && (
-        <>
-          <WorkspaceTitle
-            description="收纳低频偏好、数据同步、备份迁移和界面颜色。"
-            icon={<Settings2 size={20} />}
-            title="设置"
-          />
-          <section className="settings-stack">
-            <div className="settings-section">
-              <div className="settings-section-title">
-                <Keyboard size={18} />
-                <span>输入习惯</span>
-              </div>
-              <label className="toggle-row">
-                <span>
-                  <strong>回车发送</strong>
-                  <small>{settings.enterToSend ? 'Ctrl + Enter 换行' : 'Enter 换行，Ctrl + Enter 发送'}</small>
-                </span>
-                <input
-                  checked={settings.enterToSend}
-                  onChange={(event) => onUpdateSettings({ ...settings, enterToSend: event.target.checked })}
-                  type="checkbox"
-                />
-              </label>
-            </div>
-
-            <div className="settings-section">
-              <div className="settings-section-title">
-                <Type size={18} />
-                <span>阅读大小</span>
-              </div>
-              <label className="range-control">
-                <span>
-                  <strong>字体大小</strong>
-                  <small>{settings.fontSize}px</small>
-                </span>
-                <input
-                  max="18"
-                  min="13"
-                  onChange={(event) => onUpdateSettings({ ...settings, fontSize: Number(event.target.value) })}
-                  step="1"
-                  type="range"
-                  value={settings.fontSize}
-                />
-              </label>
-            </div>
-
-            <div className="settings-section">
-              <div className="settings-section-title">
-                <Palette size={18} />
-                <span>主题颜色</span>
-              </div>
-              <div className="theme-swatches">
-                {accentThemes.map((theme) => (
-                  <button
-                    aria-label={`切换到${theme.label}`}
-                    className={`swatch-button ${settings.accentTheme === theme.id ? 'active' : ''}`}
-                    key={theme.id}
-                    onClick={() => onUpdateSettings({ ...settings, accentTheme: theme.id })}
-                    type="button"
-                  >
-                    <span className="swatch-dot" style={{ background: theme.color }} />
-                    <span>{theme.label}</span>
-                  </button>
-                ))}
-              </div>
-              <label className={`custom-color-control ${settings.accentTheme === 'custom' ? 'active' : ''}`}>
-                <span>
-                  <strong>自定义主色</strong>
-                  <small>选一个妹妹喜欢的颜色，界面会跟着整套换色。</small>
-                </span>
-                <input
-                  aria-label="自定义主题主色"
-                  type="color"
-                  value={settings.customAccentColor || '#ffabcc'}
-                  onChange={(event) =>
-                    onUpdateSettings({
-                      ...settings,
-                      accentTheme: 'custom',
-                      customAccentColor: event.target.value,
-                    })
-                  }
-                />
-              </label>
-            </div>
-
-            <div className="settings-section">
-              <div className="settings-section-title">
-                <Database size={18} />
-                <span>数据与同步</span>
-              </div>
-              <div className="retention-options">
-                <RetentionButton
-                  active={settings.dataStorageMode === 'cloud'}
-                  description="聊天、记忆和设置自动同步到云端"
-                  label="云端同步"
-                  onClick={() => onUpdateSettings({ ...settings, dataStorageMode: 'cloud' })}
-                />
-                <RetentionButton
-                  active={settings.dataStorageMode === 'local'}
-                  description="只存在这台设备的浏览器里"
-                  label="仅本地"
-                  onClick={() => onUpdateSettings({ ...settings, dataStorageMode: 'local' })}
-                />
-              </div>
-              <div className="cloud-meta-strip" aria-label="云端同步状态">
-                <span>
-                  <strong>模式</strong>
-                  {cloudStorageEnabled ? '云端同步' : '仅本地'}
-                </span>
-                <span>
-                  <strong>版本</strong>
-                  {cloudStorageEnabled && cloudMeta ? `v${cloudMeta.revision}` : '未同步'}
-                </span>
-                <span>
-                  <strong>最后保存</strong>
-                  {cloudStorageEnabled && cloudMeta ? formatCloudTime(cloudMeta.updatedAt) : '暂无记录'}
-                </span>
-              </div>
-              <small className="cloud-status-line">
-                {cloudStorageEnabled
-                  ? cloudBusy
-                    ? getCloudBusyLabel(cloudBusy)
-                    : cloudStatus
-                  : '仅本地模式不会自动上传云端；需要迁移时可以用下面的导出。'}
-              </small>
-              <div className="settings-actions">
-                <button
-                  disabled={!cloudStorageEnabled || !cloudSyncConfigured || Boolean(cloudBusy)}
-                  onClick={onConnectCloud}
-                  type="button"
-                >
-                  <Link2 size={15} />
-                  检查连接
-                </button>
-                <button
-                  disabled={!cloudStorageEnabled || !cloudSyncConfigured || Boolean(cloudBusy)}
-                  onClick={onRefreshCloud}
-                  type="button"
-                >
-                  <RotateCcw size={15} />
-                  检查云端
-                </button>
-                <button
-                  disabled={!cloudStorageEnabled || !cloudSyncConfigured || Boolean(cloudBusy)}
-                  onClick={onPushCloud}
-                  type="button"
-                >
-                  <Save size={15} />
-                  保存到云端
-                </button>
-                <button
-                  disabled={!cloudStorageEnabled || !cloudSyncConfigured || Boolean(cloudBusy)}
-                  onClick={onPullCloud}
-                  type="button"
-                >
-                  <RotateCcw size={15} />
-                  从云端读取
-                </button>
-              </div>
-              {cloudStorageEnabled && (
-                <div className="backup-list">
-                  {visibleCloudBackups.length === 0 ? (
-                    <small>还没有读取到云端备份。保存云端或手动创建后，这里会出现下载入口。</small>
-                  ) : (
-                    <>
-                      {visibleCloudBackups.map((backup) => (
-                        <article className="backup-item" key={backup.fileName}>
-                          <div>
-                            <strong>{backup.label}</strong>
-                            <span>
-                              {formatShortTime(backup.createdAt)} / {formatBytes(backup.sizeBytes)}
-                            </span>
-                            <small>{backup.fileName}</small>
-                          </div>
-                          <div className="backup-actions">
-                            <button onClick={() => onDownloadCloudBackup(backup.fileName)} type="button">
-                              下载
-                            </button>
-                          </div>
-                        </article>
-                      ))}
-                      {hiddenCloudBackupCount > 0 && (
-                        <small className="backup-more">还有 {hiddenCloudBackupCount} 份旧云端备份已收起。</small>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-              <div className="settings-actions">
-                <button
-                  disabled={!cloudStorageEnabled || !cloudSyncConfigured || Boolean(cloudBusy)}
-                  onClick={onCreateCloudBackup}
-                  type="button"
-                >
-                  <Save size={15} />
-                  创建云端备份
-                </button>
-                <button
-                  disabled={!cloudStorageEnabled || !cloudSyncConfigured || Boolean(cloudBusy)}
-                  onClick={onRefreshCloudBackups}
-                  type="button"
-                >
-                  <RotateCcw size={15} />
-                  刷新云端备份
-                </button>
-              </div>
-            </div>
-
-            <div className="settings-section">
-              <div className="settings-section-title">
-                <Save size={18} />
-                <span>备份与迁移</span>
-              </div>
-              <p className="section-note">
-                从云端读取、导入文件、重置之前会自动留一份本机备份；也可以手动导出，方便自己留底。
-              </p>
-              <div className="settings-actions">
-                <button onClick={onCreateLocalBackup} type="button">
-                  <Save size={15} />
-                  创建本机备份
-                </button>
-                <button onClick={onExport} type="button">
-                  导出 JSON
-                </button>
-                <label className="file-button">
-                  导入 JSON
-                  <input
-                    accept="application/json"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0]
-                      if (file) onImport(file)
-                      event.currentTarget.value = ''
-                    }}
-                    type="file"
-                  />
-                </label>
-                <button className="danger-button" onClick={onReset} type="button">
-                  重置
-                </button>
-              </div>
-              <div className="backup-list">
-                {visibleLocalBackups.length === 0 ? (
-                  <small>还没有本机备份。做一次读取、导入或重置前，姐姐会自动留底。</small>
-                ) : (
-                  <>
-                    {visibleLocalBackups.map((backup) => (
-                      <article className="backup-item" key={backup.id}>
-                        <div>
-                          <strong>{backup.label}</strong>
-                          <span>
-                            {formatShortTime(backup.createdAt)} / {backup.reason}
-                          </span>
-                          <small>{formatBackupCounts(backup)}</small>
-                        </div>
-                        <div className="backup-actions">
-                          <button onClick={() => onRestoreLocalBackup(backup.id)} type="button">
-                            恢复
-                          </button>
-                          <button className="danger-button" onClick={() => onDeleteLocalBackup(backup.id)} type="button">
-                            删除
-                          </button>
-                        </div>
-                      </article>
-                    ))}
-                    {hiddenLocalBackupCount > 0 && (
-                      <small className="backup-more">还有 {hiddenLocalBackupCount} 份旧本机备份已收起。</small>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="settings-section">
-              <div className="settings-section-title">
-                <Sparkles size={18} />
-                <span>记忆系统</span>
-              </div>
-              <label className="toggle-row">
-                <span>
-                  <strong>自动捕捉记忆</strong>
-                  <small>只保存有长期价值的偏好、规则和项目线索</small>
-                </span>
-                <input
-                  checked={settings.autoMemoryEnabled}
-                  onChange={(event) => onUpdateSettings({ ...settings, autoMemoryEnabled: event.target.checked })}
-                  type="checkbox"
-                />
-              </label>
-              <label className="range-control">
-                <span>
-                  <strong>自动记忆门槛</strong>
-                  <small>{Math.round(settings.memoryConfidenceFloor * 100)}%</small>
-                </span>
-                <input
-                  max="0.95"
-                  min="0.5"
-                  onChange={(event) =>
-                    onUpdateSettings({ ...settings, memoryConfidenceFloor: Number(event.target.value) })
-                  }
-                  step="0.05"
-                  type="range"
-                  value={settings.memoryConfidenceFloor}
-                />
-              </label>
-            </div>
-
-            <div className="settings-section">
-              <div className="settings-section-title">
-                <ArchiveRestore size={18} />
-                <span>回收花园</span>
-              </div>
-              <div className="retention-options">
-                <RetentionButton
-                  active={settings.trashRetentionMode === 'forever'}
-                  description="不会自动清理"
-                  label="永久保存"
-                  onClick={() => onUpdateSettings({ ...settings, trashRetentionMode: 'forever' })}
-                />
-                <RetentionButton
-                  active={settings.trashRetentionMode === 'default'}
-                  description="30 天后清理"
-                  label="默认 30 天"
-                  onClick={() =>
-                    onUpdateSettings({ ...settings, trashRetentionMode: 'default', trashRetentionDays: 30 })
-                  }
-                />
-                <RetentionButton
-                  active={settings.trashRetentionMode === 'custom'}
-                  description="1-365 天"
-                  label="自定义"
-                  onClick={() => onUpdateSettings({ ...settings, trashRetentionMode: 'custom' })}
-                />
-              </div>
-              {settings.trashRetentionMode === 'custom' && (
-                <label className="number-control">
-                  <span>
-                    <strong>保留天数</strong>
-                    <small>只能设置 1 到 365 天</small>
-                  </span>
-                  <input
-                    max="365"
-                    min="1"
-                    onChange={(event) =>
-                      onUpdateSettings({ ...settings, trashRetentionDays: Number(event.target.value) })
-                    }
-                    type="number"
-                    value={settings.trashRetentionDays}
-                  />
-                </label>
-              )}
-            </div>
-          </section>
-        </>
+        <SettingsPanel
+          cloudBackups={cloudBackups}
+          cloudBusy={cloudBusy}
+          cloudMeta={cloudMeta}
+          cloudStatus={cloudStatus}
+          cloudSyncConfigured={cloudSyncConfigured}
+          localBackups={localBackups}
+          onConnectCloud={onConnectCloud}
+          onCreateCloudBackup={onCreateCloudBackup}
+          onCreateLocalBackup={onCreateLocalBackup}
+          onDeleteLocalBackup={onDeleteLocalBackup}
+          onDownloadCloudBackup={onDownloadCloudBackup}
+          onExport={onExport}
+          onImport={onImport}
+          onPullCloud={onPullCloud}
+          onPushCloud={onPushCloud}
+          onRefreshCloud={onRefreshCloud}
+          onRefreshCloudBackups={onRefreshCloudBackups}
+          onReset={onReset}
+          onRestoreLocalBackup={onRestoreLocalBackup}
+          onUpdateSettings={onUpdateSettings}
+          settings={settings}
+        />
       )}
     </main>
   )

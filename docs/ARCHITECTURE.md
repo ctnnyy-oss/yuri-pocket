@@ -7,7 +7,11 @@
 ## 分层
 
 - `src/components`：只负责界面，不直接决定角色、记忆和模型规则。
-- `src/components/memory`：记忆面板的子组件、草稿类型和 UI 工具函数。`MemoryPanel.tsx` 只负责组装页面，不继续堆所有细节。
+- `src/app`：前端应用编排层。`useYuriNestApp.ts` 统一持有页面状态、聊天发送、云端同步和模型配置动作；`agentActions.ts` 负责把后端 Agent 动作落到 AppState；`theme.ts`、`navigation.ts` 和 `formatters.ts` 放跨页面的轻量工具。
+- `src/components/memory`：记忆面板的子组件、草稿类型和 UI 工具函数。`MemoryPanel.tsx` 只负责组装记忆页、候选审核、守护台和档案弹窗，不继续堆编辑表单和卡片细节。
+- `src/components/settings`：设置、主题、云同步、本机备份和导入导出的页面视图。
+- `src/components/world`：世界树和 CP 展示视图。
+- `src/components/trash`：回收花园视图。
 - `src/config`：集中放品牌名、默认项目空间、本地存储 key 等跨模块配置。改名或调整存储策略时先看这里。
 - `src/domain`：类型定义，是项目的共同语言。
 - `src/domain/memoryLabels.ts`：记忆类型、状态、敏感度、提及时机的中文标签。UI 可以读标签，但不要反向依赖记忆引擎。
@@ -15,7 +19,10 @@
 - `src/data/migrations.ts`：所有 AppState 版本升级都集中放这里，避免 IndexedDB 读写层越来越臃肿。
 - `src/services/memoryEngine.ts`：短期记忆、长期记忆、世界树触发、提示词组装。
 - `src/services/chatApi.ts`：前端到本地 API 代理的通信。
-- `server/index.mjs`：本地模型代理，API Key 只留在本机环境变量里。
+- `server/index.mjs`：后端 API 入口，只负责路由、认证、请求编排和调用下层模块。
+- `server/cloudStore.mjs`：SQLite 云端快照、备份列表、备份裁剪和状态形状校验。
+- `server/modelProvider.mjs`：模型供应商适配层，集中处理 OpenAI-compatible、Anthropic 和 Gemini 的请求、模型列表、错误翻译和兼容编码。
+- `server/agentTools.mjs`：轻量 Agent 工具选择、工具结果生成和应用内动作建议。这个文件是领域引擎，不要把普通路由或数据库逻辑塞进去。
 
 ## 关键原则
 
@@ -26,8 +33,9 @@
 - 每个新能力都作为模块接入，避免把所有逻辑塞进聊天页面。
 - 品牌名、技术路径和存储 key 分开管理，但当前主技术名已经统一为 `yuri-nest`，避免后续部署和文档继续分裂。
 - 旧数据升级只能走 `migrations.ts`，不要在界面组件里临时判断旧字段；这样妹妹本机、云端快照和未来多设备同步都能复用同一条升级路径。
-- 超过 500 行的文件默认进入“需要继续拆分观察区”。现在最胖的是 `MemoryPanel.tsx`、`memoryEngine.ts` 和 `App.tsx`，后续应优先按视图、prompt packer、memory writer/retriever 继续拆。
+- 超过 500 行的文件默认进入“需要继续拆分观察区”。当前 UI 入口和记忆视图已拆开；继续变胖时，优先拆 `useYuriNestApp.ts` 的云端/模型/本机备份 hook、`memoryEngine.ts` 的 prompt packer 与 memory writer/retriever、`agentTools.mjs` 的工具识别/工具执行/动作生成。
 - 拆大文件优先按“可验证的小模块”推进：先拆纯工具、配置、迁移、独立 UI，再拆带状态流的核心逻辑；每次拆完必须跑 lint/build 和浏览器回归。
+- 新功能默认先问“它属于页面、应用编排、领域服务、数据迁移、后端路由、云存储、模型供应商还是 Agent 工具”。答不上来时先补边界，不要直接塞进 `App.tsx`、`MemoryPanel.tsx` 或 `server/index.mjs`。
 
 ## 记忆系统分层
 

@@ -240,3 +240,73 @@ select:focus-visible {
   background: var(--pink-200);
   color: var(--pink-700);
 }
+
+/* ── ErrorBoundary 兜底 ── */
+
+.error-boundary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2xl);
+  min-height: 200px;
+}
+
+.error-boundary-card {
+  max-width: 360px;
+  padding: var(--space-2xl);
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+}
+
+.error-boundary-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: var(--space-sm);
+}
+
+.error-boundary-hint {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: var(--space-lg);
+  line-height: 1.6;
+}
+
+.error-boundary-detail {
+  display: block;
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-lg);
+  border-radius: var(--radius-sm);
+  background: var(--lavender-soft);
+  color: var(--lavender-ink);
+  font-family: ui-monospace, 'SF Mono', Consolas, monospace;
+  font-size: 12px;
+  text-align: left;
+  word-break: break-word;
+  max-height: 120px;
+  overflow: auto;
+}
+
+.error-boundary-retry {
+  padding: var(--space-sm) var(--space-xl);
+  border-radius: var(--radius-full);
+  background: var(--grad-pink);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.error-boundary-retry:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.error-boundary-retry:active {
+  transform: translateY(0);
+}
