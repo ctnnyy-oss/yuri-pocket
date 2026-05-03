@@ -1,71 +1,74 @@
 /* ═══════════════════════════════════════════════════
-   百合小窝 — Left Panel / Sidebar
+   百合小窝 — Left Sidebar (Character Rail)
+   苹果风导航：分组清晰 / 留白舒适 / 粉色点缀
    ═══════════════════════════════════════════════════ */
 
 .left-panel {
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 22px 16px 18px;
   overflow: hidden;
 }
 
-/* ── Brand Block ── */
+/* ── 品牌区 ── */
 
 .brand-block {
   display: flex;
   align-items: center;
   gap: var(--space-md);
-  margin-bottom: 18px;
-  padding-bottom: 18px;
+  padding: 0 6px var(--space-lg);
+  margin-bottom: var(--space-md);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .brand-mark {
-  width: 48px;
-  height: 48px;
-  border-radius: 18px;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  border-radius: 16px;
   display: grid;
   place-items: center;
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: var(--accent-gradient);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  background: var(--grad-pink);
   box-shadow:
-    0 16px 38px rgba(255, 152, 192, 0.32),
+    0 10px 24px rgba(255, 124, 174, 0.32),
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
   transition: transform var(--duration-normal) var(--ease-spring);
 }
 
 .brand-mark:hover {
-  transform: scale(1.06) rotate(-3deg);
+  transform: rotate(-6deg) scale(1.06);
 }
 
 .brand-block h1 {
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 800;
   line-height: 1.2;
   margin: 0;
-  letter-spacing: 0.3px;
-  color: var(--rose-deep);
+  letter-spacing: 0.2px;
+  color: var(--pink-700);
 }
 
 .brand-block span {
   display: block;
   margin-top: 2px;
-  color: rgba(160, 118, 134, 0.78);
-  font-size: 11px;
+  color: var(--muted);
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
 }
 
-/* ── Primary Nav ── */
+/* ── 主导航 ── */
 
 .primary-nav {
   display: grid;
-  gap: 6px;
-  padding: 14px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+  gap: 3px;
+  padding: var(--space-sm) 0 var(--space-md);
+  margin: 0 -2px var(--space-md);
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .nav-button,
@@ -73,79 +76,78 @@
   width: 100%;
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-md);
   border: 1px solid transparent;
-  border-radius: 16px;
-  background:
-    radial-gradient(160px 90px at 10% 0%, rgba(255, 255, 255, 0.58), transparent 72%),
-    rgba(255, 255, 255, 0.44);
+  border-radius: 14px;
+  background: transparent;
   color: inherit;
-  padding: 10px var(--space-md);
+  padding: 9px 12px;
   text-align: left;
   cursor: pointer;
-  transition: all var(--duration-normal) var(--ease-smooth);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
+  transition: all var(--duration-fast) var(--ease-smooth);
 }
 
 .nav-button:hover,
 .character-button:hover {
-  background:
-    radial-gradient(180px 100px at 14% 0%, rgba(255, 255, 255, 0.78), transparent 72%),
-    rgba(255, 255, 255, 0.68);
-  border-color: rgba(236, 190, 211, 0.46);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  background: var(--pink-100);
+  border-color: var(--line-soft);
 }
 
 .nav-button.active,
 .character-button.active {
-  background:
-    radial-gradient(190px 110px at 14% 4%, rgba(255, 255, 255, 0.88), transparent 70%),
-    linear-gradient(135deg, rgba(255, 224, 239, 0.82), rgba(255, 248, 252, 0.78));
-  border-color: rgba(236, 184, 208, 0.58);
+  background: linear-gradient(135deg, #ffe6f1 0%, #ffd6e7 100%);
+  border-color: rgba(255, 158, 196, 0.35);
   box-shadow:
-    inset 4px 0 0 var(--rose),
-    0 12px 30px rgba(255, 152, 192, 0.16);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.7),
+    0 4px 12px rgba(255, 124, 174, 0.14);
 }
 
 .nav-button svg {
-  color: var(--rose-strong);
+  color: var(--pink-500);
   flex: 0 0 auto;
-  transition: transform var(--duration-normal) var(--ease-spring);
+  transition: transform var(--duration-fast) var(--ease-spring);
 }
 
-.nav-button:hover svg {
-  transform: scale(1.12);
+.nav-button:hover svg { transform: scale(1.12); }
+
+.nav-button.active svg {
+  color: var(--pink-600);
 }
 
-.nav-button.active svg,
-.character-button.active .avatar {
-  filter: drop-shadow(0 6px 12px rgba(255, 152, 192, 0.24));
-}
-
-.nav-button strong,
-.nav-button small,
-.character-button strong,
-.character-button small {
+.nav-button > span,
+.character-button > span:not(.avatar) {
+  min-width: 0;
   display: block;
+  flex: 1;
 }
 
 .nav-button strong,
 .character-button strong {
+  display: block;
   color: var(--ink);
   font-size: 14px;
-  font-weight: 750;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+}
+
+.nav-button.active strong,
+.character-button.active strong {
+  color: var(--pink-700);
 }
 
 .nav-button small,
 .character-button small {
-  color: rgba(126, 86, 104, 0.76);
+  display: block;
+  margin-top: 1px;
+  color: var(--muted);
   font-size: 11px;
-  font-weight: 600;
-  margin-top: 2px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* ── Character Section ── */
+/* ── 角色分组 ── */
 
 .panel-section {
   min-height: 0;
@@ -153,27 +155,25 @@
   flex: 1;
   flex-direction: column;
   overflow: hidden;
-  border-top: 1px solid rgba(255, 255, 255, 0.4);
-  padding-top: var(--space-md);
+  padding-top: var(--space-sm);
 }
 
 .section-title {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: 6px;
   flex: 0 0 auto;
   position: relative;
-  z-index: 1;
   font-weight: 800;
-  font-size: 11px;
-  margin-bottom: var(--space-sm);
-  color: rgba(160, 118, 134, 0.78);
+  font-size: 10px;
+  margin: 0 8px var(--space-sm);
+  color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 1px;
 }
 
 .section-title svg {
-  color: var(--rose-strong);
+  color: var(--pink-400);
 }
 
 .character-list {
@@ -181,54 +181,53 @@
   display: grid;
   flex: 1 1 auto;
   align-content: start;
-  gap: 4px;
+  gap: 2px;
   overflow-y: auto;
-  padding-right: 2px;
+  padding: 0 2px 6px;
 }
 
 .character-button {
-  padding: 10px var(--space-md);
+  padding: 8px 12px;
 }
 
 .character-button strong {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13.5px;
 }
 
 .character-button small {
-  font-size: 12px;
+  font-size: 11.5px;
 }
 
-/* ── Avatar ── */
+/* ── Avatar (头像) ── */
 
 .avatar {
-  --avatar-accent: var(--rose);
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
+  --avatar-accent: var(--pink-300);
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border-radius: 13px;
   display: grid;
   place-items: center;
-  flex: 0 0 auto;
-  border: 1px solid rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.9);
   background:
-    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.92), transparent 56%),
+    radial-gradient(circle at 30% 22%, rgba(255, 255, 255, 0.95), transparent 58%),
     linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--avatar-accent) 22%, #fff),
-      color-mix(in srgb, var(--avatar-accent) 8%, #fff)
+      140deg,
+      color-mix(in srgb, var(--avatar-accent) 38%, #fff),
+      color-mix(in srgb, var(--avatar-accent) 18%, #fff)
     );
-  color: color-mix(in srgb, var(--avatar-accent) 78%, #614457);
+  color: color-mix(in srgb, var(--avatar-accent) 75%, var(--ink));
   font-weight: 800;
   font-size: 15px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    0 8px 20px color-mix(in srgb, var(--avatar-accent) 18%, transparent);
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    0 4px 12px color-mix(in srgb, var(--avatar-accent) 22%, transparent);
   transition: transform var(--duration-normal) var(--ease-spring);
 }
 
 .avatar.large {
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   font-size: 18px;
   border-radius: 16px;
 }
@@ -237,27 +236,30 @@
   transform: scale(1.06);
 }
 
-/* ── Status Card ── */
+/* ── 状态卡 (底部模型/同步状态) ── */
 
 .status-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
-  margin: var(--space-md) 0;
-  border: 1px solid rgba(255, 255, 255, 0.66);
-  border-radius: 16px;
-  background:
-    radial-gradient(180px 110px at 20% 0%, rgba(255, 255, 255, 0.7), transparent 72%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.46), rgba(244, 252, 248, 0.36));
-  padding: var(--space-sm) var(--space-md);
-  box-shadow: var(--shadow-xs);
+  margin: var(--space-sm) 4px 0;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: var(--pink-50);
+  padding: 10px 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .mini-row {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  min-width: 0;
+}
+
+.mini-row > span {
+  min-width: 0;
 }
 
 .mini-row strong {
@@ -265,39 +267,54 @@
   color: var(--ink);
   font-size: 13px;
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.mini-row span {
+.mini-row small {
+  display: block;
+  margin-top: 1px;
   color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mini-dot {
   width: 8px;
   height: 8px;
+  flex: 0 0 auto;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, #b6e6d2, #88c9b1);
+  background: linear-gradient(140deg, #b8eed8, #8ad4b8);
   box-shadow:
-    0 0 0 3px rgba(168, 220, 198, 0.18),
-    0 0 14px rgba(168, 220, 198, 0.34);
+    0 0 0 3px rgba(184, 238, 216, 0.28),
+    0 0 12px rgba(138, 212, 184, 0.4);
   animation: pulse-dot 2.6s ease-in-out infinite;
 }
 
 @keyframes pulse-dot {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(168, 220, 198, 0.18), 0 0 14px rgba(168, 220, 198, 0.34); }
-  50% { box-shadow: 0 0 0 6px rgba(168, 220, 198, 0.08), 0 0 22px rgba(168, 220, 198, 0.4); }
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(184, 238, 216, 0.28), 0 0 12px rgba(138, 212, 184, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(184, 238, 216, 0.12), 0 0 18px rgba(138, 212, 184, 0.45);
+  }
 }
 
-.mini-row small {
-  color: var(--muted);
-  font-size: 11px;
+.status-card svg {
+  color: var(--pink-400);
+  flex: 0 0 auto;
 }
 
 .sidebar-footnote {
   flex: 0 0 auto;
-  margin: var(--space-md) 0 0;
+  margin: var(--space-md) 8px 0;
   color: var(--muted-light);
-  font-size: 11px;
-  line-height: 1.7;
+  font-size: 10.5px;
+  line-height: 1.65;
   pointer-events: none;
-  opacity: 0.72;
+  opacity: 0.78;
 }

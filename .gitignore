@@ -16,6 +16,8 @@ dev-server*.log
 output/
 data/
 secrets/
+.claude/
+.playwright-cli/
 
 # Editor directories and files
 .vscode/*

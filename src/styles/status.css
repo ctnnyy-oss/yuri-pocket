@@ -1,211 +1,30 @@
 /* ═══════════════════════════════════════════════════
-   百合小窝 — Status Pill & Cross-app surfaces
+   百合小窝 — Status Pill
+   通知胶囊 (浮动右下，自动消失)
    ═══════════════════════════════════════════════════ */
-
-/* ── Status Pill ── */
 
 .status-pill {
   position: fixed;
-  right: 28px;
-  bottom: 92px;
+  right: 32px;
+  bottom: 32px;
   z-index: 30;
   pointer-events: none;
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  background:
-    radial-gradient(120px 70px at 16% 0%, rgba(255, 255, 255, 0.84), transparent 72%),
-    linear-gradient(135deg, rgba(255, 171, 204, 0.92), rgba(255, 142, 183, 0.94));
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background: var(--grad-bubble);
   color: #fff;
   border-radius: var(--radius-full);
-  padding: 9px 18px;
-  font-size: 12px;
+  padding: 10px 20px;
+  font-size: 12.5px;
   font-weight: 700;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   box-shadow:
-    0 22px 52px rgba(255, 152, 192, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(18px) saturate(1.2);
-  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+    0 14px 36px rgba(255, 124, 174, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45);
   animation: pill-in var(--duration-slow) var(--ease-out) both;
-  text-shadow: 0 1px 2px rgba(176, 99, 130, 0.22);
+  text-shadow: 0 1px 2px rgba(214, 63, 125, 0.22);
 }
 
 @keyframes pill-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.95);
-  }
-}
-
-/* ── Cross-app premium surfaces ── */
-
-:where(
-  .memory-insight,
-  .space-overview,
-  .candidate-review,
-  .memory-item,
-  .settings-section,
-  .model-hero-section,
-  .model-column,
-  .model-profile-item,
-  .cloud-token-box,
-  .model-warning,
-  .cloud-backup-panel,
-  .backup-item,
-  .memory-guardian,
-  .guardian-lane,
-  .guardian-column,
-  .guardian-review,
-  .guardian-timeline-item,
-  .diagnostic-column,
-  .diagnostic-item,
-  .archive-modal,
-  .archive-metric,
-  .archive-section,
-  .archive-timeline article,
-  .scope-editor
-) {
-  border-color: rgba(255, 255, 255, 0.7) !important;
-  background:
-    radial-gradient(280px 200px at 14% 0%, rgba(255, 255, 255, 0.72), transparent 72%),
-    radial-gradient(340px 240px at 96% 100%, rgba(255, 192, 219, 0.08), transparent 72%),
-    rgba(255, 255, 255, 0.78) !important;
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(14px) saturate(1.08);
-  -webkit-backdrop-filter: blur(14px) saturate(1.08);
-}
-
-:where(
-  .memory-insight,
-  .space-overview,
-  .candidate-review,
-  .memory-item,
-  .settings-section,
-  .model-hero-section,
-  .model-column,
-  .cloud-backup-panel,
-  .memory-guardian,
-  .archive-modal,
-  .scope-editor
-) {
-  border-radius: 26px !important;
-}
-
-:where(
-  .insight-stat,
-  .space-stat,
-  .candidate-card,
-  .memory-lens-item,
-  .trace-memory-item,
-  .revision-row,
-  .guardian-lane,
-  .guardian-review,
-  .guardian-timeline-item,
-  .diagnostic-item,
-  .model-status-grid span,
-  .model-profile-item,
-  .backup-item,
-  .cloud-meta-strip span,
-  .retention-button,
-  .swatch-button,
-  .archive-metric,
-  .archive-timeline article
-) {
-  border-color: rgba(255, 255, 255, 0.62) !important;
-  background:
-    radial-gradient(180px 110px at 16% 0%, rgba(255, 255, 255, 0.7), transparent 72%),
-    rgba(255, 255, 255, 0.72) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
-}
-
-:where(
-  .insight-stat,
-  .space-stat,
-  .candidate-card,
-  .memory-item,
-  .model-profile-item,
-  .backup-item,
-  .guardian-lane,
-  .guardian-review,
-  .guardian-timeline-item,
-  .diagnostic-item,
-  .archive-timeline article
-):hover {
-  border-color: rgba(255, 255, 255, 0.86) !important;
-  background:
-    radial-gradient(200px 120px at 18% 0%, rgba(255, 255, 255, 0.86), transparent 72%),
-    rgba(255, 255, 255, 0.84) !important;
-  box-shadow: var(--shadow-md);
-}
-
-:where(
-  .insight-stat strong,
-  .space-stat strong,
-  .candidate-card-head span,
-  .memory-details summary,
-  .settings-section-title svg,
-  .guardian-column-title svg,
-  .diagnostic-column h3 svg,
-  .cloud-backup-head strong,
-  .archive-section h3 svg
-) {
-  color: var(--rose-strong) !important;
-}
-
-:where(
-  .settings-stack input:not([type='checkbox']):not([type='range']),
-  .settings-stack select,
-  .edit-form input:not([type='checkbox']),
-  .edit-form select,
-  .edit-form textarea,
-  .number-control input
-) {
-  border-color: rgba(255, 255, 255, 0.72) !important;
-  border-radius: 16px !important;
-  background: rgba(255, 255, 255, 0.58) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.56);
-}
-
-:where(
-  .settings-stack input:not([type='checkbox']):not([type='range']),
-  .settings-stack select,
-  .edit-form input:not([type='checkbox']),
-  .edit-form select,
-  .edit-form textarea,
-  .number-control input
-):focus {
-  border-color: rgba(255, 255, 255, 0.94) !important;
-  box-shadow:
-    0 0 0 3px var(--rose-glow),
-    0 14px 34px rgba(255, 152, 192, 0.12) !important;
-}
-
-:where(
-  .secondary-action,
-  .quiet-action,
-  .settings-actions button,
-  .file-button,
-  .mini-action,
-  .guardian-review button,
-  .conflict-actions button,
-  .archive-timeline button,
-  .retention-button
-) {
-  border-color: rgba(255, 255, 255, 0.7) !important;
-  box-shadow: var(--shadow-xs);
-}
-
-.secondary-action,
-.settings-actions button:first-child {
-  background: var(--accent-gradient) !important;
-  color: #fff !important;
-  box-shadow: 0 16px 38px rgba(255, 152, 192, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.56) !important;
-}
-
-.quiet-action,
-.mini-action,
-.file-button,
-.settings-actions button {
-  background:
-    radial-gradient(140px 80px at 16% 0%, rgba(255, 255, 255, 0.74), transparent 72%),
-    rgba(255, 255, 255, 0.5) !important;
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }

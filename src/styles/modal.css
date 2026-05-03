@@ -1,8 +1,6 @@
 /* ═══════════════════════════════════════════════════
-   百合小窝 — Modal / Archive Dialog Styles
+   百合小窝 — Archive Modal & Edit Form
    ═══════════════════════════════════════════════════ */
-
-/* ── Archive Modal ── */
 
 .archive-backdrop {
   position: fixed;
@@ -10,7 +8,7 @@
   z-index: 20;
   display: grid;
   place-items: center;
-  background: rgba(90, 58, 72, 0.22);
+  background: rgba(74, 46, 58, 0.34);
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
   padding: var(--space-xl);
@@ -19,47 +17,44 @@
 
 @keyframes fade-in {
   from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .archive-modal {
-  width: min(920px, calc(100vw - 36px));
+  width: min(960px, calc(100vw - 36px));
   max-height: min(820px, calc(100dvh - 36px));
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--line-strong);
-  border-radius: 28px;
-  background:
-    radial-gradient(420px 280px at 86% 0%, rgba(255, 230, 244, 0.6), transparent 70%),
-    linear-gradient(180deg, rgba(255, 254, 255, 0.94), rgba(255, 252, 254, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-2xl);
+  background: var(--panel);
   box-shadow:
     var(--shadow-xl),
-    inset 0 1px 0 rgba(255, 255, 255, 0.84);
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
   overflow: hidden;
   animation: modal-in var(--duration-slow) var(--ease-out) both;
-  backdrop-filter: blur(28px) saturate(1.3);
-  -webkit-backdrop-filter: blur(28px) saturate(1.3);
 }
 
 @keyframes modal-in {
-  from {
-    opacity: 0;
-    transform: translateY(16px) scale(0.97);
-  }
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+/* ── 头部 ── */
 
 .archive-head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--space-lg);
-  border-bottom: 1px solid var(--line-light);
-  padding: var(--space-xl) var(--space-2xl);
+  border-bottom: 1px solid var(--line-soft);
+  padding: 22px 28px;
 }
 
 .archive-head span {
-  color: var(--rose-strong);
+  color: var(--pink-600);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.8px;
 }
@@ -67,27 +62,36 @@
 .archive-head h2 {
   margin: 4px 0 0;
   color: var(--ink);
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0;
 }
 
 .archive-close {
   flex: 0 0 auto;
 }
 
+/* ── 元信息 (4 列) ── */
+
 .archive-meta-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-sm);
-  border-bottom: 1px solid var(--line-light);
-  padding: var(--space-md) var(--space-2xl);
+  gap: 0;
+  border-bottom: 1px solid var(--line-soft);
+  border-top: 1px solid var(--line-soft);
+  margin: 0 28px;
+  padding: 14px 0;
 }
 
 .archive-metric {
-  border: 1px solid var(--line-light);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.65);
-  padding: var(--space-sm) var(--space-md);
+  display: grid;
+  gap: 2px;
+  border-right: 1px solid var(--line-soft);
+  padding: 4px 16px;
+}
+
+.archive-metric:last-child {
+  border-right: 0;
 }
 
 .archive-metric span,
@@ -97,36 +101,38 @@
 
 .archive-metric span {
   color: var(--muted);
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
 }
 
 .archive-metric strong {
   overflow: hidden;
-  color: var(--ink-secondary);
+  color: var(--ink);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   margin-top: 2px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* ── 主体 ── */
+
 .archive-body {
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(260px, 0.95fr);
+  grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.95fr);
   gap: var(--space-md);
   overflow-y: auto;
-  padding: var(--space-lg) var(--space-2xl);
+  padding: var(--space-lg) 28px;
 }
 
 .archive-section {
   min-width: 0;
-  border: 1px solid var(--line-light);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--pink-50);
   padding: var(--space-lg);
 }
 
@@ -139,31 +145,33 @@
   align-items: center;
   gap: 6px;
   margin: 0 0 var(--space-sm);
-  color: var(--ink-secondary);
+  color: var(--ink);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .archive-section h3 svg {
-  color: var(--rose-strong);
+  color: var(--pink-500);
 }
 
 .archive-section p {
   margin: 0;
+  color: var(--ink-secondary);
   line-height: 1.75;
-  font-size: 14px;
+  font-size: 13.5px;
 }
 
 .archive-section footer,
 .archive-muted {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11.5px;
 }
 
 .archive-section footer {
   margin-top: var(--space-sm);
-  font-size: 11px;
 }
+
+/* ── 时间线 ── */
 
 .archive-timeline {
   display: grid;
@@ -171,15 +179,15 @@
 }
 
 .archive-timeline article {
-  border-left: 3px solid var(--line-strong);
+  border-left: 3px solid var(--pink-300);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  background: rgba(255, 251, 253, 0.8);
-  padding: var(--space-sm) var(--space-md);
+  background: var(--panel);
+  padding: 10px 14px;
   transition: background var(--duration-fast) var(--ease-smooth);
 }
 
 .archive-timeline article:hover {
-  background: rgba(255, 248, 251, 0.95);
+  background: var(--pink-50);
 }
 
 .archive-timeline strong,
@@ -188,9 +196,9 @@
 }
 
 .archive-timeline strong {
-  color: var(--ink-secondary);
+  color: var(--ink);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .archive-timeline span {
@@ -201,37 +209,44 @@
 
 .archive-timeline p {
   margin-top: 5px;
-  font-size: 13px;
+  font-size: 12.5px;
+  color: var(--ink-secondary);
 }
 
 .archive-timeline button {
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   border-radius: var(--radius-full);
-  background: rgba(255, 249, 251, 0.9);
-  color: var(--rose-strong);
+  background: var(--panel);
+  color: var(--pink-600);
   cursor: pointer;
   font: inherit;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   margin-top: var(--space-sm);
-  padding: 4px 10px;
+  padding: 4px 11px;
   transition: all var(--duration-fast) var(--ease-smooth);
 }
 
 .archive-timeline button:hover {
-  background: var(--rose-soft);
+  background: var(--pink-100);
+  border-color: var(--line);
   transform: translateY(-1px);
 }
+
+/* ── 操作 ── */
 
 .archive-actions {
   display: flex;
   gap: var(--space-sm);
   justify-content: flex-end;
-  border-top: 1px solid var(--line-light);
-  padding: var(--space-md) var(--space-2xl);
+  border-top: 1px solid var(--line-soft);
+  padding: var(--space-md) 28px;
+  background: var(--pink-50);
 }
 
-/* ── Edit Form ── */
+/* ═══════════════════════════════════════════════════
+   Edit Form (在 Modal 或者编辑器内)
+   ═══════════════════════════════════════════════════ */
 
 .edit-form {
   display: grid;
@@ -241,47 +256,47 @@
 .edit-form label {
   display: grid;
   gap: 5px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13px;
-  color: var(--ink-secondary);
+  color: var(--ink);
 }
 
 .edit-form input:not([type='checkbox']),
 .edit-form select,
 .edit-form textarea {
-  border: 1.5px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 14px;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--panel);
   font: inherit;
   font-size: 14px;
   transition: all var(--duration-fast) var(--ease-smooth);
+  box-shadow: var(--shadow-xs);
 }
 
 .edit-form input:not([type='checkbox']):focus,
 .edit-form select:focus,
 .edit-form textarea:focus {
-  border-color: var(--rose);
-  box-shadow: 0 0 0 3px var(--rose-glow);
+  border-color: var(--pink-400);
+  box-shadow: 0 0 0 3px var(--rose-glow), var(--shadow-sm);
   background: #fff;
 }
 
 .edit-form textarea {
   resize: vertical;
-  min-height: 88px;
+  min-height: 96px;
   line-height: 1.7;
 }
 
-/* Scope Editor */
+/* ── Scope Editor ── */
 
 .scope-editor {
   display: grid;
   gap: var(--space-md);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background:
-    linear-gradient(135deg, rgba(255, 250, 252, 0.9), rgba(244, 250, 247, 0.5));
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  background: var(--pink-50);
   padding: var(--space-lg);
 }
 
@@ -293,9 +308,9 @@
 
 .scope-editor-head strong {
   flex: 0 0 auto;
-  color: var(--ink-secondary);
+  color: var(--ink);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .scope-editor-head span {
@@ -328,5 +343,5 @@
 .compact-check input {
   width: 16px;
   height: 16px;
-  accent-color: var(--rose);
+  accent-color: var(--pink-400);
 }

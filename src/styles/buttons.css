@@ -1,91 +1,140 @@
 /* ═══════════════════════════════════════════════════
    百合小窝 — Button System
+   primary / quiet / danger / mini-action
    ═══════════════════════════════════════════════════ */
 
 .secondary-action,
 .quiet-action,
 .settings-actions button,
-.file-button {
-  border: 1px solid rgba(255, 255, 255, 0.7);
+.file-button,
+.mini-action {
+  border: 1px solid var(--line);
   border-radius: var(--radius-full);
-  background:
-    radial-gradient(140px 70px at 16% 0%, rgba(255, 255, 255, 0.78), transparent 72%),
-    rgba(255, 255, 255, 0.56);
+  background: var(--panel);
   color: var(--ink);
-  padding: 8px 16px;
+  padding: 9px 16px;
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
-  transition: all var(--duration-fast) var(--ease-smooth);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), var(--shadow-xs);
-}
-
-.secondary-action {
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: var(--accent-gradient);
-  color: #fff;
-  font-weight: 800;
-  box-shadow:
-    0 12px 28px rgba(255, 152, 192, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-.secondary-action:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 16px 36px rgba(255, 152, 192, 0.38),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  filter: brightness(1.04);
-}
-
-.secondary-action:active {
-  transform: translateY(0);
-}
-
-.quiet-action {
+  letter-spacing: 0.1px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--ink-secondary);
-  font-weight: 700;
+  transition: all var(--duration-fast) var(--ease-smooth);
+  box-shadow: var(--shadow-xs);
 }
 
-.quiet-action svg {
-  color: var(--rose-strong);
+.secondary-action svg,
+.quiet-action svg,
+.file-button svg,
+.mini-action svg {
+  color: var(--pink-500);
+  flex: 0 0 auto;
 }
 
-.quiet-action:hover {
-  background:
-    radial-gradient(140px 70px at 16% 0%, rgba(255, 255, 255, 0.86), transparent 72%),
-    rgba(255, 255, 255, 0.74);
-  border-color: rgba(255, 255, 255, 0.86);
+.secondary-action:hover,
+.quiet-action:hover,
+.settings-actions button:hover,
+.file-button:hover,
+.mini-action:hover {
+  border-color: var(--line-strong);
+  background: var(--pink-50);
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
 
+/* ── Primary: 粉色填充渐变 ── */
+
+.secondary-action {
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: var(--grad-pink);
+  color: #fff;
+  font-weight: 800;
+  box-shadow:
+    0 8px 20px rgba(255, 124, 174, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.secondary-action svg {
+  color: #fff;
+}
+
+.secondary-action:hover {
+  background: var(--grad-pink);
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+  box-shadow:
+    0 12px 26px rgba(255, 124, 174, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.secondary-action:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ── Quiet: 半透明白底 ── */
+
+.quiet-action {
+  color: var(--ink-secondary);
+  font-weight: 700;
+}
+
+/* ── Danger ── */
+
 .secondary-danger {
-  border: 1px solid rgba(201, 124, 155, 0.22);
+  border: 1px solid rgba(255, 124, 174, 0.28);
   border-radius: var(--radius-full);
-  background:
-    radial-gradient(140px 70px at 16% 0%, rgba(255, 255, 255, 0.7), transparent 72%),
-    rgba(255, 240, 246, 0.86);
-  color: #b25268;
+  background: var(--pink-50);
+  color: var(--pink-700);
   cursor: pointer;
   font: inherit;
   font-weight: 700;
-  font-size: 13px;
-  padding: 8px 16px;
+  font-size: 13.5px;
+  padding: 9px 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   transition: all var(--duration-fast) var(--ease-smooth);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow-xs);
 }
 
 .secondary-danger:hover {
-  background:
-    radial-gradient(140px 70px at 16% 0%, rgba(255, 255, 255, 0.78), transparent 72%),
-    rgba(255, 232, 240, 0.94);
-  border-color: rgba(201, 124, 155, 0.34);
-  color: #a04358;
+  background: var(--pink-100);
+  border-color: rgba(255, 124, 174, 0.45);
+  color: var(--pink-700);
   transform: translateY(-1px);
-  box-shadow: 0 8px 18px rgba(201, 124, 155, 0.16);
+  box-shadow: var(--shadow-sm);
+}
+
+.secondary-danger:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ── Mini Action (小药丸) ── */
+
+.mini-action {
+  font-size: 12px;
+  padding: 5px 12px;
+  font-weight: 700;
+  color: var(--ink-secondary);
+  border-color: var(--line-soft);
+}
+
+.mini-action:active {
+  transform: translateY(0);
+}
+
+.danger-action {
+  color: var(--pink-700);
+}
+
+.danger-action svg {
+  color: var(--pink-600);
+}
+
+.danger-action:hover {
+  background: var(--pink-100);
+  border-color: rgba(255, 124, 174, 0.32);
+  color: var(--pink-700);
 }

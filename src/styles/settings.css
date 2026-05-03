@@ -1,59 +1,98 @@
 /* ═══════════════════════════════════════════════════
-   百合小窝 — Settings Page Styles
+   百合小窝 — Settings / Model / Cloud Panel
    ═══════════════════════════════════════════════════ */
 
-/* ── Settings ── */
-
 .settings-stack {
-  max-width: 680px;
+  max-width: 720px;
+  gap: var(--space-md);
+}
+
+.model-settings-stack {
+  max-width: 1280px;
 }
 
 .settings-stack label {
   display: grid;
   gap: 5px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13px;
-  color: var(--ink-secondary);
+  color: var(--ink);
 }
+
+.settings-stack label small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+/* ── 输入控件 ── */
 
 .settings-stack input:not([type='checkbox']):not([type='range']),
 .settings-stack select {
-  border: 1.5px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 14px;
   font: inherit;
   font-size: 14px;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--panel);
+  min-height: 42px;
   transition: all var(--duration-fast) var(--ease-smooth);
+  box-shadow: var(--shadow-xs);
 }
 
 .settings-stack select {
   cursor: pointer;
 }
 
-.settings-stack label small {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.55;
-}
-
 .settings-stack input:not([type='checkbox']):not([type='range']):focus,
 .settings-stack select:focus {
-  border-color: var(--rose);
-  box-shadow: 0 0 0 3px var(--rose-glow);
+  border-color: var(--pink-400);
+  box-shadow: 0 0 0 3px var(--rose-glow), var(--shadow-sm);
   background: #fff;
 }
 
-.model-settings-stack {
-  max-width: none;
+/* ── Section 卡片 ── */
+
+.settings-section {
+  display: grid;
+  gap: var(--space-md);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-xl);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+  padding: 22px;
 }
+
+.settings-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--ink);
+  letter-spacing: 0;
+}
+
+.settings-section-title svg {
+  color: var(--pink-500);
+}
+
+.section-note,
+.cloud-status-line {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+/* ── 模型布局 (双栏) ── */
 
 .model-layout {
   display: grid;
-  grid-template-columns: minmax(420px, 0.95fr) minmax(360px, 1.05fr);
-  gap: var(--space-md);
+  grid-template-columns: minmax(420px, 0.92fr) minmax(380px, 0.82fr);
+  gap: var(--space-lg);
   align-items: start;
 }
 
@@ -65,42 +104,59 @@
 
 .model-hero-section {
   background:
-    linear-gradient(135deg, rgba(255, 245, 249, 0.96), rgba(255, 253, 254, 0.88)),
-    rgba(255, 253, 254, 0.9);
+    linear-gradient(135deg, var(--pink-50), var(--panel));
 }
 
-.model-status-grid {
+/* ── 状态网格 (3 列) ── */
+
+.model-status-grid,
+.cloud-meta-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-sm);
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--pink-50);
 }
 
-.model-status-grid span {
+.model-status-grid span,
+.cloud-meta-strip span {
   display: grid;
   gap: 2px;
-  border: 1px solid var(--line-light);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.72);
+  border-right: 1px solid var(--line-soft);
+  background: transparent;
   color: var(--ink-secondary);
   font-size: 13px;
-  padding: var(--space-sm) var(--space-md);
+  padding: 12px 14px;
   min-width: 0;
+  min-height: 70px;
 }
 
-.model-status-grid strong {
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 700;
+.model-status-grid span:last-child,
+.cloud-meta-strip span:last-child {
+  border-right: 0;
 }
+
+.model-status-grid strong,
+.cloud-meta-strip strong {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+/* ── 云端 token 输入 ── */
 
 .cloud-token-box {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
   gap: var(--space-sm);
-  border: 1px solid var(--line-light);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--pink-50);
   padding: var(--space-md);
 }
 
@@ -113,18 +169,17 @@
 
 .model-warning {
   display: block;
-  border: 1px solid rgba(255, 213, 230, 0.6);
+  border: 1px solid rgba(255, 158, 196, 0.32);
   border-radius: var(--radius-md);
-  background:
-    radial-gradient(220px 110px at 14% 0%, rgba(255, 255, 255, 0.7), transparent 72%),
-    rgba(255, 246, 250, 0.86);
-  color: var(--rose-strong);
-  font-size: 12px;
+  background: var(--pink-100);
+  color: var(--pink-700);
+  font-size: 12.5px;
   font-weight: 600;
   line-height: 1.6;
-  padding: var(--space-sm) var(--space-md);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  padding: 10px 14px;
 }
+
+/* ── 模型表单网格 ── */
 
 .model-form-grid {
   display: grid;
@@ -132,9 +187,30 @@
   gap: var(--space-md);
 }
 
-.model-profile-list {
+/* ── 模型档案列表 ── */
+
+.model-profile-list,
+.backup-list,
+.retention-options {
   display: grid;
-  gap: var(--space-sm);
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--pink-50);
+}
+
+.model-profile-item,
+.backup-item,
+.retention-button {
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+}
+
+.model-profile-item:last-child,
+.backup-item:last-child,
+.retention-button:last-child {
+  border-bottom: 0;
 }
 
 .model-profile-item {
@@ -142,17 +218,17 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-md);
-  border: 1px solid var(--line-light);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.72);
-  padding: var(--space-md) var(--space-lg);
-  transition: all var(--duration-fast) var(--ease-smooth);
+  padding: 14px 18px;
+  transition: background var(--duration-fast) var(--ease-smooth);
+}
+
+.model-profile-item:hover {
+  background: var(--pink-100);
 }
 
 .model-profile-item.active {
-  border-color: var(--line-strong);
-  background: var(--surface-hover);
-  box-shadow: inset 3px 0 0 var(--rose), var(--shadow-xs);
+  background: linear-gradient(135deg, var(--pink-100), var(--pink-50));
+  box-shadow: inset 4px 0 0 var(--pink-400);
 }
 
 .model-profile-item strong,
@@ -163,7 +239,8 @@
 
 .model-profile-item strong {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 800;
+  color: var(--ink);
 }
 
 .model-profile-item span,
@@ -174,78 +251,60 @@
   overflow-wrap: anywhere;
 }
 
-.settings-section {
-  display: grid;
-  gap: var(--space-md);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: rgba(255, 253, 254, 0.8);
-  padding: var(--space-xl);
-}
-
-.settings-section-title {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--ink-secondary);
-}
-
-.settings-section-title svg {
-  color: var(--rose-strong);
-}
-
-.section-note {
-  margin: 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.65;
-}
-
-/* Toggle */
+/* ── 切换 (toggle / range / number) 行 ── */
 
 .toggle-row,
-.range-control {
-  display: flex;
+.range-control,
+.number-control {
+  display: flex !important;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-xl);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--pink-50);
+  padding: 12px 16px;
 }
 
 .toggle-row strong,
 .toggle-row small,
 .range-control strong,
-.range-control small {
+.range-control small,
+.number-control strong,
+.number-control small {
   display: block;
 }
 
 .toggle-row strong,
-.range-control strong {
-  font-weight: 600;
+.range-control strong,
+.number-control strong {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 13.5px;
 }
 
 .toggle-row small,
-.range-control small {
+.range-control small,
+.number-control small {
   color: var(--muted);
-  font-weight: 400;
-  font-size: 12px;
+  font-weight: 500;
+  font-size: 11.5px;
   margin-top: 2px;
 }
 
+/* iOS 风开关 */
 .toggle-row input {
-  width: 48px;
-  height: 28px;
+  width: 50px;
+  height: 30px;
   appearance: none;
   border-radius: var(--radius-full);
-  background: rgba(216, 196, 208, 0.5);
+  background: rgba(180, 138, 158, 0.32);
   position: relative;
   cursor: pointer;
   flex: 0 0 auto;
   transition:
     background var(--duration-normal) var(--ease-out),
     box-shadow var(--duration-normal) var(--ease-out);
-  box-shadow: inset 0 1px 2px rgba(168, 92, 124, 0.06);
 }
 
 .toggle-row input::after {
@@ -253,16 +312,16 @@
   position: absolute;
   top: 3px;
   left: 3px;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--radius-full);
   background: #fff;
-  box-shadow: 0 2px 6px rgba(168, 92, 124, 0.2);
+  box-shadow: 0 2px 6px rgba(168, 92, 124, 0.22);
   transition: transform var(--duration-normal) var(--ease-spring);
 }
 
 .toggle-row input:checked {
-  background: linear-gradient(135deg, var(--rose), var(--rose-hot));
+  background: var(--grad-pink);
   box-shadow: 0 0 0 3px var(--rose-glow);
 }
 
@@ -270,15 +329,14 @@
   transform: translateX(20px);
 }
 
-/* Range */
-
+/* Range 滑块 */
 .range-control input {
   width: min(260px, 42vw);
-  accent-color: var(--rose);
+  accent-color: var(--pink-400);
   appearance: none;
-  height: 5px;
+  height: 6px;
   border-radius: var(--radius-full);
-  background: linear-gradient(90deg, var(--rose), var(--rose-soft));
+  background: linear-gradient(90deg, var(--pink-300), var(--pink-150));
   cursor: pointer;
 }
 
@@ -288,8 +346,8 @@
   height: 22px;
   border: 3px solid #fff;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--rose), var(--rose-hot));
-  box-shadow: 0 4px 12px rgba(255, 152, 192, 0.34);
+  background: var(--grad-pink);
+  box-shadow: 0 4px 12px rgba(255, 124, 174, 0.34);
   transition: transform var(--duration-fast) var(--ease-spring);
 }
 
@@ -302,126 +360,96 @@
   height: 22px;
   border: 3px solid #fff;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--rose), var(--rose-hot));
-  box-shadow: 0 4px 12px rgba(255, 152, 192, 0.34);
-}
-
-/* Theme Swatches */
-
-.theme-swatches {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: var(--space-sm);
-}
-
-.swatch-button {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  border: 1.5px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.75);
-  color: var(--ink);
-  padding: var(--space-sm) var(--space-md);
-  cursor: pointer;
-  font: inherit;
-  font-weight: 600;
-  font-size: 13px;
-  transition: all var(--duration-fast) var(--ease-smooth);
-}
-
-.swatch-button:hover {
-  border-color: var(--line-strong);
-  background: var(--surface-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-xs);
-}
-
-.swatch-button.active {
-  border-color: var(--line-strong);
-  background: var(--surface-hover);
-  box-shadow: inset 3px 0 0 var(--rose), var(--shadow-xs);
-}
-
-.swatch-dot {
-  width: 20px;
-  height: 20px;
-  border-radius: var(--radius-full);
-  box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.65),
-    0 2px 8px rgba(96, 68, 80, 0.18);
-}
-
-/* Retention */
-
-.retention-options {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-sm);
-}
-
-.retention-button {
-  display: grid;
-  gap: 3px;
-  border: 1.5px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.75);
-  color: var(--ink);
-  cursor: pointer;
-  font: inherit;
-  padding: var(--space-md) var(--space-lg);
-  text-align: left;
-  transition: all var(--duration-fast) var(--ease-smooth);
-}
-
-.retention-button:hover {
-  border-color: var(--line-strong);
-  background: var(--surface-hover);
-  transform: translateY(-1px);
-}
-
-.retention-button.active {
-  border-color: var(--line-strong);
-  background: var(--surface-hover);
-  box-shadow: inset 3px 0 0 var(--rose), var(--shadow-xs);
-}
-
-.retention-button strong {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.retention-button small {
-  color: var(--muted);
-  font-size: 11px;
-}
-
-/* Number Control */
-
-.number-control {
-  display: flex !important;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-xl);
-}
-
-.number-control strong,
-.number-control small {
-  display: block;
-}
-
-.number-control small {
-  color: var(--muted);
-  font-weight: 400;
-  font-size: 12px;
-  margin-top: 2px;
+  background: var(--grad-pink);
+  box-shadow: 0 4px 12px rgba(255, 124, 174, 0.34);
 }
 
 .number-control input {
   width: 120px;
 }
 
-/* Settings Actions */
+/* ── 主题色板 ── */
+
+.theme-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--space-sm);
+}
+
+.swatch-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 10px 14px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  font-size: 13px;
+  transition: all var(--duration-fast) var(--ease-smooth);
+  box-shadow: var(--shadow-xs);
+}
+
+.swatch-button:hover {
+  border-color: var(--line);
+  background: var(--pink-50);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.swatch-button.active {
+  border-color: var(--pink-400);
+  background: var(--pink-100);
+  box-shadow: inset 3px 0 0 var(--pink-500), var(--shadow-xs);
+}
+
+.swatch-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.7),
+    0 2px 8px rgba(96, 68, 80, 0.18);
+}
+
+/* ── 保留时长选择 ── */
+
+.retention-button {
+  display: grid;
+  gap: 4px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  padding: 14px 18px;
+  text-align: left;
+  transition: background var(--duration-fast) var(--ease-smooth);
+}
+
+.retention-button:hover {
+  background: var(--pink-100);
+}
+
+.retention-button.active {
+  background: linear-gradient(135deg, var(--pink-100), var(--pink-50));
+  box-shadow: inset 4px 0 0 var(--pink-400);
+}
+
+.retention-button strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.retention-button small {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+/* ── 设置操作按钮组 ── */
 
 .settings-actions {
   display: flex;
@@ -434,11 +462,13 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-height: 38px;
+  padding: 8px 14px;
 }
 
 .settings-actions button:hover:not(:disabled) {
-  background: var(--surface-hover);
-  border-color: var(--line-strong);
+  background: var(--pink-50);
+  border-color: var(--line);
   transform: translateY(-1px);
 }
 
@@ -447,46 +477,55 @@
   opacity: 0.45;
 }
 
-/* Cloud Meta */
-
-.cloud-meta-strip {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-sm);
-  border-top: 1px solid var(--line-light);
-  border-bottom: 1px solid var(--line-light);
-  padding: var(--space-md) 0;
+/* 第一颗按钮：粉色填充 */
+.settings-actions button:first-child:not(.danger-button) {
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: var(--grad-pink);
+  color: #fff;
+  font-weight: 800;
+  box-shadow:
+    0 8px 20px rgba(255, 124, 174, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
-.cloud-meta-strip span {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-  color: var(--ink-secondary);
-  font-size: 13px;
-  font-weight: 500;
+.settings-actions button:first-child:not(.danger-button):hover {
+  filter: brightness(1.04);
+  box-shadow:
+    0 12px 26px rgba(255, 124, 174, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
-.cloud-meta-strip strong {
-  color: var(--muted);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+/* ── 文件选择 / 危险按钮 ── */
+
+.file-button {
+  position: relative;
+  overflow: hidden;
 }
 
-.cloud-status-line {
-  color: var(--ink-secondary);
-  font-size: 13px;
-  font-weight: 500;
+.file-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 
-/* Cloud Backup */
+.danger-button {
+  color: var(--pink-700);
+  border-color: rgba(255, 124, 174, 0.32);
+}
+
+.danger-button:hover {
+  background: var(--pink-100);
+  border-color: rgba(255, 124, 174, 0.45);
+  color: var(--pink-700);
+}
+
+/* ── 云端备份面板 ── */
 
 .cloud-backup-panel {
   display: grid;
   gap: var(--space-md);
-  border-top: 1px solid var(--line-light);
+  border-top: 1px solid var(--line-soft);
   margin-top: var(--space-md);
   padding-top: var(--space-md);
 }
@@ -504,9 +543,9 @@
 }
 
 .cloud-backup-head strong {
-  color: var(--ink-secondary);
+  color: var(--ink);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .cloud-backup-head span {
@@ -521,16 +560,12 @@
   margin: 0;
 }
 
-/* Backup List */
-
-.backup-list {
-  display: grid;
-  gap: var(--space-sm);
-}
+/* ── 备份项 ── */
 
 .backup-list > small {
   color: var(--muted);
   font-size: 12px;
+  padding: 10px 14px;
 }
 
 .backup-item {
@@ -538,17 +573,12 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-md);
-  border: 1px solid var(--line-light);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.7);
-  padding: var(--space-md) var(--space-lg);
-  transition: all var(--duration-fast) var(--ease-smooth);
+  padding: 14px 18px;
+  transition: background var(--duration-fast) var(--ease-smooth);
 }
 
 .backup-item:hover {
-  background: rgba(255, 255, 255, 0.92);
-  border-color: var(--line);
-  box-shadow: var(--shadow-xs);
+  background: var(--pink-100);
 }
 
 .backup-item strong,
@@ -559,7 +589,8 @@
 
 .backup-item strong {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 800;
+  color: var(--ink);
 }
 
 .backup-item span,
@@ -567,6 +598,7 @@
   color: var(--muted);
   font-size: 12px;
   margin-top: 2px;
+  overflow-wrap: anywhere;
 }
 
 .backup-item small {
@@ -581,234 +613,22 @@
 }
 
 .backup-actions button {
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   border-radius: var(--radius-full);
-  background: rgba(255, 252, 253, 0.9);
+  background: var(--panel);
   color: var(--ink-secondary);
   cursor: pointer;
   font: inherit;
   font-size: 12px;
-  font-weight: 600;
-  padding: 5px 12px;
+  font-weight: 700;
+  padding: 5px 13px;
   transition: all var(--duration-fast) var(--ease-smooth);
+  box-shadow: var(--shadow-xs);
+  min-height: 32px;
 }
 
 .backup-actions button:hover {
-  background: var(--surface-hover);
-  border-color: var(--line-strong);
+  background: var(--pink-50);
+  border-color: var(--line);
   transform: translateY(-1px);
-}
-
-/* File Button */
-
-.file-button {
-  position: relative;
-  overflow: hidden;
-}
-
-.file-button input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.danger-button {
-  color: #b25268;
-}
-
-.danger-button:hover {
-  background:
-    radial-gradient(120px 60px at 16% 0%, rgba(255, 255, 255, 0.78), transparent 72%),
-    rgba(255, 232, 240, 0.94) !important;
-  border-color: rgba(201, 124, 155, 0.32) !important;
-  color: #a04358;
-}
-
-/* iOS-inspired model and settings pages */
-.settings-stack {
-  gap: 12px;
-}
-
-.model-settings-stack {
-  max-width: 1360px;
-}
-
-.model-layout {
-  grid-template-columns: minmax(420px, 0.92fr) minmax(380px, 0.82fr);
-  gap: 16px;
-}
-
-.model-column {
-  gap: 14px;
-}
-
-.settings-section {
-  gap: 14px;
-  border-color: rgba(255, 255, 255, 0.72);
-  border-radius: 22px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 250, 253, 0.56));
-  box-shadow:
-    0 18px 48px rgba(228, 152, 188, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.84);
-  padding: 18px;
-}
-
-.settings-section-title {
-  color: var(--ink);
-  font-size: 15px;
-  font-weight: 760;
-}
-
-.section-note,
-.cloud-status-line {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.model-status-grid,
-.cloud-meta-strip,
-.model-profile-list,
-.backup-list,
-.retention-options {
-  gap: 0;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.62);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.42);
-}
-
-.model-status-grid span,
-.cloud-meta-strip span,
-.model-profile-item,
-.backup-item,
-.retention-button {
-  border: 0;
-  border-radius: 0;
-  border-bottom: 1px solid rgba(255, 171, 204, 0.16);
-  background: transparent;
-  box-shadow: none;
-}
-
-.model-status-grid span,
-.cloud-meta-strip span {
-  min-height: 70px;
-  border-right: 1px solid rgba(255, 171, 204, 0.16);
-  border-bottom: 0;
-  padding: 12px 14px;
-}
-
-.model-status-grid span:last-child,
-.cloud-meta-strip span:last-child {
-  border-right: 0;
-}
-
-.model-status-grid strong,
-.cloud-meta-strip strong {
-  color: rgba(160, 118, 134, 0.78);
-  font-size: 11px;
-  font-weight: 650;
-  text-transform: none;
-}
-
-.model-warning {
-  border-color: rgba(255, 255, 255, 0.58);
-  border-radius: 16px;
-  background: rgba(255, 245, 250, 0.58);
-}
-
-.settings-stack input:not([type='checkbox']):not([type='range']),
-.settings-stack select {
-  border: 1px solid rgba(255, 255, 255, 0.68);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.52);
-  min-height: 42px;
-}
-
-.model-form-grid {
-  gap: 12px;
-}
-
-.settings-actions {
-  gap: 8px;
-}
-
-.settings-actions button,
-.file-button,
-.backup-actions button {
-  border: 1px solid rgba(255, 255, 255, 0.68);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.54);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.64);
-  min-height: 36px;
-  padding: 7px 13px;
-}
-
-.settings-actions button:first-child:not(.danger-button) {
-  border: 1px solid rgba(255, 255, 255, 0.78);
-  background: var(--accent-gradient);
-  color: #fff;
-  box-shadow:
-    0 14px 28px rgba(255, 152, 192, 0.28),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-.settings-actions button:first-child:not(.danger-button):hover {
-  box-shadow:
-    0 18px 38px rgba(255, 152, 192, 0.36),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-
-.model-profile-item,
-.backup-item {
-  padding: 14px 16px;
-}
-
-.model-profile-item:last-child,
-.backup-item:last-child,
-.retention-button:last-child {
-  border-bottom: 0;
-}
-
-.model-profile-item.active {
-  background: rgba(255, 234, 244, 0.62);
-  box-shadow: inset 4px 0 0 var(--rose);
-}
-
-.backup-item strong {
-  color: var(--ink);
-  font-weight: 700;
-}
-
-.backup-item small {
-  overflow-wrap: anywhere;
-}
-
-.backup-more {
-  border-top: 1px solid rgba(255, 171, 204, 0.16);
-  background: rgba(255, 255, 255, 0.24);
-}
-
-.cloud-backup-panel {
-  border-top-color: rgba(255, 171, 204, 0.16);
-}
-
-.toggle-row,
-.range-control,
-.number-control {
-  border: 1px solid rgba(255, 255, 255, 0.58);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.42);
-  padding: 12px 14px;
-}
-
-.theme-swatches {
-  gap: 8px;
-}
-
-.swatch-button {
-  border-color: rgba(255, 255, 255, 0.64);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.46);
 }

@@ -1,97 +1,136 @@
-/* ── 百合小窝 Design System v3 ── */
-/* Refined by Claude — sakura cream, soft & 高级 */
+/* ═══════════════════════════════════════════════════════════
+   百合小窝 · Yuri Nest
+   Design System v4 — "粉粉嫩嫩 × 苹果美学"
+   姐姐为妹妹重新调过的甜系少女风
+   ═══════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Color Tokens：樱花奶油粉系 ── */
-  --page-bg: #fff8fb;
-  --panel: rgba(255, 252, 254, 0.86);
-  --panel-solid: #fffafc;
-  --surface: rgba(255, 255, 255, 0.82);
-  --surface-strong: rgba(255, 248, 252, 0.92);
-  --surface-hover: rgba(255, 255, 255, 0.92);
-  --surface-active: rgba(255, 235, 245, 0.84);
+  /* ── 粉粉嫩嫩 8 档色阶 (从云朵到蜜桃) ── */
+  --pink-50:  #fff7fb;   /* 云朵粉，背景最浅层 */
+  --pink-100: #fff0f7;   /* 棉花糖底 */
+  --pink-150: #ffe6f1;   /* 樱花霜 */
+  --pink-200: #ffd6e7;   /* 糖霜粉 */
+  --pink-300: #ffbcd6;   /* 花瓣粉 */
+  --pink-400: #ff9ec4;   /* 蜜桃粉 */
+  --pink-500: #ff7fb1;   /* 草莓奶 */
+  --pink-600: #f25c97;   /* 玫瑰粉 */
+  --pink-700: #d63f7d;   /* 重点粉 */
 
-  --ink: #432b36;
-  --ink-secondary: #684557;
-  --muted: #8d6576;
-  --muted-light: #ad8798;
+  /* ── 兼容旧变量名 (业务样式仍引用) ── */
+  --rose:        var(--pink-300);
+  --rose-strong: var(--pink-500);
+  --rose-deep:   var(--pink-600);
+  --rose-soft:   var(--pink-100);
+  --rose-hover:  var(--pink-200);
+  --rose-hot:    var(--pink-500);
+  --rose-ghost:  rgba(255, 158, 196, 0.16);
+  --rose-glow:   rgba(255, 158, 196, 0.32);
 
-  /* 樱花粉（主） */
-  --rose: #ffabcc;
-  --rose-strong: #c97c9b;
-  --rose-deep: #b06382;
-  --rose-soft: #ffeaf3;
-  --rose-hover: #ffc0db;
-  --rose-ghost: rgba(255, 171, 204, 0.14);
-  --rose-glow: rgba(255, 171, 204, 0.32);
-  --rose-hot: #ff8eb7;
+  /* ── 文字色 (粉调暖灰) ── */
+  --ink:           #4a2e3a;   /* 主文字 */
+  --ink-secondary: #6b485a;   /* 次要文字 */
+  --muted:         #9a7587;   /* 辅助说明 */
+  --muted-light:   #c0a3b0;   /* 极弱说明 */
 
-  /* 点缀色（克制使用） */
-  --lavender: #d8c4f0;
-  --lavender-soft: rgba(232, 220, 248, 0.7);
-  --sky: #bfdef0;
-  --sky-soft: rgba(217, 238, 250, 0.72);
-  --mint: #a8dcc6;
-  --mint-soft: rgba(213, 240, 230, 0.78);
-  --butter: #ffe9b8;
-  --butter-soft: rgba(255, 240, 207, 0.72);
-  --blue-soft: rgba(217, 238, 250, 0.7);
+  /* ── 背景与表面 ── */
+  --page-bg:       #fff7fb;
+  --canvas:        #fffafd;
+  --panel:         #ffffff;
+  --panel-soft:    #fffbfd;
+  --panel-tint:    #fff5f9;
+  --surface:       rgba(255, 255, 255, 0.92);
+  --surface-strong:rgba(255, 255, 255, 0.98);
+  --surface-hover: rgba(255, 246, 250, 0.94);
+  --surface-active:rgba(255, 233, 244, 0.94);
 
-  /* 边线 */
-  --line: rgba(235, 190, 211, 0.46);
-  --line-strong: rgba(255, 255, 255, 0.9);
-  --line-light: rgba(239, 201, 218, 0.34);
-  --line-tint: rgba(255, 171, 204, 0.22);
+  /* ── 点缀色 (克制使用，每个仅 1-2 处) ── */
+  --lavender:       #e2cdff;
+  --lavender-soft:  #f3ebff;
+  --lavender-ink:   #7561a8;
+  --sky:            #c8e2ff;
+  --sky-soft:       #ebf3ff;
+  --sky-ink:        #5478a3;
+  --mint:           #b8eed8;
+  --mint-soft:      #e6f7f0;
+  --mint-ink:       #4d8a72;
+  --peach:          #ffd1b8;
+  --peach-soft:     #ffe9dd;
+  --peach-ink:      #b8704a;
+  --butter:         #ffe7a8;
+  --butter-soft:    #fff5d6;
+  --butter-ink:     #a3792d;
 
-  /* 玻璃 */
-  --glass-tint: rgba(255, 252, 254, 0.82);
-  --glass-tint-strong: rgba(255, 255, 255, 0.9);
-  --glass-highlight: rgba(255, 255, 255, 0.86);
-  --glass-lowlight: rgba(255, 200, 224, 0.12);
+  /* ── 边线 ── */
+  --line:        rgba(255, 188, 214, 0.32);
+  --line-soft:   rgba(255, 188, 214, 0.18);
+  --line-strong: rgba(255, 158, 196, 0.45);
+  --line-tint:   rgba(255, 214, 231, 0.55);
+  --line-light:  rgba(255, 214, 231, 0.4);
+  --hairline:    rgba(74, 46, 58, 0.06);
+
+  /* ── 渐变 ── */
+  --grad-pink:        linear-gradient(135deg, #ffbcd6 0%, #ff9ec4 50%, #ff7fb1 100%);
+  --grad-pink-soft:   linear-gradient(135deg, #ffe6f1 0%, #ffd6e7 100%);
+  --grad-bubble:      linear-gradient(135deg, #ffafd0 0%, #ff8eba 100%);
+  --grad-warm:        linear-gradient(135deg, #ffd6e7 0%, #ffd1b8 100%);
+  --grad-cool:        linear-gradient(135deg, #ffd6e7 0%, #e2cdff 100%);
+  --grad-page:
+    radial-gradient(900px 700px at 8% 6%, rgba(255, 196, 222, 0.42), transparent 65%),
+    radial-gradient(800px 650px at 96% 12%, rgba(226, 205, 255, 0.22), transparent 68%),
+    radial-gradient(900px 700px at 50% 100%, rgba(255, 209, 232, 0.32), transparent 70%),
+    var(--page-bg);
+
+  /* 兼容旧名 */
+  --accent-gradient:      var(--grad-pink);
+  --accent-gradient-cool: var(--grad-cool);
+  --accent-gradient-warm: var(--grad-warm);
+  --glass-tint:           rgba(255, 255, 255, 0.86);
+  --glass-tint-strong:    rgba(255, 255, 255, 0.96);
+  --glass-highlight:      rgba(255, 255, 255, 0.95);
+  --glass-lowlight:       rgba(255, 220, 240, 0.18);
   --glass-gradient:
-    radial-gradient(320px 220px at 18% 10%, rgba(255, 255, 255, 0.82), transparent 64%),
-    radial-gradient(380px 260px at 92% 86%, rgba(255, 192, 219, 0.14), transparent 66%),
-    linear-gradient(150deg, rgba(255, 255, 255, 0.86), rgba(255, 249, 252, 0.72));
+    radial-gradient(420px 280px at 22% 12%, rgba(255, 255, 255, 0.85), transparent 65%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(255, 252, 254, 0.86));
+  --line-strong-old: rgba(255, 255, 255, 0.95);
+  --soft-shadow: 0 18px 48px rgba(255, 158, 196, 0.16);
 
-  /* 强调渐变 */
-  --accent-gradient: linear-gradient(135deg, #ff9bc1 0%, #ffc0db 56%, #ffe0ec 100%);
-  --accent-gradient-cool: linear-gradient(135deg, #ffabcc 0%, #d8c4f0 50%, #bfdef0 100%);
-  --accent-gradient-warm: linear-gradient(135deg, #ffd6e6 0%, #ffe9b8 100%);
+  /* ── 阴影 (柔和粉调) ── */
+  --shadow-xs: 0 1px 2px rgba(255, 124, 174, 0.06), 0 1px 3px rgba(255, 124, 174, 0.04);
+  --shadow-sm: 0 2px 8px rgba(255, 124, 174, 0.08), 0 1px 3px rgba(255, 124, 174, 0.06);
+  --shadow-md: 0 6px 18px rgba(255, 124, 174, 0.10), 0 2px 6px rgba(255, 124, 174, 0.06);
+  --shadow-lg: 0 14px 38px rgba(255, 124, 174, 0.13), 0 4px 12px rgba(255, 124, 174, 0.08);
+  --shadow-xl: 0 24px 64px rgba(255, 124, 174, 0.16), 0 8px 22px rgba(255, 124, 174, 0.10);
+  --shadow-glow: 0 0 0 4px rgba(255, 158, 196, 0.18);
 
-  /* ── Elevation：奶感柔阴影 ── */
-  --shadow-xs: 0 1px 2px rgba(196, 130, 162, 0.05);
-  --shadow-sm: 0 8px 22px rgba(228, 152, 188, 0.08), 0 1px 2px rgba(168, 92, 124, 0.04);
-  --shadow-md: 0 16px 46px rgba(228, 152, 188, 0.1), 0 4px 12px rgba(168, 92, 124, 0.04);
-  --shadow-lg: 0 22px 58px rgba(210, 132, 170, 0.13), 0 8px 22px rgba(145, 82, 112, 0.06);
-  --shadow-xl: 0 32px 100px rgba(228, 152, 188, 0.14), 0 12px 32px rgba(168, 92, 124, 0.06);
-  --soft-shadow: var(--shadow-lg);
-
-  /* ── Radius：苹果圆润 ── */
-  --radius-xs: 8px;
-  --radius-sm: 14px;
-  --radius-md: 18px;
-  --radius-lg: 26px;
-  --radius-xl: 32px;
+  /* ── 圆角 (苹果系) ── */
+  --radius-xs:   8px;
+  --radius-sm:   12px;
+  --radius-md:   16px;
+  --radius-lg:   20px;
+  --radius-xl:   28px;
+  --radius-2xl:  36px;
   --radius-full: 999px;
 
-  /* ── Spacing ── */
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 12px;
-  --space-lg: 16px;
-  --space-xl: 20px;
+  /* ── 间距 ── */
+  --space-2xs: 2px;
+  --space-xs:  4px;
+  --space-sm:  8px;
+  --space-md:  12px;
+  --space-lg:  16px;
+  --space-xl:  20px;
   --space-2xl: 24px;
   --space-3xl: 32px;
+  --space-4xl: 48px;
 
-  /* ── Transition ── */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  /* ── 动效 ── */
+  --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-  --duration-fast: 150ms;
-  --duration-normal: 260ms;
-  --duration-slow: 420ms;
+  --duration-fast:   150ms;
+  --duration-normal: 240ms;
+  --duration-slow:   400ms;
 
-  /* ── Typography ── */
+  /* ── 字体 ── */
   font-family:
     -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
     'Microsoft YaHei', Inter, ui-sans-serif, system-ui,
@@ -100,21 +139,23 @@
   line-height: 1.65;
   font-weight: 400;
   color: var(--ink);
-  background:
-    radial-gradient(760px 520px at -8% -16%, rgba(255, 218, 235, 0.42), transparent 64%),
-    radial-gradient(700px 520px at 110% 4%, rgba(220, 238, 250, 0.24), transparent 62%),
-    radial-gradient(680px 500px at 58% 110%, rgba(255, 204, 226, 0.28), transparent 66%),
-    var(--page-bg);
+  background: var(--grad-page);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: 'cv11', 'ss01';
   letter-spacing: 0.01em;
 }
 
-* {
+/* ── Reset ── */
+
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+}
+
+* {
   margin: 0;
 }
 
@@ -128,20 +169,10 @@ body,
 
 body {
   min-width: 320px;
+  background: transparent;
 }
 
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.07'/%3E%3C/svg%3E");
-  opacity: 0.32;
-  mix-blend-mode: overlay;
-}
-
-/* ── Global interactive element resets ── */
+/* ── 全局可交互元素 ── */
 
 button,
 input,
@@ -163,25 +194,25 @@ button:disabled {
 
 select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23b48a9c' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23ff7fb1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 30px !important;
+  background-position: right 14px center;
+  padding-right: 32px !important;
 }
 
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 2.5px solid rgba(255, 171, 204, 0.42);
+  outline: 3px solid var(--rose-glow);
   outline-offset: 2px;
 }
 
-/* ── Scrollbar：奶嫩细巧 ── */
+/* ── 滚动条 ── */
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -189,23 +220,23 @@ select:focus-visible {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 171, 204, 0.28);
+  background: rgba(255, 158, 196, 0.32);
   border-radius: var(--radius-full);
-  transition: background 0.2s;
+  transition: background var(--duration-fast) var(--ease-smooth);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 142, 183, 0.5);
+  background: rgba(255, 124, 174, 0.55);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 171, 204, 0.3) transparent;
+  scrollbar-color: rgba(255, 158, 196, 0.32) transparent;
 }
 
-/* ── Global Selection ── */
+/* ── 选区 ── */
 
 ::selection {
-  background: rgba(255, 171, 204, 0.3);
-  color: var(--ink);
+  background: var(--pink-200);
+  color: var(--pink-700);
 }
