@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Clock3, ListChecks, Send, Sparkles, WandSparkles } from 'lucide-react'
+import { useEffect, useMemo, useRef } from 'react'
+import { Send, Sparkles } from 'lucide-react'
 import type {
   AppSettings,
   CharacterCard,
@@ -12,13 +12,6 @@ import type {
 import type { MemoryFeedbackAction } from '../services/memoryFeedback'
 import { buildMessageMemoryTrace } from '../services/memoryTrace'
 import { MessageBubble } from './MessageBubble'
-
-const quickPrompts = [
-  { label: '现在几点', prompt: '姐姐，现在北京时间几点？今天是几月几号星期几？', icon: Clock3 },
-  { label: '总结一下', prompt: '姐姐，帮妹妹把刚刚这段对话整理成简短摘要和待办。', icon: ListChecks },
-  { label: '下一步', prompt: '姐姐，根据当前上下文，给妹妹三个最适合的下一步。', icon: Sparkles },
-  { label: '设定检查', prompt: '姐姐，帮妹妹检查当前角色和世界观设定有没有矛盾或缺口。', icon: WandSparkles },
-]
 
 interface ChatPhoneProps {
   character: CharacterCard
@@ -48,29 +41,8 @@ export function ChatPhone({
   onSend,
 }: ChatPhoneProps) {
   const messageListRef = useRef<HTMLDivElement>(null)
-  const [now, setNow] = useState(() => new Date())
   const memoryBlocks = contextBlocks.filter((block) => block.memoryIds?.length)
   const memoryCount = new Set(memoryBlocks.flatMap((block) => block.memoryIds ?? [])).size
-  const currentTimeLabel = useMemo(
-    () =>
-      new Intl.DateTimeFormat('zh-CN', {
-        timeZone: 'Asia/Shanghai',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }).format(now),
-    [now],
-  )
-  const currentDateLabel = useMemo(
-    () =>
-      new Intl.DateTimeFormat('zh-CN', {
-        timeZone: 'Asia/Shanghai',
-        month: '2-digit',
-        day: '2-digit',
-        weekday: 'short',
-      }).format(now),
-    [now],
-  )
   const traceByAssistantMessageId = useMemo(() => {
     return new Map(
       memoryUsageLogs
@@ -98,11 +70,6 @@ export function ChatPhone({
     })
   }, [messages, isSending])
 
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 30_000)
-    return () => window.clearInterval(timer)
-  }, [])
-
   return (
     <main className="workspace chat-workspace">
       <header className="workspace-header">
@@ -113,24 +80,6 @@ export function ChatPhone({
           <div>
             <strong>{character.name}</strong>
             <span>{character.subtitle}</span>
-          </div>
-        </div>
-        <div className="chat-header-actions">
-          <div aria-label="当前北京时间" className="live-clock">
-            <Clock3 size={15} />
-            <span>{currentDateLabel}</span>
-            <strong>{currentTimeLabel}</strong>
-          </div>
-          <div className="assistant-tools" aria-label="智能快捷能力">
-            {quickPrompts.map((item) => {
-              const Icon = item.icon
-              return (
-                <button key={item.label} onClick={() => onDraftChange(item.prompt)} type="button">
-                  <Icon size={14} />
-                  <span>{item.label}</span>
-                </button>
-              )
-            })}
           </div>
         </div>
       </header>

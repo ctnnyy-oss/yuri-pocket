@@ -29,25 +29,8 @@
     padding: var(--space-md) var(--space-lg);
   }
 
-  .live-clock {
-    padding: 6px 9px;
-  }
-
-  .live-clock span {
-    display: none;
-  }
-
-  .assistant-tools {
-    display: none;
-  }
-
   .context-row {
     padding: var(--space-sm) var(--space-lg);
-  }
-
-  .assistant-tools button {
-    padding: 7px 10px;
-    font-size: 11px;
   }
 
   .memory-lens {

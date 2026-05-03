@@ -160,17 +160,18 @@ app.post('/api/chat', async (request, response) => {
     return
   }
 
+  const agentBundle = attachAgentToolResults(bundle)
   const runtimeProfile = resolveRuntimeProfileForChat(settings)
   if (!runtimeProfile?.apiKey) {
     response.json({
       provider: 'local-demo',
-      reply: createDemoReply(bundle),
+      reply: createDemoReply(agentBundle),
     })
     return
   }
 
   try {
-    const reply = await callModelChat(bundle, settings, runtimeProfile)
+    const reply = await callModelChat(agentBundle, settings, runtimeProfile)
     response.json({ provider: runtimeProfile.name, model: runtimeProfile.model, reply })
   } catch (error) {
     console.error(error)
@@ -718,6 +719,155 @@ async function callGeminiChat(bundle, settings, profile) {
 
   if (!reply) throw new Error('模型返回了空回复')
   return reply
+}
+
+function attachAgentToolResults(bundle) {
+  const contextBlocks = Array.isArray(bundle.contextBlocks) ? bundle.contextBlocks : []
+  const toolBlocks = buildAgentToolBlocks(bundle)
+
+  if (toolBlocks.length === 0 && Array.isArray(bundle.contextBlocks)) return bundle
+  return { ...bundle, contextBlocks: [...toolBlocks, ...contextBlocks] }
+}
+
+function buildAgentToolBlocks(bundle) {
+  const messages = Array.isArray(bundle.messages) ? bundle.messages : []
+  const latestUserMessage = [...messages].reverse().find((message) => message?.role === 'user')
+  const latestUserText = normalizeToolText(latestUserMessage?.content)
+
+  if (!latestUserText) return []
+
+  const toolBlocks = []
+
+  if (shouldUseTimeTool(latestUserText)) {
+    toolBlocks.push(createCurrentTimeToolBlock())
+  }
+
+  if (shouldUseConversationTool(latestUserText)) {
+    toolBlocks.push(createConversationSnapshotToolBlock(messages))
+  }
+
+  if (shouldUseCapabilityGuide(latestUserText)) {
+    toolBlocks.push(createCapabilityGuideBlock())
+  }
+
+  return toolBlocks
+}
+
+function shouldUseTimeTool(text) {
+  return /几点|时间|日期|今天|今晚|明天|昨天|星期|周几|早上|中午|下午|晚上|凌晨|现在|刚刚|一会儿/.test(text)
+}
+
+function shouldUseConversationTool(text) {
+  return /总结|摘要|整理|复盘|待办|下一步|计划|安排|检查|设定|世界观|矛盾|角色|记忆|梳理|归纳/.test(text)
+}
+
+function shouldUseCapabilityGuide(text) {
+  return /agent|Agent|LLM|llm|大预言模型|工具|功能|能做|全能|智能化|联网|文件|除了聊天|不只是聊天/.test(text)
+}
+
+function createCurrentTimeToolBlock() {
+  return {
+    title: 'Agent 工具：当前北京时间',
+    content: [
+      '工具 current_time 已执行。',
+      formatBeijingDateTime(new Date()),
+      '如果用户询问时间、日期、今天/明天/星期等问题，必须以这条工具结果为准，不能编造其他钟点。',
+    ].join('\n'),
+    category: 'stable',
+    reason: 'current_time',
+  }
+}
+
+function createConversationSnapshotToolBlock(messages) {
+  const recentMessages = messages.slice(-8)
+  const lines = recentMessages.map((message) => {
+    const role = getToolRoleLabel(message?.role)
+    const time = formatToolMessageTime(message?.createdAt)
+    const content = truncateToolText(normalizeToolText(message?.content), 180)
+    return `- ${role}${time ? ` ${time}` : ''}: ${content}`
+  })
+
+  return {
+    title: 'Agent 工具：最近对话工作台',
+    content: [
+      '工具 conversation_snapshot 已执行。',
+      `最近消息数：${recentMessages.length}`,
+      '可用于总结、下一步建议、设定检查、待办梳理；回答时请保持角色语气，不要暴露内部工具过程。',
+      '最近内容：',
+      ...lines,
+    ].join('\n'),
+    category: 'summary',
+    reason: 'conversation_snapshot',
+  }
+}
+
+function createCapabilityGuideBlock() {
+  return {
+    title: 'Agent 工具：能力边界',
+    content: [
+      '后台轻量 agent 能力已启用：current_time 可读取当前北京时间，conversation_snapshot 可整理最近对话，context_check 可基于现有记忆和上下文做设定检查。',
+      '你可以主动把用户的模糊需求整理成计划、待办、检查清单或下一步行动。',
+      '当前没有外部浏览、文件系统、系统操作或长期自动任务工具时，不要声称自己已经联网、改文件、设提醒或替用户执行了外部动作；需要这些能力时，应温柔说明需要接入对应工具。',
+    ].join('\n'),
+    category: 'stable',
+    reason: 'capability_guide',
+  }
+}
+
+function formatBeijingDateTime(date) {
+  const parts = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date)
+
+  const value = (type) => parts.find((part) => part.type === type)?.value ?? ''
+  return `北京时间 ${value('year')}-${value('month')}-${value('day')} ${value('weekday')} ${value('hour')}:${value('minute')}:${value('second')}`
+}
+
+function formatToolMessageTime(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+
+  const parts = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date)
+
+  const partValue = (type) => parts.find((part) => part.type === type)?.value ?? ''
+  return `${partValue('hour')}:${partValue('minute')}`
+}
+
+function normalizeToolText(value) {
+  if (typeof value === 'string') return value.trim()
+  if (value == null) return ''
+
+  try {
+    return JSON.stringify(value)
+  } catch (_error) {
+    return String(value)
+  }
+}
+
+function truncateToolText(value, maxLength) {
+  if (value.length <= maxLength) return value
+  return `${value.slice(0, Math.max(0, maxLength - 1))}…`
+}
+
+function getToolRoleLabel(role) {
+  if (role === 'user') return '用户'
+  if (role === 'assistant') return '角色'
+  if (role === 'system') return '系统'
+  return '消息'
 }
 
 function createDemoReply(bundle) {
