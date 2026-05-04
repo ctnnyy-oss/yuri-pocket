@@ -241,6 +241,62 @@ export function useYuriNestApp() {
     return characterId
   }
 
+  function handleDeleteCharacter(characterId: string): boolean {
+    const target = state.characters.find((item) => item.id === characterId)
+    if (!target) {
+      setNotice('没有找到这个角色')
+      return false
+    }
+
+    const canDelete =
+      target.relationship === '群聊' || target.id.startsWith('character_') || target.tags.includes('自定义角色')
+    if (!canDelete) {
+      setNotice('内置三对 CP 先保留，后续妹妹确认后再开放删除')
+      return false
+    }
+
+    setState((currentState) => {
+      const remainingCharacters = currentState.characters.filter((item) => item.id !== characterId)
+      const nextActiveCharacterId =
+        currentState.activeCharacterId === characterId
+          ? remainingCharacters[0]?.id ?? createSeedState().activeCharacterId
+          : currentState.activeCharacterId
+
+      return {
+        ...currentState,
+        activeCharacterId: nextActiveCharacterId,
+        characters: remainingCharacters,
+        conversations: currentState.conversations.filter((item) => item.characterId !== characterId),
+      }
+    })
+    setNotice(`已删除：${target.name}`)
+    return true
+  }
+
+  function handleClearConversation(characterId: string) {
+    const target = state.characters.find((item) => item.id === characterId) ?? character
+    const now = nowIso()
+    setState((currentState) => {
+      const existingConversation = getConversation(currentState, characterId)
+      return upsertConversation(currentState, {
+        ...existingConversation,
+        messages: target.greeting
+          ? [
+              {
+                id: createId('message'),
+                role: 'assistant',
+                content: target.greeting,
+                createdAt: now,
+              },
+            ]
+          : [],
+        summary: '',
+        updatedAt: now,
+      })
+    })
+    setNotice('聊天记录已清空')
+  }
+
   // ---- 设置 ----
   function handleUpdateSettings(settings: AppSettings) {
     if (settings.dataStorageMode === 'local' && state.settings.dataStorageMode !== 'local') {
@@ -274,6 +330,8 @@ export function useYuriNestApp() {
     handleClearCompletedTasks: tasks.handleClearCompletedTasks,
     handleConnectCloud: cloud.handleConnectCloud,
     handleCreateCharacter,
+    handleDeleteCharacter,
+    handleClearConversation,
     handleCreateCloudBackup: cloud.handleCreateCloudBackup,
     handleCreateLocalBackup: backup.handleCreateLocalBackup,
     handleDeleteLocalBackup: backup.handleDeleteLocalBackup,

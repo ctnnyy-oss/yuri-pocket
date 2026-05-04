@@ -1,5 +1,5 @@
 import { useMemo, useState, type CSSProperties } from 'react'
-import { ChevronRight, FileText, Plus, Search, Sparkles, UserRound } from 'lucide-react'
+import { ChevronRight, FileText, Plus, Search, Sparkles, Trash2, UserRound } from 'lucide-react'
 import type { CharacterCard } from '../domain/types'
 import type { AppView } from './CharacterRail'
 
@@ -8,6 +8,7 @@ interface QqFeaturePanelProps {
   characters: CharacterCard[]
   activeCharacterId: string
   onCreateCharacter: (input: { name: string; relation: string; mood: string; persona: string }) => string
+  onDeleteCharacter: (characterId: string) => boolean
   onOpenChat: (characterId: string) => void
   onShellAction?: (message: string) => void
 }
@@ -67,7 +68,14 @@ function toManagedRole(character: CharacterCard): ManagedRole {
   }
 }
 
-export function QqFeaturePanel({ characters, activeCharacterId, onCreateCharacter, onOpenChat, onShellAction }: QqFeaturePanelProps) {
+export function QqFeaturePanel({
+  characters,
+  activeCharacterId,
+  onCreateCharacter,
+  onDeleteCharacter,
+  onOpenChat,
+  onShellAction,
+}: QqFeaturePanelProps) {
   const builtInRoles = useMemo(
     () => characters.filter((character) => character.relationship !== '群聊').map(toManagedRole),
     [characters],
@@ -108,6 +116,20 @@ export function QqFeaturePanel({ characters, activeCharacterId, onCreateCharacte
 
   function updateDraft(field: keyof typeof roleDraft, value: string) {
     setRoleDraft((draft) => ({ ...draft, [field]: value }))
+  }
+
+  function deleteSelectedRole() {
+    if (!selectedRole) return
+    if (selectedRole.source !== '自定义') {
+      onShellAction?.('内置三对 CP 先保留，后续妹妹确认后再开放删除')
+      return
+    }
+    if (!window.confirm(`删除“${selectedRole.name}”和对应聊天记录吗？`)) return
+    const nextRole = managedRoles.find((role) => role.id !== selectedRole.id)
+    if (nextRole) setSelectedRoleId(nextRole.id)
+    if (onDeleteCharacter(selectedRole.id)) {
+      onShellAction?.('角色和对应聊天记录已删除')
+    }
   }
 
   return (
@@ -182,6 +204,12 @@ export function QqFeaturePanel({ characters, activeCharacterId, onCreateCharacte
                 <button onClick={() => onOpenChat(selectedRole.id)} type="button">
                   <UserRound size={17} />
                   <span>打开聊天</span>
+                </button>
+              )}
+              {selectedRole?.source === '自定义' && (
+                <button className="danger-role-action" onClick={deleteSelectedRole} type="button">
+                  <Trash2 size={17} />
+                  <span>删除角色</span>
                 </button>
               )}
               {roleTemplates.map((template) => (

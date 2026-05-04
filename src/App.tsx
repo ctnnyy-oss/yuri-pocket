@@ -40,7 +40,9 @@ function App() {
     handleCreateCharacter,
     handleCreateCloudBackup,
     handleCreateLocalBackup,
+    handleClearConversation,
     handleDeleteLocalBackup,
+    handleDeleteCharacter,
     handleDeleteModelProfile,
     handleDeleteTrashedMemory,
     handleDeleteTrashedWorldNode,
@@ -179,6 +181,7 @@ function App() {
         activeCharacterId={state.activeCharacterId}
         activeView={activeView}
         characters={state.characters}
+        conversations={state.conversations}
         onSelect={handleSelectCharacter}
         onOpenGroupChat={handleOpenGroupChat}
         onShellAction={showShellTip}
@@ -189,6 +192,7 @@ function App() {
         <MobileMessageList
           activeCharacterId={state.activeCharacterId}
           characters={state.characters}
+          conversations={state.conversations}
           onShellAction={showShellTip}
           onOpenChat={handleOpenMobileChat}
           onOpenGroupChat={handleOpenGroupChat}
@@ -209,6 +213,8 @@ function App() {
           onDraftChange={setDraft}
           onMemoryFeedback={handleMemoryFeedbackFromChat}
           onSelectCharacter={handleSelectCharacter}
+          onClearConversation={handleClearConversation}
+          onDeleteCharacter={handleDeleteCharacter}
           onSend={handleSend}
           onShellAction={showShellTip}
           settings={state.settings}
@@ -219,6 +225,7 @@ function App() {
           activeView={activeView}
           characters={state.characters}
           onCreateCharacter={handleCreateCharacter}
+          onDeleteCharacter={handleDeleteCharacter}
           onShellAction={showShellTip}
           onOpenChat={handleOpenMobileChat}
         />

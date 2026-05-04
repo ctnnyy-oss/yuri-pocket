@@ -1,9 +1,10 @@
 import type { CSSProperties } from 'react'
 import { BellOff, ChevronRight, Plus, Search } from 'lucide-react'
-import type { CharacterCard } from '../domain/types'
+import type { CharacterCard, ConversationState } from '../domain/types'
 
 interface MobileMessageListProps {
   characters: CharacterCard[]
+  conversations: ConversationState[]
   activeCharacterId: string
   onOpenChat: (characterId: string) => void
   onOpenGroupChat?: (group: { name: string; text: string }) => void
@@ -30,8 +31,22 @@ function isGroupCharacter(character: CharacterCard) {
   return character.relationship === '群聊'
 }
 
+function formatThreadTime(value?: string, fallback = '今天') {
+  if (!value) return fallback
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return fallback
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
+}
+
+function getLastConversationText(conversation?: ConversationState, fallback = '还没有聊天记录') {
+  const lastMessage = conversation?.messages.at(-1)
+  if (!lastMessage?.content) return fallback
+  return lastMessage.content.replace(/\s+/g, ' ').slice(0, 24)
+}
+
 export function MobileMessageList({
   characters,
+  conversations,
   activeCharacterId,
   onOpenChat,
   onOpenGroupChat,
@@ -39,15 +54,19 @@ export function MobileMessageList({
   const activeCharacter = characters.find((character) => character.id === activeCharacterId) ?? characters[0]
   const roleCharacters = characters.filter((character) => !isGroupCharacter(character))
   const groupCharacters = characters.filter(isGroupCharacter)
+  const conversationByCharacterId = new Map(conversations.map((conversation) => [conversation.characterId, conversation]))
   const defaultGroupNames = new Set(groupThreads.map((thread) => thread.name))
   const visibleGroups = [
     ...groupThreads.map((thread) => {
       const existing = groupCharacters.find((character) => character.name === thread.name)
+      const conversation = conversationByCharacterId.get(existing?.id ?? '')
       return {
         ...thread,
         avatar: existing?.avatar ?? thread.avatar,
-        text: existing?.mood ?? thread.text,
+        text: existing ? getLastConversationText(conversation, existing.mood) : thread.text,
+        time: existing ? formatThreadTime(conversation?.updatedAt, thread.time) : thread.time,
         characterId: existing?.id ?? '',
+        updatedAt: conversation?.updatedAt ?? '',
       }
     }),
     ...groupCharacters
@@ -55,12 +74,22 @@ export function MobileMessageList({
       .map((character) => ({
         name: character.name,
         avatar: character.avatar,
-        text: character.mood || character.title,
-        time: '今天',
+        text: getLastConversationText(conversationByCharacterId.get(character.id), character.mood || character.title),
+        time: formatThreadTime(conversationByCharacterId.get(character.id)?.updatedAt),
         badge: '',
         characterId: character.id,
+        updatedAt: conversationByCharacterId.get(character.id)?.updatedAt ?? '',
       })),
-  ]
+  ].sort((left, right) => {
+    const leftTime = left.updatedAt ? new Date(left.updatedAt).getTime() : 0
+    const rightTime = right.updatedAt ? new Date(right.updatedAt).getTime() : 0
+    return rightTime - leftTime
+  })
+  const visibleRoleCharacters = [...roleCharacters].sort((left, right) => {
+    const leftTime = new Date(conversationByCharacterId.get(left.id)?.updatedAt ?? '').getTime() || 0
+    const rightTime = new Date(conversationByCharacterId.get(right.id)?.updatedAt ?? '').getTime() || 0
+    return rightTime - leftTime
+  })
 
   return (
     <section className="mobile-message-list" aria-label="手机消息列表">
@@ -123,9 +152,10 @@ export function MobileMessageList({
             </span>
           </button>
         ))}
-        {roleCharacters.map((character, index) => {
+        {visibleRoleCharacters.map((character, index) => {
           const isActive = character.id === activeCharacterId
           const badge = unreadBadges[index % unreadBadges.length]
+          const conversation = conversationByCharacterId.get(character.id)
 
           return (
             <button
@@ -143,10 +173,10 @@ export function MobileMessageList({
               </span>
               <span className="mobile-thread-copy">
                 <strong>{character.name}</strong>
-                <small>{character.title}</small>
+                <small>{getLastConversationText(conversation, character.title)}</small>
               </span>
               <span className="mobile-thread-meta">
-                <time>{threadTimes[index % threadTimes.length]}</time>
+                <time>{formatThreadTime(conversation?.updatedAt, threadTimes[index % threadTimes.length])}</time>
                 {index > 4 && <BellOff size={18} />}
               </span>
             </button>

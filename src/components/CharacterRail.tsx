@@ -13,13 +13,14 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { brand } from '../config/brand'
-import type { CharacterCard } from '../domain/types'
+import type { CharacterCard, ConversationState } from '../domain/types'
 
 export type AppView = 'chat' | 'role' | 'group' | 'moments' | 'tasks' | 'memory' | 'world' | 'model' | 'settings' | 'trash'
 
 interface CharacterRailProps {
   characters: CharacterCard[]
   activeCharacterId: string
+  conversations: ConversationState[]
   activeView: AppView
   onViewChange: (view: AppView) => void
   onSelect: (characterId: string) => void
@@ -35,16 +36,6 @@ const primaryNavigationItems: RailItem[] = [
   { id: 'model', label: '模型', description: '模型配置', icon: SlidersHorizontal },
   { id: 'memory', label: '记忆', description: '记忆系统', icon: Brain },
   { id: 'settings', label: '设置', description: '应用设置', icon: Settings },
-]
-
-const messagePreview = [
-  '我觉得你可以把这个模型的这...',
-  '梁智源：@全体成员 各位已填...',
-  '姐姐刚刚有点卡住了，妹妹再...',
-  '🌹',
-  '[机器人名片] 池唐',
-  '解题：[动画表情]',
-  '先去了学校再说吧',
 ]
 
 const channelRows = [
@@ -63,6 +54,19 @@ function characterThreadTime(index: number, active: boolean) {
   return ['星期三', '03/19', '03/18', '03/18', '03/16', '02/25', '02/23'][index % 7]
 }
 
+function formatThreadTime(value?: string, fallback = '今天') {
+  if (!value) return fallback
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return fallback
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
+}
+
+function getLastConversationText(conversation?: ConversationState, fallback = '还没有聊天记录') {
+  const lastMessage = conversation?.messages.at(-1)
+  if (!lastMessage?.content) return fallback
+  return lastMessage.content.replace(/\s+/g, ' ').slice(0, 28)
+}
+
 function isGroupCharacter(character: CharacterCard) {
   return character.relationship === '群聊'
 }
@@ -70,6 +74,7 @@ function isGroupCharacter(character: CharacterCard) {
 export function CharacterRail({
   characters,
   activeCharacterId,
+  conversations,
   activeView,
   onShellAction,
   onOpenGroupChat,
@@ -83,6 +88,9 @@ export function CharacterRail({
   const activeCharacter = characters.find((character) => character.id === activeCharacterId) ?? characters[0]
   const roleCharacters = useMemo(() => characters.filter((character) => !isGroupCharacter(character)), [characters])
   const groupCharacters = useMemo(() => characters.filter(isGroupCharacter), [characters])
+  const conversationByCharacterId = useMemo(() => {
+    return new Map(conversations.map((conversation) => [conversation.characterId, conversation]))
+  }, [conversations])
   const filteredCharacters = useMemo(() => {
     if (!normalizedQuery) return roleCharacters
     return roleCharacters.filter((character) => {
@@ -106,8 +114,10 @@ export function CharacterRail({
         ...row,
         id: existing ? `group:${existing.id}` : row.id,
         avatar: existing?.avatar ?? row.avatar,
-        text: existing?.mood ?? row.text,
+        text: existing ? getLastConversationText(conversationByCharacterId.get(existing.id), existing.mood) : row.text,
+        time: existing ? formatThreadTime(conversationByCharacterId.get(existing.id)?.updatedAt, row.time) : row.time,
         characterId: existing?.id ?? '',
+        updatedAt: conversationByCharacterId.get(existing?.id ?? '')?.updatedAt ?? '',
       }
     })
     const customRows = groupCharacters
@@ -116,15 +126,16 @@ export function CharacterRail({
         id: `group:${character.id}`,
         title: character.name,
         text: character.mood || character.title,
-        time: index === 0 ? '刚刚' : '今天',
+        time: formatThreadTime(conversationByCharacterId.get(character.id)?.updatedAt, index === 0 ? '刚刚' : '今天'),
         avatar: character.avatar,
         badge: '',
         characterId: character.id,
+        updatedAt: conversationByCharacterId.get(character.id)?.updatedAt ?? '',
       }))
     const rows = [...defaultRows, ...customRows]
     if (!normalizedQuery) return rows
     return rows.filter((row) => `${row.title} ${row.text}`.toLowerCase().includes(normalizedQuery))
-  }, [groupCharacters, normalizedQuery])
+  }, [conversationByCharacterId, groupCharacters, normalizedQuery])
   const chatThreads = useMemo(() => {
     const characterThreads = filteredCharacters.map((character, index) => ({
       id: `character:${character.id}`,
@@ -133,10 +144,11 @@ export function CharacterRail({
       name: character.name,
       avatar: character.avatar,
       accent: character.accent,
-      preview: messagePreview[index % messagePreview.length],
-      time: characterThreadTime(index, character.id === activeCharacterId),
+      preview: getLastConversationText(conversationByCharacterId.get(character.id), character.title),
+      time: formatThreadTime(conversationByCharacterId.get(character.id)?.updatedAt, characterThreadTime(index, character.id === activeCharacterId)),
       muted: index === 5,
       characterId: character.id,
+      updatedAt: conversationByCharacterId.get(character.id)?.updatedAt ?? '',
     }))
     const groupThreads = filteredChannelRows.map((row, index) => ({
       id: row.id,
@@ -150,15 +162,19 @@ export function CharacterRail({
       muted: index > 0,
       badge: row.badge,
       characterId: row.characterId,
+      updatedAt: row.updatedAt,
     }))
 
     return [...characterThreads, ...groupThreads].sort((left, right) => {
       const leftPinned = pinnedThreadIds.has(left.id)
       const rightPinned = pinnedThreadIds.has(right.id)
       if (leftPinned !== rightPinned) return leftPinned ? -1 : 1
+      const leftTime = left.updatedAt ? new Date(left.updatedAt).getTime() : 0
+      const rightTime = right.updatedAt ? new Date(right.updatedAt).getTime() : 0
+      if (leftTime !== rightTime) return rightTime - leftTime
       return left.rank - right.rank
     })
-  }, [activeCharacterId, filteredCharacters, filteredChannelRows, pinnedThreadIds])
+  }, [activeCharacterId, conversationByCharacterId, filteredCharacters, filteredChannelRows, pinnedThreadIds])
 
   function togglePinnedThread(threadId: string) {
     setPinnedThreadIds((current) => {

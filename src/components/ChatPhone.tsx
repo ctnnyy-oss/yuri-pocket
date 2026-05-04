@@ -50,11 +50,21 @@ interface ChatPhoneProps {
   onBackToList?: () => void
   onSelectCharacter: (characterId: string) => void
   onMemoryFeedback: (memoryId: string, action: MemoryFeedbackAction) => void
+  onClearConversation: (characterId: string) => void
+  onDeleteCharacter: (characterId: string) => boolean
   onSend: () => void
   onShellAction?: (message: string) => void
 }
 
 type ToolPanel = 'emoji' | 'sticker' | 'more' | 'info' | 'settings' | null
+type ChatSettingRow = {
+  label: string
+  value: string
+  switcher?: boolean
+  danger?: boolean
+  link?: boolean
+  action?: 'clear-conversation' | 'delete-character'
+}
 
 const emojiRows = [
   '🥰',
@@ -90,16 +100,24 @@ const moreTools = [
   { label: '聊天背景', icon: Paintbrush },
 ]
 
-const chatSettingRows = [
+const chatSettingRows: ChatSettingRow[] = [
   { label: '设置置顶', value: 'off', switcher: true },
   { label: '特别关心', value: 'NEW 未开启' },
   { label: '隐藏会话', value: 'off', switcher: true },
   { label: '消息免打扰', value: 'off', switcher: true },
   { label: '消息通知设置', value: '通知预览、提示音等' },
   { label: '设置当前聊天背景', value: '' },
-  { label: '删除聊天记录', value: '', danger: false },
+  { label: '删除聊天记录', value: '', danger: true, action: 'clear-conversation' },
   { label: '被骚扰了？举报该用户', value: '', link: true },
 ]
+
+function canDeleteCharacter(character: CharacterCard) {
+  return (
+    character.relationship === '群聊' ||
+    character.id.startsWith('character_') ||
+    character.tags.includes('自定义角色')
+  )
+}
 
 function MobileStatusBar() {
   return (
@@ -124,6 +142,8 @@ export function ChatPhone({
   onBackToList,
   onSelectCharacter,
   onMemoryFeedback,
+  onClearConversation,
+  onDeleteCharacter,
   onSend,
   onShellAction,
 }: ChatPhoneProps) {
@@ -136,6 +156,17 @@ export function ChatPhone({
         .map((log) => [log.assistantMessageId as string, buildMessageMemoryTrace(log, memories)]),
     )
   }, [memories, memoryUsageLogs])
+  const settingRows = canDeleteCharacter(character)
+    ? [
+        ...chatSettingRows,
+        {
+          label: character.relationship === '群聊' ? '删除群聊' : '删除角色',
+          value: '',
+          danger: true,
+          action: 'delete-character' as const,
+        },
+      ]
+    : chatSettingRows
 
   function togglePanel(panel: Exclude<ToolPanel, null>) {
     setActivePanel((current) => (current === panel ? null : panel))
@@ -334,8 +365,23 @@ export function ChatPhone({
             <strong>{character.name}</strong>
           </section>
           <section className="chat-setting-list">
-            {chatSettingRows.map((row) => (
-              <button className={row.link ? 'link-row' : row.danger ? 'danger-row' : ''} key={row.label} type="button">
+            {settingRows.map((row) => (
+              <button
+                className={row.link ? 'link-row' : row.danger ? 'danger-row' : ''}
+                key={row.label}
+                onClick={() => {
+                  if (row.action === 'clear-conversation' && window.confirm(`清空和“${character.name}”的聊天记录吗？`)) {
+                    onClearConversation(character.id)
+                    setActivePanel(null)
+                  }
+                  if (row.action === 'delete-character' && window.confirm(`删除“${character.name}”和对应聊天记录吗？`)) {
+                    if (onDeleteCharacter(character.id)) {
+                      setActivePanel(null)
+                    }
+                  }
+                }}
+                type="button"
+              >
                 <span>{row.label}</span>
                 {row.switcher ? (
                   <ToggleLeft size={46} />
