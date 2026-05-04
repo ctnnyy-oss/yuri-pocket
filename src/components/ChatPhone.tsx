@@ -51,6 +51,7 @@ interface ChatPhoneProps {
   onSelectCharacter: (characterId: string) => void
   onMemoryFeedback: (memoryId: string, action: MemoryFeedbackAction) => void
   onSend: () => void
+  onShellAction?: (message: string) => void
 }
 
 type ToolPanel = 'emoji' | 'sticker' | 'more' | 'info' | 'settings' | null
@@ -124,6 +125,7 @@ export function ChatPhone({
   onSelectCharacter,
   onMemoryFeedback,
   onSend,
+  onShellAction,
 }: ChatPhoneProps) {
   const [activePanel, setActivePanel] = useState<ToolPanel>(null)
   const messageListRef = useRef<HTMLDivElement>(null)
@@ -163,6 +165,11 @@ export function ChatPhone({
       <MobileStatusBar />
       <header
         className="chat-topbar"
+        onClick={(event) => {
+          const actionButton = (event.target as HTMLElement).closest('.chat-topbar-actions button')
+          if (!actionButton || actionButton.classList.contains('mobile-menu-button')) return
+          onShellAction?.('通话、视频和协作入口已保留，后续接入实时模型能力')
+        }}
         style={{ '--avatar-accent': character.accent } as CSSProperties}
       >
         <button aria-label="返回消息" className="mobile-chat-back" onClick={onBackToList} type="button">
@@ -482,7 +489,11 @@ export function ChatPhone({
                 {moreTools.map((tool) => {
                   const Icon = tool.icon
                   return (
-                    <button key={tool.label} type="button">
+                    <button
+                      key={tool.label}
+                      onClick={() => onShellAction?.(`${tool.label}入口已保留，后续接入真实功能`)}
+                      type="button"
+                    >
                       <Icon size={24} />
                       <span>{tool.label}</span>
                     </button>

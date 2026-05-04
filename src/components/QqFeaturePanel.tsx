@@ -31,6 +31,7 @@ interface QqFeaturePanelProps {
   characters: CharacterCard[]
   activeCharacterId: string
   onOpenChat: (characterId: string) => void
+  onShellAction?: (message: string) => void
 }
 
 const mobileTitle: Record<AppView, string> = {

@@ -43,6 +43,7 @@ interface CharacterRailProps {
   activeView: AppView
   onViewChange: (view: AppView) => void
   onSelect: (characterId: string) => void
+  onShellAction?: (message: string) => void
 }
 
 type RailItem = { id: AppView; label: string; description: string; icon: LucideIcon; badge?: string }
@@ -125,6 +126,7 @@ export function CharacterRail({
   characters,
   activeCharacterId,
   activeView,
+  onShellAction,
   onViewChange,
   onSelect,
 }: CharacterRailProps) {
@@ -188,7 +190,13 @@ export function CharacterRail({
           {dockItems.map((item) => {
             const Icon = item.icon
             return (
-              <button aria-label={item.label} key={item.label} title={item.label} type="button">
+              <button
+                aria-label={item.label}
+                key={item.label}
+                onClick={() => onShellAction?.(`${item.label}入口已保留，后续接入真实功能`)}
+                title={item.label}
+                type="button"
+              >
                 <Icon size={22} />
               </button>
             )
@@ -225,7 +233,13 @@ export function CharacterRail({
                 <button
                   className="desktop-rail-menu-row"
                   key={item.label}
-                  onClick={() => item.view && onViewChange(item.view)}
+                  onClick={() => {
+                    if (item.view) {
+                      onViewChange(item.view)
+                      return
+                    }
+                    onShellAction?.(`${item.label}入口已保留，后续接入真实功能`)
+                  }}
                   type="button"
                 >
                   <Icon size={18} />

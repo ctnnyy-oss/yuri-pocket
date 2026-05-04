@@ -209,6 +209,37 @@
   animation: workspace-fade-in var(--duration-slow) var(--ease-out) both;
 }
 
+.shell-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(28px + env(safe-area-inset-bottom));
+  z-index: 100;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 10px 16px;
+  border: 1px solid rgba(86, 50, 68, 0.08);
+  border-radius: 999px;
+  background: rgba(35, 24, 31, 0.86);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+  box-shadow: 0 14px 36px rgba(74, 46, 58, 0.16);
+  transform: translateX(-50%);
+  animation: shell-toast-in 180ms ease-out both;
+  pointer-events: none;
+}
+
+@keyframes shell-toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
 @keyframes workspace-fade-in {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -216,7 +247,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .detail-workspace,
-  .chat-workspace {
+  .chat-workspace,
+  .shell-toast {
     animation: none;
   }
 }

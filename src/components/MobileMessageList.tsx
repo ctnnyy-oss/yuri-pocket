@@ -6,6 +6,7 @@ interface MobileMessageListProps {
   characters: CharacterCard[]
   activeCharacterId: string
   onOpenChat: (characterId: string) => void
+  onShellAction?: (message: string) => void
 }
 
 const threadTimes = ['下午5:42', '星期六', '星期三', '04/11', '04/03', '03/26', '03/22']
@@ -29,13 +30,21 @@ export function MobileMessageList({
   characters,
   activeCharacterId,
   onOpenChat,
+  onShellAction,
 }: MobileMessageListProps) {
   const activeCharacter = characters.find((character) => character.id === activeCharacterId) ?? characters[0]
 
   return (
     <section className="mobile-message-list" aria-label="手机消息列表">
       <MobileStatusBar />
-      <header className="mobile-message-header">
+      <header
+        className="mobile-message-header"
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest('.mobile-message-plus')) {
+            onShellAction?.('新建聊天入口已保留，后续接入加好友和建群')
+          }
+        }}
+      >
         <button className="mobile-message-profile" type="button">
           <span
             className="avatar mobile-self-avatar"
@@ -58,7 +67,14 @@ export function MobileMessageList({
         <input aria-label="搜索" placeholder="搜索" />
       </label>
 
-      <div className="mobile-message-thread-list">
+      <div
+        className="mobile-message-thread-list"
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest('.device-thread')) {
+            onShellAction?.('我的电脑入口已保留，后续接入文件传输')
+          }
+        }}
+      >
         <button className="mobile-device-row" type="button">
           <MonitorSmartphone size={34} />
           <span>已登录 Windows、Pad</span>
