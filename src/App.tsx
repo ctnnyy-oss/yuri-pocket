@@ -16,6 +16,7 @@ import { useEffect, useState } from 'react'
 import { useYuriNestApp } from './app/useYuriNestApp'
 import { CharacterRail } from './components/CharacterRail'
 import { ChatPhone } from './components/ChatPhone'
+import { MemoryPanel } from './components/MemoryPanel'
 import { MobileMessageList } from './components/MobileMessageList'
 import { MobileNav } from './components/MobileNav'
 import { QqFeaturePanel } from './components/QqFeaturePanel'
@@ -27,12 +28,54 @@ function App() {
     activeView,
     appStyle,
     character,
+    cloudBackups,
+    cloudBusy,
+    cloudMeta,
+    cloudStatus,
+    cloudSyncConfigured,
     conversation,
     draft,
+    handleAddMemory,
+    handleConnectCloud,
+    handleCreateCharacter,
+    handleCreateCloudBackup,
+    handleCreateLocalBackup,
+    handleDeleteLocalBackup,
+    handleDeleteModelProfile,
+    handleDeleteTrashedMemory,
+    handleDeleteTrashedWorldNode,
+    handleDownloadCloudBackup,
+    handleEmptyTrash,
+    handleExport,
+    handleFetchModelCatalog,
+    handleImport,
     handleMemoryFeedbackFromChat,
+    handleOrganizeMemories,
+    handlePullCloud,
+    handlePushCloud,
+    handleRefreshCloud,
+    handleRefreshCloudBackups,
+    handleReset,
+    handleRestoreLocalBackup,
+    handleRestoreMemory,
+    handleRestoreMemoryRevision,
+    handleRestoreWorldNode,
+    handleSaveModelProfile,
     handleSelectCharacter,
     handleSend,
+    handleTestModelProfile,
+    handleTrashMemory,
+    handleTrashWorldNode,
+    handleUpdateMemory,
+    handleUpdateSettings,
+    handleUpdateWorldNode,
     isSending,
+    localBackups,
+    memoryConflicts,
+    memoryEvents,
+    modelProfileBusy,
+    modelProfileStatus,
+    modelProfiles,
     navigateView,
     notice,
     setDraft,
@@ -52,6 +95,22 @@ function App() {
     setMobileMessageListOpen(false)
   }
 
+  function handleOpenGroupChat(group: { name: string; text: string }) {
+    const existingGroup = state.characters.find((item) => item.name === group.name && item.relationship === '群聊')
+    const groupId =
+      existingGroup?.id ??
+      handleCreateCharacter({
+        name: group.name,
+        relation: '群聊',
+        mood: group.text,
+        persona: `这是一个多人聊天群：${group.name}。成员可以从角色列表里继续添加，当前先作为本地群聊会话使用。`,
+      })
+    handleSelectCharacter(groupId)
+    navigateView('chat')
+    setMobileMessageListOpen(false)
+    showShellTip(`已拉起群聊：${group.name}`)
+  }
+
   function showShellTip(message: string) {
     setShellTip(message)
   }
@@ -65,6 +124,15 @@ function App() {
 
   const showMobileBottomNav = activeView !== 'chat' || mobileMessageListOpen
   const shellClassName = `app-shell ${activeView === 'chat' ? 'chat-mode' : 'feature-mode'}`
+  const managementView = (
+    activeView === 'model' ||
+    activeView === 'memory' ||
+    activeView === 'world' ||
+    activeView === 'settings' ||
+    activeView === 'trash'
+      ? activeView
+      : 'settings'
+  ) as Exclude<typeof activeView, 'chat' | 'role' | 'group' | 'moments' | 'tasks'>
 
   return (
     <div className={shellClassName} style={appStyle}>
@@ -112,6 +180,7 @@ function App() {
         activeView={activeView}
         characters={state.characters}
         onSelect={handleSelectCharacter}
+        onOpenGroupChat={handleOpenGroupChat}
         onShellAction={showShellTip}
         onViewChange={handleViewChange}
       />
@@ -122,6 +191,7 @@ function App() {
           characters={state.characters}
           onShellAction={showShellTip}
           onOpenChat={handleOpenMobileChat}
+          onOpenGroupChat={handleOpenGroupChat}
         />
       )}
 
@@ -143,13 +213,67 @@ function App() {
           onShellAction={showShellTip}
           settings={state.settings}
         />
-      ) : (
+      ) : activeView === 'role' ? (
         <QqFeaturePanel
           activeCharacterId={state.activeCharacterId}
           activeView={activeView}
           characters={state.characters}
+          onCreateCharacter={handleCreateCharacter}
           onShellAction={showShellTip}
           onOpenChat={handleOpenMobileChat}
+        />
+      ) : (
+        <MemoryPanel
+          activeCharacterId={state.activeCharacterId}
+          activeConversationId={conversation.id}
+          activeView={managementView}
+          characters={state.characters}
+          cloudBackups={cloudBackups}
+          cloudBusy={cloudBusy}
+          cloudMeta={cloudMeta}
+          cloudStatus={cloudStatus}
+          cloudSyncConfigured={cloudSyncConfigured}
+          localBackups={localBackups}
+          memories={state.memories}
+          memoryConflicts={memoryConflicts}
+          memoryEvents={memoryEvents}
+          memoryUsageLogs={state.memoryUsageLogs}
+          modelProfileBusy={modelProfileBusy}
+          modelProfileStatus={modelProfileStatus}
+          modelProfiles={modelProfiles}
+          onAddMemory={handleAddMemory}
+          onConnectCloud={handleConnectCloud}
+          onCreateCloudBackup={handleCreateCloudBackup}
+          onCreateLocalBackup={handleCreateLocalBackup}
+          onDeleteLocalBackup={handleDeleteLocalBackup}
+          onDeleteModelProfile={handleDeleteModelProfile}
+          onDeleteTrashedMemory={handleDeleteTrashedMemory}
+          onDeleteTrashedWorldNode={handleDeleteTrashedWorldNode}
+          onDownloadCloudBackup={handleDownloadCloudBackup}
+          onEmptyTrash={handleEmptyTrash}
+          onExport={handleExport}
+          onFetchModelCatalog={handleFetchModelCatalog}
+          onImport={handleImport}
+          onOrganizeMemories={handleOrganizeMemories}
+          onPullCloud={handlePullCloud}
+          onPushCloud={handlePushCloud}
+          onRefreshCloud={handleRefreshCloud}
+          onRefreshCloudBackups={handleRefreshCloudBackups}
+          onReset={handleReset}
+          onRestoreLocalBackup={handleRestoreLocalBackup}
+          onRestoreMemory={handleRestoreMemory}
+          onRestoreMemoryRevision={handleRestoreMemoryRevision}
+          onRestoreWorldNode={handleRestoreWorldNode}
+          onSaveModelProfile={handleSaveModelProfile}
+          onTestModelProfile={handleTestModelProfile}
+          onTrashMemory={handleTrashMemory}
+          onTrashWorldNode={handleTrashWorldNode}
+          onUpdateMemory={handleUpdateMemory}
+          onUpdateSettings={handleUpdateSettings}
+          onUpdateWorldNode={handleUpdateWorldNode}
+          settings={state.settings}
+          trash={state.trash}
+          worldNodes={state.worldNodes}
         />
       )}
 

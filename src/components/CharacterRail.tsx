@@ -1,41 +1,21 @@
 import type { CSSProperties } from 'react'
 import { useMemo, useState } from 'react'
 import {
-  ArchiveRestore,
   BellOff,
-  Bookmark,
-  Bot,
   Brain,
-  BriefcaseBusiness,
-  ChevronDown,
   ChevronRight,
-  CircleUserRound,
-  FileText,
-  Folder,
-  Gamepad2,
-  Grid3X3,
-  Hash,
-  HelpCircle,
-  LogOut,
-  Mail,
-  Menu,
   MessageCircle,
-  MonitorSmartphone,
-  Palette,
   Plus,
   Search,
   Settings,
-  ShieldCheck,
-  Shirt,
   SlidersHorizontal,
-  Star,
   UserRound,
   type LucideIcon,
 } from 'lucide-react'
 import { brand } from '../config/brand'
 import type { CharacterCard } from '../domain/types'
 
-export type AppView = 'chat' | 'group' | 'moments' | 'tasks' | 'memory' | 'world' | 'model' | 'settings' | 'trash'
+export type AppView = 'chat' | 'role' | 'group' | 'moments' | 'tasks' | 'memory' | 'world' | 'model' | 'settings' | 'trash'
 
 interface CharacterRailProps {
   characters: CharacterCard[]
@@ -43,36 +23,18 @@ interface CharacterRailProps {
   activeView: AppView
   onViewChange: (view: AppView) => void
   onSelect: (characterId: string) => void
+  onOpenGroupChat?: (group: { name: string; text: string }) => void
   onShellAction?: (message: string) => void
 }
 
 type RailItem = { id: AppView; label: string; description: string; icon: LucideIcon; badge?: string }
 
 const primaryNavigationItems: RailItem[] = [
-  { id: 'chat', label: '消息', description: '最近会话', icon: MessageCircle, badge: '1' },
-  { id: 'memory', label: '联系人', description: '好友与群聊', icon: UserRound },
-  { id: 'moments', label: '收藏', description: '收藏与空间', icon: Star },
-  { id: 'world', label: '频道', description: '频道广场', icon: Hash, badge: '•' },
-  { id: 'group', label: '群聊', description: '群聊房间', icon: Bot },
-  { id: 'tasks', label: '游戏', description: '娱乐入口占位', icon: Gamepad2 },
-  { id: 'model', label: '应用', description: '模型与插件入口', icon: Grid3X3 },
-]
-
-const dockItems = [
-  { label: '邮箱', icon: Mail },
-  { label: '设备', icon: MonitorSmartphone },
-]
-
-const menuItems = [
-  { label: '收藏', icon: Bookmark },
-  { label: '文件', icon: Folder },
-  { label: '调色盘', icon: Shirt },
-  { label: '聊天记录管理', icon: FileText },
-  { label: '检查更新', icon: ShieldCheck },
-  { label: '帮助', icon: HelpCircle },
-  { label: '锁定', icon: BriefcaseBusiness },
-  { label: '设置', icon: Settings, view: 'settings' as AppView },
-  { label: '退出账号', icon: LogOut },
+  { id: 'chat', label: '聊天', description: '最近聊天', icon: MessageCircle, badge: '1' },
+  { id: 'role', label: '角色', description: '角色管理', icon: UserRound },
+  { id: 'model', label: '模型', description: '模型配置', icon: SlidersHorizontal },
+  { id: 'memory', label: '记忆', description: '记忆系统', icon: Brain },
+  { id: 'settings', label: '设置', description: '应用设置', icon: Settings },
 ]
 
 const messagePreview = [
@@ -85,36 +47,15 @@ const messagePreview = [
   '先去了学校再说吧',
 ]
 
-const extraThreads = [
-  { name: '唐起', avatar: '唐', text: '先去了学校再说吧', time: '02/25', muted: false },
-  { name: '仙界林慕溪', avatar: '溪', text: '链式代理.yaml', time: '02/23', muted: false },
-  { name: '发电233三班的熊...', avatar: '熊', text: '[图片]', time: '01/05', muted: true },
-  { name: '曼城是冠军', avatar: '曼', text: '[动画表情]', time: '2025/12/30', muted: false },
-  { name: '王肆杰 发电23...', avatar: '王', text: 'Jend3ukie：忘了通知大家...', time: '2025/09/03', muted: true },
-  { name: '清新校园，无...', avatar: '清', text: '潘江洋20240151：@全体...', time: '2025/06/24', muted: true },
-]
-
-const contactGroups = [
-  { title: '我的设备', count: '2', open: false },
-  { title: '机器人', count: '3', open: false },
-  { title: '特别关心', count: '0/0', open: false },
-  { title: '我的好友', count: '21/40', open: true },
-]
-
 const channelRows = [
-  { title: 'ai 交流群1', text: '用户7916今日已打卡 我也要打卡星！', time: '下午2:28', avatar: 'AI', badge: '10' },
-  { title: '公众号', text: 'QQ会员：抽奖100%中！限量公仔等你赢', time: '上午11:45', avatar: '公', badge: '' },
-  { title: 'AstrBot 4群', text: '[有新总结] 陌沉：@折叠 可以正常识别', time: '下午4:07', avatar: 'A', badge: '99+' },
-  { title: 'Clove 的小窝', text: '[有新总结] 花殇踢了踢 Clove', time: '下午4:02', avatar: 'C', badge: '99+' },
-  { title: 'live2d 资源群', text: 'Nick 牧牧男友：心动了', time: '下午3:52', avatar: 'L', badge: '49' },
+  { id: 'group:cp-tea', title: '三对CP茶会', text: '六位角色都在这里，当前可拉起本地群聊', time: '今天', avatar: '群', badge: '6' },
+  { id: 'group:yuri-room', title: '百合创作小屋', text: '只保留项目需要的群聊入口', time: '星期六', avatar: '百', badge: '' },
 ]
 
 const appRows = [
-  { title: '模型设置', text: '语言、多模态、图片、语音模型', icon: SlidersHorizontal, view: 'model' as AppView },
-  { title: '记忆系统', text: '长期记忆、关系记忆、世界观资料', icon: Brain, view: 'memory' as AppView },
-  { title: '人设导入', text: '导入角色设定与自我总结', icon: CircleUserRound, view: 'model' as AppView },
-  { title: '外观设置', text: '主题、字体、聊天背景', icon: Palette, view: 'settings' as AppView },
-  { title: '回收站', text: '误删找回与离线记录', icon: ArchiveRestore, view: 'trash' as AppView },
+  { title: '模型管理', text: 'URL、API Key、官方或第三方协议', icon: SlidersHorizontal, view: 'model' as AppView },
+  { title: '记忆管理', text: '长期记忆、关系记忆、世界观资料', icon: Brain, view: 'memory' as AppView },
+  { title: '设置中心', text: '不属于聊天、角色、模型、记忆的入口都放这里', icon: Settings, view: 'settings' as AppView },
 ]
 
 function characterThreadTime(index: number, active: boolean) {
@@ -122,21 +63,29 @@ function characterThreadTime(index: number, active: boolean) {
   return ['星期三', '03/19', '03/18', '03/18', '03/16', '02/25', '02/23'][index % 7]
 }
 
+function isGroupCharacter(character: CharacterCard) {
+  return character.relationship === '群聊'
+}
+
 export function CharacterRail({
   characters,
   activeCharacterId,
   activeView,
   onShellAction,
+  onOpenGroupChat,
   onViewChange,
   onSelect,
 }: CharacterRailProps) {
   const [query, setQuery] = useState('')
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [pinnedThreadIds, setPinnedThreadIds] = useState<Set<string>>(() => new Set())
+  const [pinTimer, setPinTimer] = useState<number | null>(null)
   const normalizedQuery = query.trim().toLowerCase()
   const activeCharacter = characters.find((character) => character.id === activeCharacterId) ?? characters[0]
+  const roleCharacters = useMemo(() => characters.filter((character) => !isGroupCharacter(character)), [characters])
+  const groupCharacters = useMemo(() => characters.filter(isGroupCharacter), [characters])
   const filteredCharacters = useMemo(() => {
-    if (!normalizedQuery) return characters
-    return characters.filter((character) => {
+    if (!normalizedQuery) return roleCharacters
+    return roleCharacters.filter((character) => {
       const haystack = [
         character.name,
         character.title,
@@ -148,7 +97,96 @@ export function CharacterRail({
         .toLowerCase()
       return haystack.includes(normalizedQuery)
     })
-  }, [characters, normalizedQuery])
+  }, [normalizedQuery, roleCharacters])
+  const filteredChannelRows = useMemo(() => {
+    const defaultTitles = new Set(channelRows.map((row) => row.title))
+    const defaultRows = channelRows.map((row) => {
+      const existing = groupCharacters.find((character) => character.name === row.title)
+      return {
+        ...row,
+        id: existing ? `group:${existing.id}` : row.id,
+        avatar: existing?.avatar ?? row.avatar,
+        text: existing?.mood ?? row.text,
+        characterId: existing?.id ?? '',
+      }
+    })
+    const customRows = groupCharacters
+      .filter((character) => !defaultTitles.has(character.name))
+      .map((character, index) => ({
+        id: `group:${character.id}`,
+        title: character.name,
+        text: character.mood || character.title,
+        time: index === 0 ? '刚刚' : '今天',
+        avatar: character.avatar,
+        badge: '',
+        characterId: character.id,
+      }))
+    const rows = [...defaultRows, ...customRows]
+    if (!normalizedQuery) return rows
+    return rows.filter((row) => `${row.title} ${row.text}`.toLowerCase().includes(normalizedQuery))
+  }, [groupCharacters, normalizedQuery])
+  const chatThreads = useMemo(() => {
+    const characterThreads = filteredCharacters.map((character, index) => ({
+      id: `character:${character.id}`,
+      type: 'character' as const,
+      rank: index * 2 + 1,
+      name: character.name,
+      avatar: character.avatar,
+      accent: character.accent,
+      preview: messagePreview[index % messagePreview.length],
+      time: characterThreadTime(index, character.id === activeCharacterId),
+      muted: index === 5,
+      characterId: character.id,
+    }))
+    const groupThreads = filteredChannelRows.map((row, index) => ({
+      id: row.id,
+      type: 'group' as const,
+      rank: index * 2,
+      name: row.title,
+      avatar: row.avatar,
+      accent: '#f2c5de',
+      preview: row.text,
+      time: row.time,
+      muted: index > 0,
+      badge: row.badge,
+      characterId: row.characterId,
+    }))
+
+    return [...characterThreads, ...groupThreads].sort((left, right) => {
+      const leftPinned = pinnedThreadIds.has(left.id)
+      const rightPinned = pinnedThreadIds.has(right.id)
+      if (leftPinned !== rightPinned) return leftPinned ? -1 : 1
+      return left.rank - right.rank
+    })
+  }, [activeCharacterId, filteredCharacters, filteredChannelRows, pinnedThreadIds])
+
+  function togglePinnedThread(threadId: string) {
+    setPinnedThreadIds((current) => {
+      const next = new Set(current)
+      if (next.has(threadId)) {
+        next.delete(threadId)
+      } else {
+        next.add(threadId)
+      }
+      return next
+    })
+  }
+
+  function startPinGesture(threadId: string) {
+    if (typeof window === 'undefined') return
+    const timer = window.setTimeout(() => {
+      togglePinnedThread(threadId)
+      onShellAction?.('已切换置顶状态')
+      setPinTimer(null)
+    }, 560)
+    setPinTimer(timer)
+  }
+
+  function cancelPinGesture() {
+    if (pinTimer === null || typeof window === 'undefined') return
+    window.clearTimeout(pinTimer)
+    setPinTimer(null)
+  }
 
   return (
     <aside className="left-panel">
@@ -166,7 +204,7 @@ export function CharacterRail({
         <nav className="primary-nav" aria-label="主要功能">
           {primaryNavigationItems.map((item) => {
             const Icon = item.icon
-            const active = activeView === item.id || (activeView === 'settings' && item.id === 'model')
+            const active = activeView === item.id
             return (
               <button
                 aria-label={item.label}
@@ -185,72 +223,6 @@ export function CharacterRail({
         </nav>
 
         <div className="qq-rail-spacer" />
-
-        <div className="qq-dock-icons" aria-label="扩展入口">
-          {dockItems.map((item) => {
-            const Icon = item.icon
-            return (
-              <button
-                aria-label={item.label}
-                key={item.label}
-                onClick={() => onShellAction?.(`${item.label}入口已保留，后续接入真实功能`)}
-                title={item.label}
-                type="button"
-              >
-                <Icon size={22} />
-              </button>
-            )
-          })}
-          <button
-            aria-expanded={menuOpen}
-            aria-label="菜单"
-            className={menuOpen ? 'active' : ''}
-            onClick={() => setMenuOpen((open) => !open)}
-            title="菜单"
-            type="button"
-          >
-            <Menu size={24} />
-            <i />
-          </button>
-        </div>
-
-        {menuOpen && (
-          <div className="desktop-rail-menu" role="menu">
-            <div className="desktop-rail-menu-shortcuts">
-              {menuItems.slice(0, 3).map((item) => {
-                const Icon = item.icon
-                return (
-                  <button key={item.label} type="button">
-                    <Icon size={21} />
-                    <span>{item.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-            {menuItems.slice(3).map((item) => {
-              const Icon = item.icon
-              return (
-                <button
-                  className="desktop-rail-menu-row"
-                  key={item.label}
-                  onClick={() => {
-                    if (item.view) {
-                      onViewChange(item.view)
-                      return
-                    }
-                    onShellAction?.(`${item.label}入口已保留，后续接入真实功能`)
-                  }}
-                  type="button"
-                >
-                  <Icon size={18} />
-                  <span>{item.label}</span>
-                  {item.label === '设置' && <b>!</b>}
-                  {item.label === '帮助' && <ChevronRight size={17} />}
-                </button>
-              )
-            })}
-          </div>
-        )}
       </div>
 
       <section className="conversation-pane" aria-label="QQ 侧边内容">
@@ -267,8 +239,18 @@ export function CharacterRail({
           <button
             aria-label="新建"
             className="conversation-add-button"
-            onClick={() => onViewChange(activeView === 'chat' ? 'memory' : 'chat')}
-            title="新建"
+            onClick={() => {
+              if (activeView === 'role') {
+                onShellAction?.('这里后续会弹出：添加角色 / 导入人设')
+                return
+              }
+              if (activeView === 'chat') {
+                onOpenGroupChat?.({ name: '新群聊', text: '本地创建的多人聊天，可以先把角色拉进来试聊' })
+                return
+              }
+              onShellAction?.('当前入口已放入设置中心规划')
+            }}
+            title={activeView === 'role' ? '添加角色' : '新建聊天'}
             type="button"
           >
             <Plus size={20} />
@@ -277,104 +259,85 @@ export function CharacterRail({
 
         {activeView === 'chat' && (
           <div className="character-list conversation-list">
-            {filteredCharacters.map((character, index) => {
-              const active = character.id === activeCharacterId
+            {chatThreads.map((thread) => {
+              const active = thread.characterId === activeCharacterId
+              const pinned = pinnedThreadIds.has(thread.id)
               return (
                 <button
-                  className={`character-button ${active ? 'active' : ''}`}
+                  className={`character-button ${active ? 'active' : ''} ${thread.type === 'group' ? 'ghost' : ''}`}
+                  key={thread.id}
+                  onClick={() => {
+                    if (thread.type === 'character') {
+                      onSelect(thread.characterId)
+                      onViewChange('chat')
+                      return
+                    }
+                    if (thread.characterId) {
+                      onSelect(thread.characterId)
+                      onViewChange('chat')
+                      return
+                    }
+                    onOpenGroupChat?.({ name: thread.name, text: thread.preview })
+                  }}
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    togglePinnedThread(thread.id)
+                  }}
+                  onPointerDown={() => startPinGesture(thread.id)}
+                  onPointerLeave={cancelPinGesture}
+                  onPointerUp={cancelPinGesture}
+                  title="长按或右键切换置顶"
+                  type="button"
+                >
+                  <span className="avatar" style={{ '--avatar-accent': thread.accent } as CSSProperties}>
+                    {thread.avatar}
+                    {'badge' in thread && thread.badge && <b>{thread.badge}</b>}
+                  </span>
+                  <span className="conversation-copy">
+                    <strong>{thread.name}</strong>
+                    <small>{thread.preview}</small>
+                  </span>
+                  <span className="conversation-meta">
+                    <time>{pinned ? '置顶' : thread.time}</time>
+                    {thread.muted && <BellOff size={17} />}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
+
+        {activeView === 'role' && (
+          <div className="qq-contact-pane qq-contact-pane-simple">
+            <div className="qq-role-actions">
+              <button onClick={() => onShellAction?.('添加角色入口已占位，后续可创建姐姐、恋人或自定义角色')} type="button">添加角色</button>
+              <button onClick={() => onShellAction?.('导入人设入口已占位，后续可粘贴设定或导入文件')} type="button">导入人设</button>
+            </div>
+            <div className="qq-contact-friends">
+              {roleCharacters.map((character) => (
+                <button
+                  className={character.id === activeCharacterId ? 'active' : ''}
                   key={character.id}
                   onClick={() => {
                     onSelect(character.id)
-                    onViewChange('chat')
+                    onShellAction?.('角色卡片已选中，后续可在这里编辑人设、头像、关系和默认模型')
                   }}
                   type="button"
                 >
                   <span className="avatar" style={{ '--avatar-accent': character.accent } as CSSProperties}>
                     {character.avatar}
                   </span>
-                  <span className="conversation-copy">
-                    <strong>{index === 0 ? '招生助理-陈' : character.name}</strong>
-                    <small>{messagePreview[index % messagePreview.length]}</small>
-                  </span>
-                  <span className="conversation-meta">
-                    <time>{characterThreadTime(index, active)}</time>
-                    {index === 5 && <BellOff size={17} />}
+                  <span>
+                    <strong>{character.name}</strong>
+                    <small>{character.mood}</small>
                   </span>
                 </button>
-              )
-            })}
-            {extraThreads.map((thread) => (
-              <button className="character-button ghost" key={thread.name} type="button">
-                <span className="avatar muted-avatar">{thread.avatar}</span>
-                <span className="conversation-copy">
-                  <strong>{thread.name}</strong>
-                  <small>{thread.text}</small>
-                </span>
-                <span className="conversation-meta">
-                  <time>{thread.time}</time>
-                  {thread.muted && <BellOff size={17} />}
-                </span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {activeView === 'memory' && (
-          <div className="qq-contact-pane">
-            <button className="qq-contact-manager" type="button">
-              <UserRound size={18} />
-              好友管理器
-            </button>
-            <button className="qq-contact-notice" type="button">
-              好友通知
-              <ChevronRight size={18} />
-            </button>
-            <button className="qq-contact-notice" type="button">
-              群通知
-              <ChevronRight size={18} />
-            </button>
-            <div className="qq-contact-tabs">
-              <button className="active" type="button">好友</button>
-              <button type="button">群聊</button>
-            </div>
-            <div className="qq-contact-groups">
-              {contactGroups.map((group) => (
-                <section key={group.title}>
-                  <button className="qq-contact-group-title" type="button">
-                    {group.open ? <ChevronDown size={17} /> : <ChevronRight size={17} />}
-                    <span>{group.title}</span>
-                    <small>{group.count}</small>
-                  </button>
-                  {group.open && (
-                    <div className="qq-contact-friends">
-                      {characters.map((character) => (
-                        <button
-                          className={character.id === activeCharacterId ? 'active' : ''}
-                          key={character.id}
-                          onClick={() => {
-                            onSelect(character.id)
-                            onViewChange('chat')
-                          }}
-                          type="button"
-                        >
-                          <span className="avatar" style={{ '--avatar-accent': character.accent } as CSSProperties}>
-                            {character.avatar}
-                          </span>
-                          <span>
-                            <strong>{character.name}</strong>
-                            <small>{character.mood}</small>
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </section>
               ))}
             </div>
           </div>
         )}
 
-        {(activeView === 'group' || activeView === 'world') && (
+        {activeView === 'group' && (
           <div className="character-list conversation-list">
             {channelRows.map((row, index) => (
               <button className={`character-button ${index === 0 ? 'active' : ''}`} key={row.title} type="button">
@@ -395,7 +358,7 @@ export function CharacterRail({
           </div>
         )}
 
-        {activeView !== 'chat' && activeView !== 'memory' && activeView !== 'group' && activeView !== 'world' && (
+        {activeView !== 'chat' && activeView !== 'role' && activeView !== 'group' && (
           <div className="qq-app-pane">
             {appRows.map((row) => {
               const Icon = row.icon
@@ -422,9 +385,9 @@ export function CharacterRail({
 
         <footer className="conversation-pane-foot">
           <span className="avatar" style={{ '--avatar-accent': activeCharacter?.accent ?? '#d85b8a' } as CSSProperties}>
-            {activeCharacter?.avatar ?? '姐'}
+            {activeCharacter?.avatar ?? '宁'}
           </span>
-          <span>{activeCharacter?.name ?? '姐姐大人'}</span>
+          <span>{activeCharacter?.name ?? '宁安'}</span>
         </footer>
       </section>
     </aside>

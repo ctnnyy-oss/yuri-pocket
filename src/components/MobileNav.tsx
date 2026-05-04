@@ -1,7 +1,8 @@
 import {
-  Images,
+  Brain,
   MessageCircle,
-  MessagesSquare,
+  Settings,
+  SlidersHorizontal,
   UserRound,
   type LucideIcon,
 } from 'lucide-react'
@@ -13,10 +14,11 @@ interface MobileNavProps {
 }
 
 const fixedNavItems: Array<{ id: AppView; label: string; icon: LucideIcon }> = [
-  { id: 'chat', label: '消息', icon: MessageCircle },
-  { id: 'group', label: '频道', icon: MessagesSquare },
-  { id: 'memory', label: '联系人', icon: UserRound },
-  { id: 'moments', label: '动态', icon: Images },
+  { id: 'chat', label: '聊天', icon: MessageCircle },
+  { id: 'role', label: '角色', icon: UserRound },
+  { id: 'model', label: '模型', icon: SlidersHorizontal },
+  { id: 'memory', label: '记忆', icon: Brain },
+  { id: 'settings', label: '设置', icon: Settings },
 ]
 
 export function MobileNav({ activeView, onViewChange }: MobileNavProps) {

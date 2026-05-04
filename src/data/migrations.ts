@@ -1,19 +1,27 @@
-import type { AppState, LongTermMemory } from '../domain/types'
+import type { AppState, CharacterCard, LongTermMemory } from '../domain/types'
 import { normalizeMemories } from '../services/memoryEngine'
 import { normalizeTrashRetentionSettings } from '../services/trashRetention'
 import { agentRooms, createSeedState } from './seed'
 
-const currentStateVersion = 18
+const currentStateVersion = 20
 
 export function migrateAppState(state: AppState): AppState {
   const defaults = createSeedState()
   const sourceVersion = Number(state.version ?? 0)
   const sourceSettings = state.settings ?? defaults.settings
   const baseMemories = normalizeMemories(state.memories ?? defaults.memories)
+  const shouldResetCharacterShell = sourceVersion < 19
+  const characters = shouldResetCharacterShell
+    ? defaults.characters
+    : sanitizeCharacterShell(state.characters ?? defaults.characters, defaults.characters)
+  const characterIds = new Set(characters.map((character) => character.id))
 
   const migrated = {
     ...state,
     version: currentStateVersion,
+    activeCharacterId: characterIds.has(state.activeCharacterId) ? state.activeCharacterId : defaults.activeCharacterId,
+    characters,
+    conversations: mergeCoreConversations(state.conversations ?? defaults.conversations, defaults.conversations, characterIds),
     memories: sourceVersion < 10 ? mergeMissingSeedMemories(baseMemories, defaults.memories) : baseMemories,
     trash: {
       memories: normalizeMemories(state.trash?.memories ?? defaults.trash.memories).map((memory, index) => ({
@@ -48,10 +56,31 @@ export function migrateAppState(state: AppState): AppState {
   return migrated
 }
 
+function sanitizeCharacterShell(characters: CharacterCard[], defaultCharacters: CharacterCard[]): CharacterCard[] {
+  const defaultIds = new Set(defaultCharacters.map((character) => character.id))
+  const customCharacters = characters.filter((character) => {
+    if (defaultIds.has(character.id)) return false
+    return character.id.startsWith('character_') || (Array.isArray(character.tags) && character.tags.includes('自定义角色'))
+  })
+
+  return [...defaultCharacters, ...customCharacters]
+}
+
 function mergeSeedAgentRooms(rooms: AppState['agentRooms']): AppState['agentRooms'] {
   const existingIds = new Set(rooms.map((room) => room.id))
   const missingRooms = agentRooms.filter((room) => !existingIds.has(room.id))
   return [...rooms, ...missingRooms]
+}
+
+function mergeCoreConversations(
+  conversations: AppState['conversations'],
+  defaultConversations: AppState['conversations'],
+  characterIds: Set<string>,
+): AppState['conversations'] {
+  const kept = conversations.filter((conversation) => characterIds.has(conversation.characterId))
+  const existingCharacterIds = new Set(kept.map((conversation) => conversation.characterId))
+  const missingDefaults = defaultConversations.filter((conversation) => !existingCharacterIds.has(conversation.characterId))
+  return [...kept, ...missingDefaults]
 }
 
 function mergeMissingSeedMemories(memories: LongTermMemory[], seedMemories: LongTermMemory[]): LongTermMemory[] {

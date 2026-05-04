@@ -366,6 +366,36 @@
   overflow: hidden;
 }
 
+.qq-contact-pane-simple {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.qq-role-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 18px 12px;
+}
+
+.qq-role-actions button {
+  min-height: 42px;
+  border: 1px solid rgba(86, 50, 68, 0.16);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.42);
+  color: #2b1b24;
+  font-size: 14px;
+}
+
+.qq-role-actions button:hover {
+  background: #fff;
+  color: #ee78b0;
+}
+
+.qq-contact-pane-simple .qq-contact-friends {
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .qq-contact-manager {
   min-height: 48px;
   margin: 0 24px 10px;

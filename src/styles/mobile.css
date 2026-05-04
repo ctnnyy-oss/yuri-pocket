@@ -1390,7 +1390,7 @@
     top: 0;
     z-index: 2;
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     min-height: 70px;
     background: #fff;
     border-top: 10px solid #f0f0f2;
@@ -1473,8 +1473,64 @@
     gap: 24px;
   }
 
+  .mobile-simple-list button > span {
+    display: grid;
+    gap: 4px;
+    text-align: left;
+  }
+
+  .mobile-simple-list button strong {
+    font-size: 21px;
+    font-weight: 500;
+  }
+
+  .mobile-simple-list button small {
+    color: #8f939b;
+    font-size: 15px;
+  }
+
   .mobile-simple-list button svg:last-child {
     margin-left: auto;
+  }
+
+  .role-mobile-form {
+    display: grid;
+    gap: 10px;
+    margin: 10px 16px 0;
+    padding: 12px;
+    border-radius: 14px;
+    background: #fff;
+  }
+
+  .role-mobile-form label {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    color: #8f939b;
+  }
+
+  .role-mobile-form input,
+  .role-mobile-form textarea {
+    width: 100%;
+    border: 0;
+    background: #f7f7fa;
+    color: #1d1d1f;
+    font: inherit;
+  }
+
+  .role-mobile-form input {
+    min-height: 38px;
+    border-radius: 10px;
+    padding: 0 10px;
+  }
+
+  .role-mobile-form textarea {
+    min-height: 88px;
+    border-radius: 12px;
+    padding: 10px;
+    resize: vertical;
   }
 
   .mobile-channel-list {

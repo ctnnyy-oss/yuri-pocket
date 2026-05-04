@@ -4,13 +4,15 @@ import type { AppView } from '../components/CharacterRail'
 import { loadAppState, saveAppState } from '../data/database'
 import { migrateAppState } from '../data/migrations'
 import { createSeedState } from '../data/seed'
-import type { AppSettings, AppState } from '../domain/types'
+import type { AppSettings, AppState, CharacterCard } from '../domain/types'
 import { isCloudSyncConfigured } from '../services/cloudSync'
 import {
   buildPromptBundle,
+  createId,
   detectMemoryConflicts,
   getActiveCharacter,
   getConversation,
+  nowIso,
   upsertConversation,
 } from '../services/memoryEngine'
 import { applyTrashRetention, normalizeTrashRetentionSettings } from '../services/trashRetention'
@@ -192,6 +194,53 @@ export function useYuriNestApp() {
     })
   }
 
+  function handleCreateCharacter(input: { name: string; relation: string; mood: string; persona: string }): string {
+    const now = nowIso()
+    const name = input.name.trim() || '新角色'
+    const relation = input.relation.trim() || '角色'
+    const mood = input.mood.trim() || '等待补全'
+    const persona = input.persona.trim() || '还没有导入人设。'
+    const characterId = createId('character')
+    const character: CharacterCard = {
+      id: characterId,
+      name,
+      title: relation,
+      subtitle: mood,
+      avatar: name.slice(0, 1),
+      accent: '#ef9ac6',
+      relationship: relation,
+      mood,
+      tags: ['自定义角色', relation, name],
+      systemPrompt: persona,
+      greeting: `${name}已经加入百合小窝。`,
+    }
+    setState((currentState) => ({
+      ...currentState,
+      activeCharacterId: characterId,
+      characters: [character, ...currentState.characters],
+      conversations: [
+        {
+          id: createId('conversation'),
+          characterId,
+          messages: [
+            {
+              id: createId('message'),
+              role: 'assistant',
+              content: character.greeting,
+              createdAt: now,
+            },
+          ],
+          summary: '',
+          createdAt: now,
+          updatedAt: now,
+        },
+        ...currentState.conversations,
+      ],
+    }))
+    setNotice(`已添加角色：${name}`)
+    return characterId
+  }
+
   // ---- 设置 ----
   function handleUpdateSettings(settings: AppSettings) {
     if (settings.dataStorageMode === 'local' && state.settings.dataStorageMode !== 'local') {
@@ -224,6 +273,7 @@ export function useYuriNestApp() {
     handleAddMemory: memory.handleAddMemory,
     handleClearCompletedTasks: tasks.handleClearCompletedTasks,
     handleConnectCloud: cloud.handleConnectCloud,
+    handleCreateCharacter,
     handleCreateCloudBackup: cloud.handleCreateCloudBackup,
     handleCreateLocalBackup: backup.handleCreateLocalBackup,
     handleDeleteLocalBackup: backup.handleDeleteLocalBackup,
@@ -259,6 +309,7 @@ export function useYuriNestApp() {
     isSending: chat.isSending,
     localBackups: backup.localBackups,
     memoryConflicts,
+    memoryEvents: state.memoryEvents,
     modelProfileBusy: cloud.modelProfileBusy,
     modelProfileStatus: cloud.modelProfileStatus,
     modelProfiles: cloud.modelProfiles,

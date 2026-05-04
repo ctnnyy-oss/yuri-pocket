@@ -1,28 +1,5 @@
-import type { CSSProperties } from 'react'
-import {
-  Bell,
-  BellOff,
-  Bookmark,
-  Bot,
-  ChevronLeft,
-  ChevronRight,
-  CircleUserRound,
-  Folder,
-  Grid3X3,
-  Heart,
-  Image,
-  Moon,
-  Plus,
-  Search,
-  Settings,
-  Shield,
-  Shirt,
-  SlidersHorizontal,
-  Sparkles,
-  Star,
-  Sun,
-  UserPlus,
-} from 'lucide-react'
+import { useMemo, useState, type CSSProperties } from 'react'
+import { ChevronRight, FileText, Plus, Search, Sparkles, UserRound } from 'lucide-react'
 import type { CharacterCard } from '../domain/types'
 import type { AppView } from './CharacterRail'
 
@@ -30,45 +7,40 @@ interface QqFeaturePanelProps {
   activeView: AppView
   characters: CharacterCard[]
   activeCharacterId: string
+  onCreateCharacter: (input: { name: string; relation: string; mood: string; persona: string }) => string
   onOpenChat: (characterId: string) => void
   onShellAction?: (message: string) => void
 }
 
-const mobileTitle: Record<AppView, string> = {
-  chat: '消息',
-  group: '频道',
-  moments: '动态',
-  tasks: '应用',
-  memory: '联系人',
-  world: '频道',
-  model: '我的',
-  settings: '设置',
-  trash: '回收站',
+type ManagedRole = {
+  id: string
+  name: string
+  avatar: string
+  accent: string
+  relation: string
+  mood: string
+  persona: string
+  source: '内置' | '自定义'
 }
 
-const possibleFriends = [
-  ['南栀', '♂ 22岁', '7位共同好友', '天蝎座'],
-  ['一代柯_', '♂ 21岁', '在北京', '天蝎座'],
-]
-
-const settingGroups = [
+const roleTemplates = [
   {
-    title: '功能',
-    rows: [
-      ['消息通知', '', Bell],
-      ['模式选择', '普通模式', SlidersHorizontal],
-      ['个性装扮与特权外显', '', Shirt],
-      ['通用', '', Grid3X3],
-    ],
+    name: '温柔姐姐',
+    relation: '姐姐',
+    mood: '温柔、可靠、有主见',
+    persona: '她像年长一点的姐姐，会主动接住情绪，也会认真推进事情。',
   },
   {
-    title: '隐私',
-    rows: [
-      ['隐私设置', '', Shield],
-      ['个人信息收集清单', '', Bookmark],
-      ['第三方个人信息共享清单', '', Sparkles],
-      ['个人信息保护设置', '', Shield],
-    ],
+    name: '专属恋人',
+    relation: '恋人',
+    mood: '亲密、黏人、边界清楚',
+    persona: '她会以恋人身份陪伴，但仍然尊重边界和现实节奏。',
+  },
+  {
+    name: '原创角色',
+    relation: '角色',
+    mood: '等待妹妹补全',
+    persona: '把小说、游戏或百合世界观里的角色设定粘贴进来。',
   },
 ]
 
@@ -81,311 +53,203 @@ function MobileStatusBar() {
   )
 }
 
-export function QqFeaturePanel({
-  activeView,
-  characters,
-  activeCharacterId,
-  onOpenChat,
-}: QqFeaturePanelProps) {
-  const activeCharacter = characters.find((character) => character.id === activeCharacterId) ?? characters[0]
+function toManagedRole(character: CharacterCard): ManagedRole {
+  const isCustomRole = character.id.startsWith('character_') || character.tags.includes('自定义角色')
+  return {
+    id: character.id,
+    name: character.name,
+    avatar: character.avatar,
+    accent: character.accent,
+    relation: character.relationship,
+    mood: character.mood,
+    persona: character.systemPrompt,
+    source: isCustomRole ? '自定义' : '内置',
+  }
+}
+
+export function QqFeaturePanel({ characters, activeCharacterId, onCreateCharacter, onOpenChat, onShellAction }: QqFeaturePanelProps) {
+  const builtInRoles = useMemo(
+    () => characters.filter((character) => character.relationship !== '群聊').map(toManagedRole),
+    [characters],
+  )
+  const [selectedRoleId, setSelectedRoleId] = useState(activeCharacterId)
+  const [roleTab, setRoleTab] = useState<'roles' | 'templates'>('roles')
+  const [roleDraft, setRoleDraft] = useState({
+    name: '',
+    relation: '姐姐',
+    mood: '',
+    persona: '',
+  })
+  const [importText, setImportText] = useState('')
+  const managedRoles = builtInRoles
+  const selectedRole = managedRoles.find((role) => role.id === selectedRoleId) ?? managedRoles[0]
+
+  function fillTemplate(template: (typeof roleTemplates)[number]) {
+    setRoleDraft(template)
+    setRoleTab('roles')
+    onShellAction?.(`已套用「${template.name}」模板`)
+  }
+
+  function addRoleFromDraft() {
+    const persona = roleDraft.persona.trim() || importText.trim()
+    const nameFromImport = importText.trim().split(/\r?\n/).find(Boolean)?.replace(/^#+\s*/, '')
+    const name = roleDraft.name.trim() || nameFromImport || '新角色'
+    const roleId = onCreateCharacter({
+      name,
+      relation: roleDraft.relation.trim() || '角色',
+      mood: roleDraft.mood.trim() || '等待补全',
+      persona: persona || '还没有导入人设。',
+    })
+    setSelectedRoleId(roleId)
+    setRoleDraft({ name: '', relation: '姐姐', mood: '', persona: '' })
+    setImportText('')
+    onShellAction?.('角色已加入管理列表和聊天列表，可以直接打开聊天')
+  }
+
+  function updateDraft(field: keyof typeof roleDraft, value: string) {
+    setRoleDraft((draft) => ({ ...draft, [field]: value }))
+  }
 
   return (
     <main className="workspace qq-feature-workspace">
-      <DesktopFeature activeView={activeView} activeCharacter={activeCharacter} characters={characters} onOpenChat={onOpenChat} />
-      <MobileFeature activeView={activeView} activeCharacter={activeCharacter} characters={characters} onOpenChat={onOpenChat} />
-    </main>
-  )
-}
-
-function DesktopFeature({
-  activeView,
-  activeCharacter,
-  characters,
-  onOpenChat,
-}: {
-  activeView: AppView
-  activeCharacter: CharacterCard
-  characters: CharacterCard[]
-  onOpenChat: (characterId: string) => void
-}) {
-  const isContact = activeView === 'memory'
-  const title = mobileTitle[activeView] ?? '消息'
-
-  if (isContact) {
-    return (
-      <section className="qq-desktop-feature" aria-label="联系人详情">
-        <div className="qq-desktop-empty">
-          <span>AIQ</span>
-        </div>
-      </section>
-    )
-  }
-
-  if (activeView === 'moments') {
-    return (
-      <section className="qq-desktop-feature qq-desktop-dynamic" aria-label="动态">
-        <header>
-          <strong>动态</strong>
+      <section className="qq-desktop-feature role-desktop-feature" aria-label="角色管理">
+        <header className="qq-desktop-feature-head">
+          <strong>角色管理</strong>
           <div>
-            <Sparkles size={22} />
-            <Grid3X3 size={22} />
+            <button onClick={addRoleFromDraft} type="button">
+              <Plus size={18} />
+              添加角色
+            </button>
+            <button onClick={() => onShellAction?.('角色加入聊天名单入口已占位')} type="button">
+              <UserRound size={18} />
+              管理聊天
+            </button>
           </div>
         </header>
-        <div className="qq-desktop-dynamic-feed">
-          {characters.slice(0, 4).map((character, index) => (
-            <article key={character.id}>
-              <span className="avatar" style={{ '--avatar-accent': character.accent } as CSSProperties}>{character.avatar}</span>
+        <div className="role-manager-grid">
+          <aside className="role-list" aria-label="角色列表">
+            {managedRoles.map((role) => (
+              <button
+                className={role.id === selectedRole?.id ? 'active' : ''}
+                key={role.id}
+                onClick={() => setSelectedRoleId(role.id)}
+                type="button"
+              >
+                <span className="avatar" style={{ '--avatar-accent': role.accent } as CSSProperties}>{role.avatar}</span>
+                <span>
+                  <strong>{role.name}</strong>
+                  <small>{role.mood}</small>
+                </span>
+                <em>{role.source}</em>
+              </button>
+            ))}
+          </aside>
+          <section className="role-detail" aria-label="角色详情">
+            <div className="role-detail-head">
+              <span className="avatar" style={{ '--avatar-accent': selectedRole?.accent ?? '#ef9ac6' } as CSSProperties}>
+                {selectedRole?.avatar ?? '角'}
+              </span>
               <div>
-                <strong>{character.name}</strong>
-                <p>{index === 0 ? '分享新鲜事：今天也在百合小窝里等妹妹上线。' : character.subtitle}</p>
-                <small>前天20:01 · {296 + index * 7} 浏览</small>
+                <strong>{selectedRole?.name ?? '未选择角色'}</strong>
+                <small>{selectedRole?.relation ?? '选择左侧角色查看设定'}</small>
               </div>
-              <button type="button">...</button>
-            </article>
-          ))}
-        </div>
-      </section>
-    )
-  }
-
-  return (
-    <section className="qq-desktop-feature" aria-label={title}>
-      <header className="qq-desktop-feature-head">
-        <strong>{title}</strong>
-        <div>
-          <Search size={20} />
-          <Plus size={21} />
-        </div>
-      </header>
-      <div className="qq-desktop-center-card">
-        <span className="avatar qq-contact-avatar" style={{ '--avatar-accent': activeCharacter.accent } as CSSProperties}>
-          {activeCharacter.avatar}
-        </span>
-        <strong>{activeView === 'model' ? '应用与模型' : activeCharacter.name}</strong>
-        <p>{activeView === 'model' ? '模型、记忆、人设导入和离线功能都先作为 QQ 风格入口保留。' : activeCharacter.subtitle}</p>
-        <button onClick={() => onOpenChat(activeCharacter.id)} type="button">进入会话</button>
-      </div>
-    </section>
-  )
-}
-
-function MobileFeature({
-  activeView,
-  activeCharacter,
-  characters,
-  onOpenChat,
-}: {
-  activeView: AppView
-  activeCharacter: CharacterCard
-  characters: CharacterCard[]
-  onOpenChat: (characterId: string) => void
-}) {
-  if (activeView === 'memory') {
-    return (
-      <section className="mobile-feature-page mobile-contact-page" aria-label="联系人">
-        <MobileStatusBar />
-        <header className="mobile-feature-header">
-          <span className="avatar" style={{ '--avatar-accent': activeCharacter.accent } as CSSProperties}>
-            {activeCharacter.avatar}
-          </span>
-          <strong>联系人</strong>
-          <button aria-label="添加好友" type="button">
-            <UserPlus size={31} />
-          </button>
-        </header>
-        <label className="mobile-feature-search">
-          <Search size={28} />
-          <input placeholder="搜索" />
-        </label>
-        <section className="possible-friends">
-          <button className="possible-title" type="button">
-            可能想认识的人
-            <ChevronRight size={24} />
-          </button>
-          {possibleFriends.map((friend) => (
-            <div className="possible-row" key={friend[0]}>
-              <span className="avatar">{friend[0].slice(0, 1)}</span>
-              <div>
-                <strong>{friend[0]}</strong>
-                <p>
-                  <span>{friend[1]}</span>
-                  <span>{friend[2]}</span>
-                  <span>{friend[3]}</span>
-                </p>
-              </div>
-              <button type="button">添加</button>
-              <button aria-label="关闭" type="button">×</button>
             </div>
-          ))}
-        </section>
-        <div className="mobile-contact-notice">
-          <button type="button">新朋友 <ChevronRight size={24} /></button>
-          <button type="button">群通知 <ChevronRight size={24} /></button>
+            <p>{selectedRole?.persona ?? '还没有角色设定。'}</p>
+            <div className="role-editor-fields">
+              <label>
+                名称
+                <input value={roleDraft.name} onChange={(event) => updateDraft('name', event.target.value)} placeholder="比如：姐姐 / 恋人 / 新角色" />
+              </label>
+              <label>
+                关系
+                <input value={roleDraft.relation} onChange={(event) => updateDraft('relation', event.target.value)} placeholder="姐姐、恋人、朋友、角色" />
+              </label>
+              <label>
+                氛围
+                <input value={roleDraft.mood} onChange={(event) => updateDraft('mood', event.target.value)} placeholder="温柔、傲娇、绿茶、忠犬..." />
+              </label>
+              <label>
+                人设
+                <textarea value={roleDraft.persona} onChange={(event) => updateDraft('persona', event.target.value)} placeholder="在这里写角色设定，或粘贴导入文本。" />
+              </label>
+              <label>
+                导入文本
+                <textarea value={importText} onChange={(event) => setImportText(event.target.value)} placeholder="粘贴人设文档、角色卡、模型总结。" />
+              </label>
+            </div>
+            <div className="role-template-list">
+              {selectedRole && (
+                <button onClick={() => onOpenChat(selectedRole.id)} type="button">
+                  <UserRound size={17} />
+                  <span>打开聊天</span>
+                </button>
+              )}
+              {roleTemplates.map((template) => (
+                <button key={template.name} onClick={() => fillTemplate(template)} type="button">
+                  <Sparkles size={17} />
+                  <span>{template.name}</span>
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
+      </section>
+
+      <section className="mobile-feature-page mobile-contact-page role-mobile-page" aria-label="角色">
+        <MobileStatusBar />
+        <header className="mobile-feature-header">
+          <span className="avatar" style={{ '--avatar-accent': selectedRole?.accent ?? '#ef9ac6' } as CSSProperties}>
+            {selectedRole?.avatar ?? '角'}
+          </span>
+          <strong>角色</strong>
+          <button aria-label="添加角色" onClick={addRoleFromDraft} type="button">
+            <Plus size={34} />
+          </button>
+        </header>
+        <label className="mobile-feature-search">
+          <Search size={28} />
+          <input placeholder="搜索角色" />
+        </label>
         <div className="mobile-contact-tabs">
-          {['分组', '好友', '群聊', '频道', '机器人', '设备'].map((tab, index) => (
-            <button className={index === 0 ? 'active' : ''} key={tab} type="button">{tab}</button>
-          ))}
+          <button className={roleTab === 'roles' ? 'active' : ''} onClick={() => setRoleTab('roles')} type="button">角色</button>
+          <button className={roleTab === 'templates' ? 'active' : ''} onClick={() => setRoleTab('templates')} type="button">模板</button>
         </div>
-        <div className="mobile-contact-list">
-          <button className="mobile-contact-group" type="button">▶ 特别关心 <span>0/0</span></button>
-          <button className="mobile-contact-group open" type="button">▼ 我的好友 <span>21/40</span></button>
-          {characters.map((character) => (
-            <button key={character.id} onClick={() => onOpenChat(character.id)} type="button">
-              <span className="avatar" style={{ '--avatar-accent': character.accent } as CSSProperties}>{character.avatar}</span>
-              <span>
-                <strong>{character.name}</strong>
-                <small>{character.mood}</small>
-              </span>
-            </button>
-          ))}
-        </div>
-      </section>
-    )
-  }
-
-  if (activeView === 'moments') {
-    return (
-      <section className="mobile-feature-page mobile-dynamics-page" aria-label="动态">
-        <MobileStatusBar />
-        <header className="mobile-feature-header">
-          <span className="avatar" style={{ '--avatar-accent': activeCharacter.accent } as CSSProperties}>
-            {activeCharacter.avatar}
-          </span>
-          <strong>动态</strong>
-          <span className="mobile-header-icons">
-            <Sparkles size={30} />
-            <Grid3X3 size={30} />
-          </span>
-        </header>
-        <label className="mobile-feature-search">
-          <Search size={28} />
-          <input placeholder="搜索" />
-        </label>
-        <div className="mobile-simple-list">
-          <button type="button"><Star size={32} />空间动态 <ChevronRight size={24} /></button>
-          <button type="button"><Sparkles size={32} />脑洞秀 <ChevronRight size={24} /></button>
-          <button type="button"><Heart size={32} />经典农场 <ChevronRight size={24} /></button>
-        </div>
-      </section>
-    )
-  }
-
-  if (activeView === 'group' || activeView === 'world') {
-    return (
-      <section className="mobile-feature-page mobile-channel-page" aria-label="频道">
-        <MobileStatusBar />
-        <header className="mobile-feature-header">
-          <span className="avatar" style={{ '--avatar-accent': activeCharacter.accent } as CSSProperties}>
-            {activeCharacter.avatar}
-          </span>
-          <strong>频道</strong>
-          <button type="button"><Plus size={38} /></button>
-        </header>
-        <label className="mobile-feature-search">
-          <Search size={28} />
-          <input placeholder="搜索" />
-        </label>
-        <div className="mobile-channel-list">
-          {['ai 交流群1', '公众号', 'AstrBot 4群', 'Clove 的小窝', 'live2d 资源群', 'AI 塑造未来-4群'].map((name, index) => (
-            <button key={name} type="button">
-              <span className="avatar">{index === 1 ? '公' : '群'}</span>
-              <span>
-                <strong>{name}</strong>
-                <small>{index === 1 ? 'QQ会员：抽奖100%中！限量公仔等你赢' : '[有新总结] 可以正常识别'}</small>
-              </span>
-              <time>下午{index + 2}:0{index}</time>
-              <BellOff size={18} />
-            </button>
-          ))}
-        </div>
-      </section>
-    )
-  }
-
-  return (
-    <section className="mobile-feature-page mobile-settings-page" aria-label={mobileTitle[activeView]}>
-      <MobileStatusBar />
-      <header className="mobile-feature-header centered">
-        <button aria-label="返回" type="button"><ChevronLeft size={36} /></button>
-        <strong>{activeView === 'settings' ? '设置' : '我的'}</strong>
-        <span />
-      </header>
-      {activeView !== 'settings' && <MobileProfile activeCharacter={activeCharacter} />}
-      {activeView === 'settings' ? (
-        <SettingsList />
-      ) : (
-        <div className="mobile-profile-entries">
-          <button type="button"><Image size={31} />相册 <ChevronRight size={24} /></button>
-          <button type="button"><Bookmark size={31} />收藏 <ChevronRight size={24} /></button>
-          <button type="button"><Folder size={31} />文件 <ChevronRight size={24} /></button>
-          <button type="button"><WalletIcon />钱包 <ChevronRight size={24} /></button>
-          <button type="button"><Shirt size={31} />个性装扮 <ChevronRight size={24} /></button>
-          <div className="mobile-profile-actions">
-            <button type="button"><Settings size={30} />设置</button>
-            <button type="button"><Moon size={30} />夜间</button>
-            <button type="button"><Sun size={30} />温江</button>
-          </div>
-        </div>
-      )}
-    </section>
-  )
-}
-
-function MobileProfile({ activeCharacter }: { activeCharacter: CharacterCard }) {
-  return (
-    <section className="mobile-profile-card">
-      <span className="avatar" style={{ '--avatar-accent': activeCharacter.accent } as CSSProperties}>
-        {activeCharacter.avatar}
-      </span>
-      <div>
-        <strong>{activeCharacter.name}</strong>
-        <small>{activeCharacter.subtitle}</small>
-        <p>
-          <span>她的山她的海</span>
-          <span>百合</span>
-          <span>更多</span>
-        </p>
-      </div>
-      <button type="button"><Grid3X3 size={25} /></button>
-    </section>
-  )
-}
-
-function SettingsList() {
-  return (
-    <div className="mobile-settings-list">
-      <label className="mobile-feature-search">
-        <Search size={28} />
-        <input placeholder="搜索" />
-      </label>
-      <button className="settings-account" type="button">
-        <CircleUserRound size={30} />
-        <span>账号与安全</span>
-        <span className="avatar">姐</span>
-        <ChevronRight size={25} />
-      </button>
-      {settingGroups.map((group) => (
-        <section key={group.title}>
-          <h3>{group.title}</h3>
-          <div>
-            {group.rows.map(([label, value, Icon]) => (
-              <button key={label as string} type="button">
-                <Icon size={29} />
-                <span>{label as string}</span>
-                {value && <small>{value as string}</small>}
+        {roleTab === 'roles' ? (
+          <>
+            <div className="mobile-contact-list">
+              {managedRoles.map((role) => (
+                <button key={role.id} onClick={() => setSelectedRoleId(role.id)} type="button">
+                  <span className="avatar" style={{ '--avatar-accent': role.accent } as CSSProperties}>{role.avatar}</span>
+                  <span>
+                    <strong>{role.name}</strong>
+                    <small>{role.mood}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="role-mobile-form">
+              <label>
+                <FileText size={20} />
+                <input value={roleDraft.name} onChange={(event) => updateDraft('name', event.target.value)} placeholder="新角色名称" />
+              </label>
+              <textarea value={importText} onChange={(event) => setImportText(event.target.value)} placeholder="粘贴人设后点右上角加号" />
+            </div>
+          </>
+        ) : (
+          <div className="mobile-simple-list">
+            {roleTemplates.map((template) => (
+              <button key={template.name} onClick={() => fillTemplate(template)} type="button">
+                <Sparkles size={31} />
+                <span>
+                  <strong>{template.name}</strong>
+                  <small>{template.mood}</small>
+                </span>
                 <ChevronRight size={24} />
               </button>
             ))}
           </div>
-        </section>
-      ))}
-      <button className="settings-single" type="button">关于 QQ 与帮助 <ChevronRight size={24} /></button>
-      <button className="settings-single" type="button">退出当前账号 <ChevronRight size={24} /></button>
-    </div>
+        )}
+      </section>
+    </main>
   )
-}
-
-function WalletIcon() {
-  return <Bot size={31} />
 }

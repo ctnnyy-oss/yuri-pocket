@@ -1088,6 +1088,164 @@
   font-weight: 800;
 }
 
+.role-desktop-feature {
+  overflow: hidden;
+}
+
+.role-desktop-feature .qq-desktop-feature-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.55);
+  color: #2b1b24;
+  font-size: 14px;
+}
+
+.role-manager-grid {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px 24px 24px;
+  overflow: hidden;
+}
+
+.role-list,
+.role-detail {
+  min-height: 0;
+  overflow-y: auto;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.role-list {
+  padding: 8px;
+}
+
+.role-list button {
+  width: 100%;
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.role-list button.active,
+.role-list button:hover {
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.role-list strong,
+.role-detail-head strong {
+  display: block;
+  color: #21141c;
+  font-size: 16px;
+}
+
+.role-list small,
+.role-detail-head small {
+  display: block;
+  overflow: hidden;
+  margin-top: 4px;
+  color: rgba(80, 50, 64, 0.62);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role-list em {
+  color: rgba(80, 50, 64, 0.54);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.role-detail {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 20px;
+}
+
+.role-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.role-detail > p {
+  max-height: 118px;
+  overflow-y: auto;
+  margin: 0;
+  color: rgba(80, 50, 64, 0.72);
+  line-height: 1.7;
+}
+
+.role-editor-fields {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.role-editor-fields label {
+  display: grid;
+  gap: 6px;
+  color: rgba(80, 50, 64, 0.72);
+  font-size: 13px;
+}
+
+.role-editor-fields label:nth-last-child(-n + 2) {
+  grid-column: 1 / -1;
+}
+
+.role-editor-fields input,
+.role-editor-fields textarea {
+  width: 100%;
+  border: 1px solid rgba(86, 50, 68, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  color: #21141c;
+  font: inherit;
+}
+
+.role-editor-fields input {
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+.role-editor-fields textarea {
+  min-height: 78px;
+  resize: vertical;
+  padding: 10px;
+}
+
+.role-template-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.role-template-list button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: #ec83bb;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .qq-desktop-dynamic {
   display: flex;
   flex-direction: column;

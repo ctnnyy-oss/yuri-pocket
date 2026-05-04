@@ -2,7 +2,7 @@ import type { AgentRoom, AppState, CharacterCard, ConversationState, LongTermMem
 import { brand } from '../config/brand'
 import { createId, nowIso } from '../services/memoryEngine'
 
-export const characters: CharacterCard[] = [
+const allCharacters: CharacterCard[] = [
   {
     id: 'sister-architect',
     name: '姐姐大人',
@@ -144,6 +144,17 @@ export const characters: CharacterCard[] = [
     greeting: '皇后娘娘不见我呀？那我便在门外等等，反正娘娘最心软了。',
   },
 ]
+
+const coreCpCharacterIds = new Set([
+  'ningan-princess',
+  'aling-maid',
+  'su-wanyin',
+  'xie-zhao',
+  'shen-wanci',
+  'lu-wanzhao',
+])
+
+export const characters: CharacterCard[] = allCharacters.filter((character) => coreCpCharacterIds.has(character.id))
 
 export const worldNodes: WorldNode[] = [
   {
@@ -379,7 +390,7 @@ export function createSeedState(): AppState {
   }))
 
   return {
-    version: 18,
+    version: 20,
     activeCharacterId: characters[0].id,
     characters,
     conversations,

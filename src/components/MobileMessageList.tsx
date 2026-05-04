@@ -1,20 +1,20 @@
 import type { CSSProperties } from 'react'
-import { BellOff, ChevronRight, MonitorSmartphone, Plus, Search } from 'lucide-react'
+import { BellOff, ChevronRight, Plus, Search } from 'lucide-react'
 import type { CharacterCard } from '../domain/types'
 
 interface MobileMessageListProps {
   characters: CharacterCard[]
   activeCharacterId: string
   onOpenChat: (characterId: string) => void
+  onOpenGroupChat?: (group: { name: string; text: string }) => void
   onShellAction?: (message: string) => void
 }
 
 const threadTimes = ['下午5:42', '星期六', '星期三', '04/11', '04/03', '03/26', '03/22']
 const unreadBadges = ['', '', '', '', '', '', '']
-const extraThreads = [
-  { name: '我的电脑', avatar: 'PC', text: '你已在电脑登录，可传文件到电脑', time: '下午5:49', system: true },
-  { name: 'QQ安全中心', avatar: '盾', text: '账号登录通知', time: '03/22', system: true },
-  { name: '聊天群', avatar: '群', text: '解题：[动画表情]', time: '03/16', system: false },
+const groupThreads = [
+  { name: '三对CP茶会', avatar: '群', text: '六位角色都在这里，当前可拉起本地群聊', time: '下午5:49', badge: '6' },
+  { name: '百合创作小屋', avatar: '百', text: '只保留项目需要的群聊入口', time: '星期六', badge: '' },
 ]
 
 function MobileStatusBar() {
@@ -26,13 +26,41 @@ function MobileStatusBar() {
   )
 }
 
+function isGroupCharacter(character: CharacterCard) {
+  return character.relationship === '群聊'
+}
+
 export function MobileMessageList({
   characters,
   activeCharacterId,
   onOpenChat,
-  onShellAction,
+  onOpenGroupChat,
 }: MobileMessageListProps) {
   const activeCharacter = characters.find((character) => character.id === activeCharacterId) ?? characters[0]
+  const roleCharacters = characters.filter((character) => !isGroupCharacter(character))
+  const groupCharacters = characters.filter(isGroupCharacter)
+  const defaultGroupNames = new Set(groupThreads.map((thread) => thread.name))
+  const visibleGroups = [
+    ...groupThreads.map((thread) => {
+      const existing = groupCharacters.find((character) => character.name === thread.name)
+      return {
+        ...thread,
+        avatar: existing?.avatar ?? thread.avatar,
+        text: existing?.mood ?? thread.text,
+        characterId: existing?.id ?? '',
+      }
+    }),
+    ...groupCharacters
+      .filter((character) => !defaultGroupNames.has(character.name))
+      .map((character) => ({
+        name: character.name,
+        avatar: character.avatar,
+        text: character.mood || character.title,
+        time: '今天',
+        badge: '',
+        characterId: character.id,
+      })),
+  ]
 
   return (
     <section className="mobile-message-list" aria-label="手机消息列表">
@@ -41,7 +69,7 @@ export function MobileMessageList({
         className="mobile-message-header"
         onClick={(event) => {
           if ((event.target as HTMLElement).closest('.mobile-message-plus')) {
-            onShellAction?.('新建聊天入口已保留，后续接入加好友和建群')
+            onOpenGroupChat?.({ name: '新群聊', text: '本地创建的多人聊天，可以先把角色拉进来试聊' })
           }
         }}
       >
@@ -67,32 +95,35 @@ export function MobileMessageList({
         <input aria-label="搜索" placeholder="搜索" />
       </label>
 
-      <div
-        className="mobile-message-thread-list"
-        onClick={(event) => {
-          if ((event.target as HTMLElement).closest('.device-thread')) {
-            onShellAction?.('我的电脑入口已保留，后续接入文件传输')
-          }
-        }}
-      >
-        <button className="mobile-device-row" type="button">
-          <MonitorSmartphone size={34} />
-          <span>已登录 Windows、Pad</span>
-          <ChevronRight size={25} />
-        </button>
-
-        <button className="mobile-message-thread device-thread" type="button">
-          <span className="avatar mobile-thread-avatar system-avatar">PC</span>
-          <span className="mobile-thread-copy">
-            <strong>我的电脑</strong>
-            <small>你已在电脑登录，可传文件到电脑</small>
-          </span>
-          <span className="mobile-thread-meta">
-            <time>下午5:49</time>
-          </span>
-        </button>
-
-        {characters.map((character, index) => {
+      <div className="mobile-message-thread-list">
+        {visibleGroups.map((thread, index) => (
+          <button
+            className={`mobile-message-thread ${thread.characterId === activeCharacterId ? 'active' : ''}`}
+            key={thread.name}
+            onClick={() => {
+              if (thread.characterId) {
+                onOpenChat(thread.characterId)
+                return
+              }
+              onOpenGroupChat?.({ name: thread.name, text: thread.text })
+            }}
+            type="button"
+          >
+            <span className="avatar mobile-thread-avatar system-avatar">
+              {thread.avatar}
+              {thread.badge && <b>{thread.badge}</b>}
+            </span>
+            <span className="mobile-thread-copy">
+              <strong>{thread.name}</strong>
+              <small>{thread.text}</small>
+            </span>
+            <span className="mobile-thread-meta">
+              <time>{thread.time}</time>
+              {index > 0 && <BellOff size={18} />}
+            </span>
+          </button>
+        ))}
+        {roleCharacters.map((character, index) => {
           const isActive = character.id === activeCharacterId
           const badge = unreadBadges[index % unreadBadges.length]
 
@@ -111,8 +142,8 @@ export function MobileMessageList({
                 {badge && <b>{badge}</b>}
               </span>
               <span className="mobile-thread-copy">
-                <strong>{index === 0 ? '招生助理-陈' : character.name}</strong>
-                <small>{index === 0 ? '❗姐姐，妹妹突然犯了一个很大的错误，也...' : character.title}</small>
+                <strong>{character.name}</strong>
+                <small>{character.title}</small>
               </span>
               <span className="mobile-thread-meta">
                 <time>{threadTimes[index % threadTimes.length]}</time>
@@ -121,20 +152,6 @@ export function MobileMessageList({
             </button>
           )
         })}
-
-        {extraThreads.slice(1).map((thread) => (
-          <button className="mobile-message-thread" key={thread.name} type="button">
-            <span className={`avatar mobile-thread-avatar ${thread.system ? 'system-avatar' : ''}`}>{thread.avatar}</span>
-            <span className="mobile-thread-copy">
-              <strong>{thread.name}</strong>
-              <small>{thread.text}</small>
-            </span>
-            <span className="mobile-thread-meta">
-              <time>{thread.time}</time>
-              <BellOff size={18} />
-            </span>
-          </button>
-        ))}
       </div>
     </section>
   )

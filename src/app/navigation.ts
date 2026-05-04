@@ -1,6 +1,6 @@
 import type { AppView } from '../components/CharacterRail'
 
-export const appViews: AppView[] = ['chat', 'group', 'moments', 'tasks', 'memory', 'world', 'model', 'settings', 'trash']
+export const appViews: AppView[] = ['chat', 'role', 'group', 'moments', 'tasks', 'memory', 'world', 'model', 'settings', 'trash']
 
 export function readViewFromLocation(): AppView {
   if (typeof window === 'undefined') return 'chat'
