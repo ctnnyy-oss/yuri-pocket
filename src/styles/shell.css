@@ -19,7 +19,7 @@
 }
 
 .app-shell.feature-mode {
-  grid-template-columns: 82px minmax(0, 1fr);
+  grid-template-columns: clamp(420px, 24vw, 462px) minmax(0, 1fr);
 }
 
 .desktop-titlebar {
@@ -161,11 +161,7 @@
 }
 
 .feature-mode .left-panel {
-  grid-template-columns: 82px;
-}
-
-.feature-mode .conversation-pane {
-  display: none;
+  grid-template-columns: 82px minmax(0, 1fr);
 }
 
 .workspace {
