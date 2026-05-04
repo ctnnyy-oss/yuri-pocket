@@ -8,14 +8,18 @@
   width: 100%;
   height: 100dvh;
   display: grid;
-  grid-template-columns: clamp(336px, 28vw, 392px) minmax(0, 1fr);
-  grid-template-rows: 46px minmax(0, 1fr);
+  grid-template-columns: clamp(420px, 24vw, 462px) minmax(0, 1fr);
+  grid-template-rows: 60px minmax(0, 1fr);
   gap: 0;
   padding: 0;
   overflow: hidden;
-  background: #faf7f9;
+  background: var(--canvas);
   color: var(--ink);
   font-size: var(--app-font-size, 15px);
+}
+
+.app-shell.feature-mode {
+  grid-template-columns: 82px minmax(0, 1fr);
 }
 
 .desktop-titlebar {
@@ -25,30 +29,68 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 0 12px 0 14px;
-  border-bottom: 1px solid rgba(74, 46, 58, 0.06);
-  background:
-    linear-gradient(90deg, #ffd8eb 0%, #fbeaf3 48%, #fff8fb 100%);
+  padding: 0 18px 0 16px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--panel);
 }
 
 .desktop-titlebar-brand {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   color: rgba(74, 46, 58, 0.88);
 }
 
-.desktop-titlebar-brand strong {
-  color: rgba(32, 22, 27, 0.88);
-  font-size: 14px;
+.desktop-titlebar-logo {
+  background: var(--grad-pink);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  font-size: 18px;
   font-weight: 900;
+  letter-spacing: 0;
 }
 
-.desktop-titlebar-brand span {
+.desktop-titlebar-avatar {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(
+      140deg,
+      color-mix(in srgb, var(--avatar-accent, var(--pink-300)) 42%, #fff),
+      color-mix(in srgb, var(--avatar-accent, var(--pink-300)) 16%, #fff)
+    );
+  color: color-mix(in srgb, var(--avatar-accent, var(--pink-300)) 76%, var(--ink));
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.desktop-titlebar-profile {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.desktop-titlebar-profile b {
+  max-width: 160px;
+  color: rgba(32, 22, 27, 0.9);
+  font-size: 15px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.desktop-titlebar-profile small {
   max-width: 220px;
   color: rgba(74, 46, 58, 0.62);
-  font-size: 13px;
+  font-size: 14px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -112,17 +154,22 @@
   box-shadow: none;
 }
 
-.left-panel,
+.left-panel {
+  grid-row: 2;
+  border-right: 1px solid var(--hairline);
+  background: var(--panel-soft);
+}
+
+.feature-mode .left-panel {
+  grid-template-columns: 82px;
+}
+
+.feature-mode .conversation-pane {
+  display: none;
+}
+
 .workspace {
   grid-row: 2;
-}
-
-.left-panel {
-  border-right: 1px solid rgba(74, 46, 58, 0.08);
-  background: #f5dce9;
-}
-
-.workspace {
   height: 100%;
   overflow: hidden;
   background: var(--panel);

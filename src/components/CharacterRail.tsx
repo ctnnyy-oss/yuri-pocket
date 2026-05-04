@@ -5,17 +5,22 @@ import {
   Brain,
   ClipboardList,
   Gamepad2,
+  Grid3X3,
+  Hash,
   HeartHandshake,
   Images,
-  Link,
   Mail,
+  Menu,
   MessageCircle,
   MessagesSquare,
   Palette,
   Plus,
   Search,
   SlidersHorizontal,
+  Smartphone,
   Sprout,
+  Star,
+  UserRound,
   type LucideIcon,
 } from 'lucide-react'
 import { brand } from '../config/brand'
@@ -44,22 +49,25 @@ const navigationItems: Array<{ id: AppView; label: string; description: string; 
 ]
 
 const primaryNavigationItems = [
-  navigationItems[0],
-  navigationItems[1],
-  navigationItems[2],
-  { id: 'world' as AppView, label: '频道', description: '世界树频道', icon: Link },
-  { id: 'tasks' as AppView, label: '小队', description: 'Agent 队列', icon: ClipboardList },
+  { id: 'chat' as AppView, label: '消息', description: '最近消息', icon: MessageCircle },
+  { id: 'memory' as AppView, label: '联系人', description: '联系人资料', icon: UserRound },
+  { id: 'moments' as AppView, label: '收藏', description: '动态与收藏', icon: Star },
+  { id: 'world' as AppView, label: '频道', description: '频道广场', icon: Hash },
+  { id: 'group' as AppView, label: '群聊', description: '群聊房间', icon: MessagesSquare },
+  { id: 'tasks' as AppView, label: '游戏', description: '娱乐入口占位', icon: Gamepad2 },
+  { id: 'model' as AppView, label: '应用', description: '模型与插件入口', icon: Grid3X3 },
 ]
 const utilityNavigationItems = [
-  { id: 'memory' as AppView, label: '记忆', description: '长期记忆', icon: Brain },
-  { id: 'model' as AppView, label: '模型', description: '模型接入', icon: SlidersHorizontal },
   { id: 'trash' as AppView, label: '回收', description: '误删找回', icon: ArchiveRestore },
-  { id: 'settings' as AppView, label: '设置', description: '输入、字体和主题', icon: Palette },
+  { id: 'settings' as AppView, label: '设置', description: '外观与数据', icon: SlidersHorizontal },
+  { id: 'memory' as AppView, label: '记忆', description: '长期记忆', icon: Brain },
+  { id: 'model' as AppView, label: '模型', description: '模型接入', icon: Palette },
 ]
 
 const dockItems = [
   { label: '邮箱', icon: Mail },
-  { label: '游戏', icon: Gamepad2 },
+  { label: '设备', icon: Smartphone },
+  { label: '菜单', icon: Menu },
 ]
 
 export function CharacterRail({
@@ -167,26 +175,28 @@ export function CharacterRail({
               <small>{activeCharacter?.mood ?? brand.versionLabel}</small>
             </span>
           </div>
-          <button
-            aria-label="整理最近聊天"
-            className="conversation-add-button"
-            onClick={() => onViewChange('memory')}
-            title="整理最近聊天"
-            type="button"
-          >
-            <Plus size={19} />
-          </button>
         </header>
 
-        <label className="conversation-search">
-          <Search size={17} />
-          <input
-            aria-label="搜索角色"
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索角色 / CP / 功能"
-            value={query}
-          />
-        </label>
+        <div className="conversation-search-row">
+          <label className="conversation-search">
+            <Search size={18} />
+            <input
+              aria-label="搜索角色"
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="搜索"
+              value={query}
+            />
+          </label>
+          <button
+            aria-label="新建"
+            className="conversation-add-button"
+            onClick={() => onViewChange('memory')}
+            title="新建"
+            type="button"
+          >
+            <Plus size={20} />
+          </button>
+        </div>
 
         <div className="conversation-tabs" aria-label="会话筛选">
           <button className="active" type="button">消息</button>
