@@ -4,8 +4,11 @@ import {
   ArchiveRestore,
   Brain,
   ClipboardList,
+  Gamepad2,
   HeartHandshake,
   Images,
+  Link,
+  Mail,
   MessageCircle,
   MessagesSquare,
   Palette,
@@ -40,8 +43,24 @@ const navigationItems: Array<{ id: AppView; label: string; description: string; 
   { id: 'settings', label: '设置', description: '输入、字体和主题', icon: Palette },
 ]
 
-const primaryNavigationItems = navigationItems.slice(0, 4)
-const utilityNavigationItems = navigationItems.slice(4)
+const primaryNavigationItems = [
+  navigationItems[0],
+  navigationItems[1],
+  navigationItems[2],
+  { id: 'world' as AppView, label: '频道', description: '世界树频道', icon: Link },
+  { id: 'tasks' as AppView, label: '小队', description: 'Agent 队列', icon: ClipboardList },
+]
+const utilityNavigationItems = [
+  { id: 'memory' as AppView, label: '记忆', description: '长期记忆', icon: Brain },
+  { id: 'model' as AppView, label: '模型', description: '模型接入', icon: SlidersHorizontal },
+  { id: 'trash' as AppView, label: '回收', description: '误删找回', icon: ArchiveRestore },
+  { id: 'settings' as AppView, label: '设置', description: '输入、字体和主题', icon: Palette },
+]
+
+const dockItems = [
+  { label: '邮箱', icon: Mail },
+  { label: '游戏', icon: Gamepad2 },
+]
 
 export function CharacterRail({
   characters,
@@ -102,6 +121,18 @@ export function CharacterRail({
           })}
         </nav>
 
+        <div className="qq-dock-divider" />
+        <div className="qq-dock-icons" aria-label="QQ 扩展入口占位">
+          {dockItems.map((item) => {
+            const Icon = item.icon
+            return (
+              <button aria-label={item.label} key={item.label} title={item.label} type="button">
+                <Icon size={20} />
+              </button>
+            )
+          })}
+        </div>
+
         <nav className="primary-nav utility-nav" aria-label="更多功能">
           {utilityNavigationItems.map((item) => {
           const Icon = item.icon
@@ -157,8 +188,14 @@ export function CharacterRail({
           />
         </label>
 
+        <div className="conversation-tabs" aria-label="会话筛选">
+          <button className="active" type="button">消息</button>
+          <button type="button">联系人</button>
+          <button type="button">群聊</button>
+        </div>
+
         <div className="section-title">
-          <span>{activeView === 'chat' ? '消息' : activeViewLabel}</span>
+          <span>{activeView === 'chat' ? '最近会话' : activeViewLabel}</span>
           <small>{filteredCharacters.length} 个角色</small>
         </div>
 

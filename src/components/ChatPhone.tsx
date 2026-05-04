@@ -1,11 +1,15 @@
 import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useRef } from 'react'
 import {
+  Camera,
+  ChevronLeft,
   Image,
+  Menu,
   Mic,
   MoreHorizontal,
   Paperclip,
   Phone,
+  PlusCircle,
   Search,
   Send,
   Smile,
@@ -33,6 +37,7 @@ interface ChatPhoneProps {
   isSending: boolean
   settings: AppSettings
   onDraftChange: (value: string) => void
+  onBackToList?: () => void
   onSelectCharacter: (characterId: string) => void
   onMemoryFeedback: (memoryId: string, action: MemoryFeedbackAction) => void
   onSend: () => void
@@ -48,6 +53,7 @@ export function ChatPhone({
   draft,
   isSending,
   settings,
+  onBackToList,
   onDraftChange,
   onSelectCharacter,
   onMemoryFeedback,
@@ -87,6 +93,9 @@ export function ChatPhone({
         className="chat-topbar"
         style={{ '--avatar-accent': character.accent } as CSSProperties}
       >
+        <button aria-label="返回消息" className="mobile-chat-back" onClick={onBackToList} type="button">
+          <ChevronLeft size={28} />
+        </button>
         <div className="chat-topbar-main">
           <span className="chat-topbar-avatar">{character.avatar}</span>
           <div className="chat-topbar-text">
@@ -118,6 +127,9 @@ export function ChatPhone({
           </button>
           <button aria-label="更多" title="更多" type="button">
             <MoreHorizontal size={20} />
+          </button>
+          <button aria-label="菜单" className="mobile-menu-button" title="菜单" type="button">
+            <Menu size={24} />
           </button>
         </div>
       </header>
@@ -201,11 +213,17 @@ export function ChatPhone({
           <button aria-label="图片" className="composer-tool" title="图片" type="button">
             <Image size={20} />
           </button>
+          <button aria-label="拍摄" className="composer-tool" title="拍摄" type="button">
+            <Camera size={20} />
+          </button>
           <button aria-label="文件" className="composer-tool" title="文件" type="button">
             <Paperclip size={20} />
           </button>
           <button aria-label="表情" className="composer-tool" title="表情" type="button">
             <Smile size={20} />
+          </button>
+          <button aria-label="更多" className="composer-tool" title="更多" type="button">
+            <PlusCircle size={21} />
           </button>
         </div>
       </form>

@@ -22,8 +22,8 @@ interface MobileNavProps {
 
 const fixedNavItems: Array<{ id: AppView; label: string; icon: LucideIcon }> = [
   { id: 'chat', label: '消息', icon: MessageCircle },
-  { id: 'group', label: '群聊', icon: MessagesSquare },
-  { id: 'memory', label: '记忆', icon: Brain },
+  { id: 'group', label: '频道', icon: MessagesSquare },
+  { id: 'memory', label: '联系人', icon: Brain },
   { id: 'moments', label: '动态', icon: Images },
 ]
 

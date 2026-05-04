@@ -10,16 +10,20 @@ import './styles/status.css'
 import './styles/social.css'
 import './styles/tasks.css'
 import './styles/mobile.css'
+import { CloudSun, Maximize2, Minus, PanelsTopLeft, X } from 'lucide-react'
+import { useState } from 'react'
 import { useYuriNestApp } from './app/useYuriNestApp'
 import { CharacterRail } from './components/CharacterRail'
 import { AgentTaskPanel } from './components/agent/AgentTaskPanel'
 import { ChatPhone } from './components/ChatPhone'
+import { MobileMessageList } from './components/MobileMessageList'
 import { MobileNav } from './components/MobileNav'
 import { MemoryPanel } from './components/MemoryPanel'
 import { GroupChatPanel } from './components/social/GroupChatPanel'
 import { MomentsPanel } from './components/social/MomentsPanel'
 
 function App() {
+  const [mobileMessageListOpen, setMobileMessageListOpen] = useState(true)
   const {
     activeView,
     appStyle,
@@ -78,15 +82,61 @@ function App() {
     state,
   } = useYuriNestApp()
 
+  function handleViewChange(view: typeof activeView) {
+    navigateView(view)
+    if (view === 'chat') {
+      setMobileMessageListOpen(true)
+    }
+  }
+
+  function handleOpenMobileChat(characterId: string) {
+    handleSelectCharacter(characterId)
+    navigateView('chat')
+    setMobileMessageListOpen(false)
+  }
+
+  const showMobileBottomNav = activeView !== 'chat' || mobileMessageListOpen
+
   return (
     <div className="app-shell" style={appStyle}>
+      <header className="desktop-titlebar" aria-label="应用顶栏">
+        <div className="desktop-titlebar-brand">
+          <strong>百合小窝</strong>
+          <span>{character.name}</span>
+        </div>
+        <div className="desktop-titlebar-status">
+          <CloudSun size={18} />
+          <span>晴</span>
+          <button aria-label="布局" type="button">
+            <PanelsTopLeft size={16} />
+          </button>
+          <button aria-label="最小化" type="button">
+            <Minus size={16} />
+          </button>
+          <button aria-label="最大化" type="button">
+            <Maximize2 size={15} />
+          </button>
+          <button aria-label="关闭" type="button">
+            <X size={17} />
+          </button>
+        </div>
+      </header>
+
       <CharacterRail
         activeCharacterId={state.activeCharacterId}
         activeView={activeView}
         characters={state.characters}
         onSelect={handleSelectCharacter}
-        onViewChange={navigateView}
+        onViewChange={handleViewChange}
       />
+
+      {activeView === 'chat' && mobileMessageListOpen && (
+        <MobileMessageList
+          activeCharacterId={state.activeCharacterId}
+          characters={state.characters}
+          onOpenChat={handleOpenMobileChat}
+        />
+      )}
 
       {activeView === 'chat' ? (
         <ChatPhone
@@ -98,6 +148,7 @@ function App() {
           memories={state.memories}
           memoryUsageLogs={state.memoryUsageLogs}
           messages={conversation.messages}
+          onBackToList={() => setMobileMessageListOpen(true)}
           onDraftChange={setDraft}
           onMemoryFeedback={handleMemoryFeedbackFromChat}
           onSelectCharacter={handleSelectCharacter}
@@ -170,7 +221,7 @@ function App() {
         />
       )}
 
-      <MobileNav activeView={activeView} onViewChange={navigateView} />
+      {showMobileBottomNav && <MobileNav activeView={activeView} onViewChange={handleViewChange} />}
       {notice && <div className="status-pill">{notice}</div>}
     </div>
   )
