@@ -2,6 +2,7 @@ import { MessagesSquare, UsersRound } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { useMemo, useState } from 'react'
 import type { AgentRoom, CharacterCard } from '../../domain/types'
+import { formatSocialTime } from '../../app/formatters'
 import { EmptyState, WorkspaceTitle } from '../memory/atoms'
 
 interface GroupChatPanelProps {
@@ -139,15 +140,4 @@ export function GroupChatPanel({ characters, rooms }: GroupChatPanelProps) {
       </section>
     </main>
   )
-}
-
-function formatSocialTime(value: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '刚刚'
-  return date.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }

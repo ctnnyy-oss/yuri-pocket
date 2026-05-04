@@ -323,17 +323,12 @@
 
 .model-picker-row {
   display: grid;
-  grid-template-columns: 1fr;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
   gap: var(--space-sm);
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-}
-
-.model-picker-row input[readonly] {
-  background: var(--pink-50);
-  color: var(--muted);
 }
 
 .model-picker-row button {

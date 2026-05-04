@@ -28,6 +28,7 @@ export interface ConversationState {
   characterId: string
   messages: ChatMessage[]
   summary: string
+  createdAt?: string
   updatedAt: string
 }
 
@@ -146,11 +147,10 @@ export interface AppTrash {
 
 export interface MemoryTombstone {
   id: string
-  memoryFingerprint: string
-  scope: MemoryScope
-  deletedAt: string
-  reason: 'user_permanent_delete' | 'trash_retention' | 'empty_trash'
-  blockReExtraction: boolean
+  memoryId: string
+  fingerprint: string
+  reason: string
+  createdAt: string
 }
 
 export type MemoryConflictType = 'value' | 'scope' | 'duplicate' | 'safety'
@@ -172,7 +172,9 @@ export interface MemoryUsageLog {
   id: string
   conversationId: string
   characterId: string
+  characterName?: string
   userMessageId: string
+  userExcerpt?: string
   assistantMessageId?: string
   memoryIds: string[]
   contextBlockTitles: string[]

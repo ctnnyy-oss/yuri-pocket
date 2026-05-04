@@ -1,5 +1,7 @@
 const appName = 'Yuri Nest'
 
+import { clampNumber } from './shared/utils.mjs'
+
 export async function callModelChat(bundle, settings, profile) {
   if (profile.kind === 'anthropic') return callAnthropicChat(bundle, settings, profile)
   if (profile.kind === 'google-gemini') return callGeminiChat(bundle, settings, profile)
@@ -75,21 +77,25 @@ async function callOpenAICompatibleChat(bundle, settings, profile) {
   const messages = buildProviderMessages(bundle, profile.baseUrl)
   const maxTokens = getMaxOutputTokens(settings)
 
-  const modelResponse = await fetch(`${profile.baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${profile.apiKey}`,
-      'Content-Type': 'application/json; charset=utf-8',
+  const modelResponse = await fetchWithTimeout(
+    `${profile.baseUrl}/chat/completions`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${profile.apiKey}`,
+        'Content-Type': 'application/json; charset=utf-8',
+      },
+      body: stringifyJsonForProvider({
+        model: profile.model,
+        messages,
+        temperature: clampNumber(settings?.temperature, 0, 2, 0.85),
+        max_tokens: maxTokens,
+        frequency_penalty: clampNumber(settings?.frequencyPenalty, -2, 2, 0.3),
+        presence_penalty: clampNumber(settings?.presencePenalty, -2, 2, 0.2),
+      }),
     },
-    body: stringifyJsonForProvider({
-      model: profile.model,
-      messages,
-      temperature: clampNumber(settings?.temperature, 0, 2, 0.85),
-      max_tokens: maxTokens,
-      frequency_penalty: clampNumber(settings?.frequencyPenalty, -2, 2, 0.3),
-      presence_penalty: clampNumber(settings?.presencePenalty, -2, 2, 0.2),
-    }),
-  })
+    getChatTimeoutMs(),
+  )
 
   if (!modelResponse.ok) {
     const detail = await modelResponse.text()
@@ -112,6 +118,11 @@ async function fetchWithTimeout(url, init = {}, timeoutMs = 12_000) {
 
   try {
     return await fetch(url, { ...init, signal: controller.signal })
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error('模型供应商响应超时，请稍后重试或换一组模型配置。')
+    }
+    throw error
   } finally {
     clearTimeout(timeout)
   }
@@ -162,24 +173,28 @@ function dedupeProviderModels(models) {
 }
 
 async function callAnthropicChat(bundle, settings, profile) {
-  const modelResponse = await fetch(`${profile.baseUrl}/messages`, {
-    method: 'POST',
-    headers: {
-      'x-api-key': profile.apiKey,
-      'anthropic-version': process.env.ANTHROPIC_VERSION || '2023-06-01',
-      'Content-Type': 'application/json',
+  const modelResponse = await fetchWithTimeout(
+    `${profile.baseUrl}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        'x-api-key': profile.apiKey,
+        'anthropic-version': process.env.ANTHROPIC_VERSION || '2023-06-01',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: profile.model,
+        system: buildAnthropicSystem(bundle),
+        messages: bundle.messages.map((message) => ({
+          role: message.role === 'assistant' ? 'assistant' : 'user',
+          content: message.content,
+        })),
+        temperature: clampNumber(settings?.temperature, 0, 1, 0.85),
+        max_tokens: getMaxOutputTokens(settings),
+      }),
     },
-    body: JSON.stringify({
-      model: profile.model,
-      system: buildAnthropicSystem(bundle),
-      messages: bundle.messages.map((message) => ({
-        role: message.role === 'assistant' ? 'assistant' : 'user',
-        content: message.content,
-      })),
-      temperature: clampNumber(settings?.temperature, 0, 1, 0.85),
-      max_tokens: getMaxOutputTokens(settings),
-    }),
-  })
+    getChatTimeoutMs(),
+  )
 
   if (!modelResponse.ok) {
     const detail = await modelResponse.text()
@@ -200,25 +215,29 @@ async function callGeminiChat(bundle, settings, profile) {
   const endpoint = `${profile.baseUrl}/models/${encodeURIComponent(profile.model)}:generateContent?key=${encodeURIComponent(
     profile.apiKey,
   )}`
-  const modelResponse = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
+  const modelResponse = await fetchWithTimeout(
+    endpoint,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: buildAnthropicSystem(bundle) }],
+        },
+        contents: bundle.messages.map((message) => ({
+          role: message.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: message.content }],
+        })),
+        generationConfig: {
+          temperature: clampNumber(settings?.temperature, 0, 2, 0.85),
+          maxOutputTokens: getMaxOutputTokens(settings),
+        },
+      }),
     },
-    body: JSON.stringify({
-      systemInstruction: {
-        parts: [{ text: buildAnthropicSystem(bundle) }],
-      },
-      contents: bundle.messages.map((message) => ({
-        role: message.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: message.content }],
-      })),
-      generationConfig: {
-        temperature: clampNumber(settings?.temperature, 0, 2, 0.85),
-        maxOutputTokens: getMaxOutputTokens(settings),
-      },
-    }),
-  })
+    getChatTimeoutMs(),
+  )
 
   if (!modelResponse.ok) {
     const detail = await modelResponse.text()
@@ -269,6 +288,10 @@ function normalizeModelAlias(model) {
 function getMaxOutputTokens(settings) {
   const configured = process.env.AI_MAX_TOKENS || process.env.OPENAI_MAX_TOKENS
   return clampNumber(settings?.maxOutputTokens ?? configured, 256, 65536, 4096)
+}
+
+function getChatTimeoutMs() {
+  return clampNumber(process.env.AI_REQUEST_TIMEOUT_MS, 8_000, 120_000, 35_000)
 }
 
 function buildProviderMessages(bundle, baseUrl) {
@@ -363,8 +386,8 @@ function formatProviderError(status, detail, profile) {
     return `${providerPrefix} 不接受这个模型名。请在模型页把模型名换成供应商控制台里的准确 ID。原始提示：${providerMessage}`
   }
 
-  if (status === 429) {
-    return `${providerPrefix} 额度或频率受限了。原始提示：${providerMessage}`
+  if (status === 429 || /insufficient\s*balance|balance|quota|credit|额度|余额|欠费/i.test(providerMessage)) {
+    return `${providerPrefix} 额度或余额不足了。请换一组模型配置、补充余额，或选择可用的免费模型。原始提示：${providerMessage}`
   }
 
   if (status >= 500) {
@@ -389,12 +412,6 @@ function extractProviderMessage(detail) {
   } catch {
     return detail.slice(0, 500)
   }
-}
-
-function clampNumber(value, min, max, fallback) {
-  const numericValue = Number(value)
-  if (Number.isNaN(numericValue)) return fallback
-  return Math.min(max, Math.max(min, numericValue))
 }
 
 function stringifyJsonForProvider(value) {

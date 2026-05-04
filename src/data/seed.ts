@@ -397,7 +397,7 @@ export function createSeedState(): AppState {
     agentMoments: [],
     agentRooms,
     settings: {
-      model: 'deepseek-v4-flash',
+      model: '',
       modelProfileId: '',
       temperature: 0.8,
       maxContextMessages: 18,

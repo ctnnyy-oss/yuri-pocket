@@ -17,12 +17,19 @@
 - `src/domain/memoryLabels.ts`：记忆类型、状态、敏感度、提及时机的中文标签。UI 可以读标签，但不要反向依赖记忆引擎。
 - `src/data`：种子数据、本地数据库和状态迁移，后续可替换或扩展为云同步。
 - `src/data/migrations.ts`：所有 AppState 版本升级都集中放这里，避免 IndexedDB 读写层越来越臃肿。
-- `src/services/memoryEngine.ts`：短期记忆、长期记忆、世界树触发、提示词组装。
+- `src/services/memoryEngine.ts`：记忆系统门面，只 re-export 公共 API，并保留会话管理和轻量冲突检测。
+- `src/services/memoryCore.ts`：记忆创建、标准化、修订、回滚、候选整合、整理和 tombstone 防复活。
+- `src/services/memoryRetrieval.ts`：长期记忆检索、世界树触发、调用权重更新和上下文块构建。
+- `src/services/promptBuilder.ts`：提示词组装、上下文预算、运行时环境和记忆调用日志。
 - `src/services/chatApi.ts`：前端到本地 API 代理的通信。
 - `server/index.mjs`：后端 API 入口，只负责路由、认证、请求编排和调用下层模块。
 - `server/cloudStore.mjs`：SQLite 云端快照、备份列表、备份裁剪和状态形状校验。
 - `server/modelProvider.mjs`：模型供应商适配层，集中处理 OpenAI-compatible、Anthropic 和 Gemini 的请求、模型列表、错误翻译和兼容编码。
-- `server/agentTools.mjs`：轻量 Agent 工具选择、工具结果生成和应用内动作建议。这个文件是领域引擎，不要把普通路由或数据库逻辑塞进去。
+- `server/agentTools.mjs`：Agent 编排入口，只负责按顺序调度工具检测、工具执行、动作检测和上下文块组装。
+- `server/agent/toolDetectors.mjs`：判断本轮应该启用哪些白名单工具、风险闸门和收尾检查。
+- `server/agent/toolExecutors.mjs`：生成工具结果，调用天气、搜索、网页摘录、计算、质量检查等执行逻辑。
+- `server/agent/actionDetectors.mjs`：从用户消息识别应用内动作，例如提醒、任务、候选记忆、动态和群聊。
+- `server/agent/searchEngines.mjs`、`server/agent/utils.mjs`、`server/agent/constants.mjs`：Agent 的搜索、通用工具函数和常量。
 
 ## 关键原则
 
@@ -33,7 +40,7 @@
 - 每个新能力都作为模块接入，避免把所有逻辑塞进聊天页面。
 - 品牌名、技术路径和存储 key 分开管理，但当前主技术名已经统一为 `yuri-nest`，避免后续部署和文档继续分裂。
 - 旧数据升级只能走 `migrations.ts`，不要在界面组件里临时判断旧字段；这样妹妹本机、云端快照和未来多设备同步都能复用同一条升级路径。
-- 超过 500 行的文件默认进入“需要继续拆分观察区”。当前 UI 入口和记忆视图已拆开；继续变胖时，优先拆 `useYuriNestApp.ts` 的云端/模型/本机备份 hook、`memoryEngine.ts` 的 prompt packer 与 memory writer/retriever、`agentTools.mjs` 的工具识别/工具执行/动作生成。
+- 超过 500 行的文件默认进入“需要继续拆分观察区”。当前 UI 入口、记忆视图、App 编排层、记忆引擎入口和 Agent 编排入口已拆开；继续变胖时，优先拆 `server/agent/toolExecutors.mjs` 的实时/网页/计算/治理工具，以及 `server/agent/actionDetectors.mjs` 的动作识别与 Agent 意图分析。
 - 拆大文件优先按“可验证的小模块”推进：先拆纯工具、配置、迁移、独立 UI，再拆带状态流的核心逻辑；每次拆完必须跑 lint/build 和浏览器回归。
 - 新功能默认先问“它属于页面、应用编排、领域服务、数据迁移、后端路由、云存储、模型供应商还是 Agent 工具”。答不上来时先补边界，不要直接塞进 `App.tsx`、`MemoryPanel.tsx` 或 `server/index.mjs`。
 

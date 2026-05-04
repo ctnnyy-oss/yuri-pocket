@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { AgentTask, AgentTaskStatus, CharacterCard } from '../../domain/types'
+import { formatSocialTime } from '../../app/formatters'
 import {
   createPlatformTask,
   getBrowserNotificationPermission,
@@ -430,7 +431,7 @@ function TaskCard({
 
       <div className="task-meta-row">
         <span>{character ? character.name : 'Agent'}</span>
-        <span>{formatTaskTime(task.updatedAt)}</span>
+        <span>{formatSocialTime(task.updatedAt)}</span>
         {task.handoff ? <span>{task.handoff}</span> : null}
       </div>
 
@@ -513,15 +514,4 @@ function getPlatformTaskStatusLabel(status: PlatformTaskStatus) {
   if (status === 'blocked') return '卡住'
   if (status === 'cancelled') return '取消'
   return '失败'
-}
-
-function formatTaskTime(value: string) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '刚刚'
-  return date.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }

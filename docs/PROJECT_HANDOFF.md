@@ -51,6 +51,7 @@
 - 2026-05-02 线上排查发现 YOP 旧模型 `deepseek/deepseek-v4-pro-free` 返回“无可用渠道”，已把默认模型切到实测可用的 `deepseek-v4-flash`；`deepseek-v4-pro` 也可用，但不要默认切到妹妹曾经明确想避免的 `Go/deepseek-v4-pro`。
 - 2026-05-03 已新增第一阶段轻量 Agent：后端 `server/agentTools.mjs` 会在 `/api/chat` 前执行白名单工具，包括当前北京时间、Open-Meteo 公开天气、用户提供的公开网页链接摘录、最近对话工作台、能力边界说明；还新增动作回传，用户明确要求时可更新当前聊天角色名称/头像字、创建网页内提醒、把内容写入候选记忆。
 - 2026-05-03 已完成早期架构整理：`App.tsx` 瘦身为页面外壳，应用状态与动作集中到 `src/app/useYuriNestApp.ts`；主题、路由、Agent 动作落地、格式化工具分别拆到 `src/app/*`；记忆编辑表单、记忆列表、设置页、世界树页、回收花园页拆成独立组件；后端模型供应商适配拆到 `server/modelProvider.mjs`，云端 SQLite 快照/备份拆到 `server/cloudStore.mjs`。
+- 2026-05-04 已完成 Claude 中断后的架构收尾：`useYuriNestApp.ts` 进一步拆出 `useChat`、`useCloudSync`、`useBackupRestore`、`useMemoryActions`、`useAgentTasks`；`memoryEngine.ts` 改成门面，核心、检索、推断、提示词构建分别落到 `src/services/memory*.ts` 和 `promptBuilder.ts`；`server/agentTools.mjs` 改成 Agent 编排入口，检测、执行、搜索、常量和工具函数拆到 `server/agent/*`。这轮同时修复了拆分后漏导入导致的 Agent 运行时错误，并补齐风险闸门、默认推进、任务队列、质量检查等 15 条 Agent 回归。
 - 旧 AstrBot / NapCat 服务已经从服务器清理掉，释放资源。
 - GitHub 已经作为版本回溯和部署入口。
 
@@ -149,7 +150,7 @@ flowchart LR
 - 前端新增页面视图时优先放 `src/components/<feature>/`，不要塞进 `App.tsx`。
 - 前端跨页面状态和动作放 `src/app/`；纯领域规则放 `src/services/` 或 `src/domain/`。
 - 后端新 API 先在 `server/index.mjs` 接路由，再把数据库、模型供应商、Agent 工具等具体逻辑放到对应模块。
-- `server/modelProvider.mjs` 只管模型接口差异；`server/cloudStore.mjs` 只管 SQLite 快照/备份；`server/agentTools.mjs` 只管轻量 Agent 工具和动作建议。
+- `server/modelProvider.mjs` 只管模型接口差异；`server/cloudStore.mjs` 只管 SQLite 快照/备份；`server/agentTools.mjs` 只做 Agent 编排；具体规则继续放到 `server/agent/toolDetectors.mjs`、`server/agent/toolExecutors.mjs`、`server/agent/actionDetectors.mjs`、`server/agent/searchEngines.mjs`。
 
 GitHub 负责：
 

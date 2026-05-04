@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { clampNumber, stripHtml, parseJson, sanitizeShortText, sanitizeBlockText, formatLogTime } from './shared/utils.mjs'
 
 const TASK_STATUSES = new Set(['queued', 'running', 'completed', 'failed', 'blocked', 'cancelled'])
 const TASK_PRIORITIES = new Set(['low', 'medium', 'high'])
@@ -600,45 +601,4 @@ function isInsideRoot(root, target) {
 
 function extractFirstUrl(text) {
   return String(text).match(/https?:\/\/[^\s"'<>]+/i)?.[0] || ''
-}
-
-function stripHtml(value) {
-  return String(value)
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function parseJson(value, fallback) {
-  if (!value) return fallback
-  try {
-    return JSON.parse(value)
-  } catch {
-    return fallback
-  }
-}
-
-function sanitizeShortText(value, maxLength) {
-  return Array.from(String(value || '').replace(/[\r\n\t]/g, ' ').trim()).slice(0, maxLength).join('')
-}
-
-function sanitizeBlockText(value, maxLength) {
-  return Array.from(String(value || '').replace(/\r\n/g, '\n').replace(/\t/g, ' ').trim()).slice(0, maxLength).join('')
-}
-
-function clampNumber(value, min, max, fallback) {
-  const numeric = Number(value)
-  if (!Number.isFinite(numeric)) return fallback
-  return Math.min(max, Math.max(min, numeric))
-}
-
-function formatLogTime(value) {
-  return new Date(value).toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }

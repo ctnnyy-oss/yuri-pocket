@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import dotenv from 'dotenv'
+import { clampNumber, quoteSqlString } from './shared/utils.mjs'
 
 dotenv.config({ path: '.env.local' })
 dotenv.config()
@@ -38,14 +39,4 @@ function pruneBackups() {
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
     .slice(maxBackups)
     .forEach((backup) => rmSync(backup.path, { force: true }))
-}
-
-function quoteSqlString(value) {
-  return `'${String(value).replace(/'/g, "''")}'`
-}
-
-function clampNumber(value, min, max, fallback) {
-  const numericValue = Number(value)
-  if (Number.isNaN(numericValue)) return fallback
-  return Math.min(max, Math.max(min, numericValue))
 }

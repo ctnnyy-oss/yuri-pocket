@@ -39,6 +39,15 @@ export interface ModelCatalogResult {
 
 export const modelProviderPresets: ModelProviderPreset[] = [
   {
+    id: 'custom',
+    label: '自定义平台 / 中转站',
+    description: '按平台文档填写 Base URL、接口格式和 API Key，适合任何兼容转发或私有后端。',
+    group: 'custom',
+    kind: 'openai-compatible',
+    baseUrl: '',
+    model: '',
+  },
+  {
     id: 'openai',
     label: 'OpenAI 官方',
     description: '官方 OpenAI API，使用 OpenAI-compatible 格式。',
@@ -136,15 +145,6 @@ export const modelProviderPresets: ModelProviderPreset[] = [
     kind: 'openai-compatible',
     baseUrl: 'http://127.0.0.1:18788/v1',
     model: 'deepseek/deepseek-v4-pro-free',
-  },
-  {
-    id: 'custom',
-    label: '自定义中转站',
-    description: '任何 OpenAI-compatible、Anthropic 或 Gemini 形态都可以手填。',
-    group: 'custom',
-    kind: 'openai-compatible',
-    baseUrl: '',
-    model: '',
   },
 ]
 

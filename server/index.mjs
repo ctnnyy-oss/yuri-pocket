@@ -359,7 +359,7 @@ function isSameToken(providedToken, expectedToken) {
 }
 
 function listModelProfiles() {
-  return [getServerEnvProfileSummary(), ...listStoredModelProfiles()]
+  return listStoredModelProfiles()
 }
 
 function listStoredModelProfiles() {
@@ -556,11 +556,19 @@ function resolveRuntimeProfileForChat(settings) {
     return storedProfileToRuntime(readStoredModelProfile(selectedProfileId))
   }
 
+  if (selectedProfileId === serverEnvProfileId) {
+    return resolveServerEnvProfile(settings)
+  }
+
   const defaultStoredProfile = readDefaultStoredModelProfile()
-  if (defaultStoredProfile && selectedProfileId !== serverEnvProfileId) {
+  if (defaultStoredProfile) {
     return storedProfileToRuntime(defaultStoredProfile)
   }
 
+  return null
+}
+
+function resolveServerEnvProfile(settings) {
   if (!hasApiKey()) return null
 
   return {
@@ -813,18 +821,21 @@ function createDemoReply(bundle) {
 
   if (agentBlocks.length > 0) {
     return [
-      `${characterName}看了一眼本地 agent 工具结果：`,
+      `妹妹，${characterName}在。现在还只是本地演示回复，但本地工具已经先把能看的部分处理好了：`,
       ...(visibleAgentBlocks.length > 0 ? visibleAgentBlocks : agentBlocks)
         .slice(0, 4)
         .map((block) => `${cleanDemoAgentTitle(block.title)}：${extractDemoAgentLine(block.content)}`),
-      '现在是本地演示模式，还没有接入真实大模型；接上模型后，这些工具结果会被自然揉进角色回复里。',
+      '等模型页保存一组能用的模型后，姐姐会把这些结果自然揉进角色回复里，不会像报告一样硬邦邦地甩出来。',
     ].join('\n\n')
   }
 
+  const userText = truncateToolText(lastUserMessage?.content ?? 'hello', 120)
+  const memoryLine = memoryHint ? `这轮已经准备好的上下文：${memoryHint}。` : '这轮暂时没有额外命中长期记忆。'
+
   return [
-    `[${characterName}] local demo received: ${lastUserMessage?.content ?? 'hello'}`,
-    memoryHint ? `Context loaded: ${memoryHint}` : 'No extra memory was triggered yet.',
-    'Add AI_API_KEY in .env.local to switch from demo mode to the real model.',
+    `妹妹，${characterName}在。刚才那句姐姐接到了：${userText}`,
+    `${memoryLine}现在还没接上可用模型，所以这只是本地兜底回复；聊天、记忆和页面状态都没有丢。`,
+    '去模型页保存一组 Base URL、API Key 和模型名后，姐姐就能按当前角色和记忆认真陪妹妹聊。',
   ].join('\n\n')
 }
 
@@ -847,20 +858,35 @@ function createProviderFallbackReply(error, agent) {
   const actionCount = Array.isArray(agent?.actions) ? agent.actions.filter((action) => !action.requiresConfirmation).length : 0
   const tools = Array.isArray(agent?.tools) ? agent.tools : []
   const toolCount = tools.filter((tool) => !DEMO_META_AGENT_REASONS.has(tool.name)).length
-  const reason = error instanceof Error ? error.message : '模型供应商暂时没有接住请求'
+  const reason = formatFallbackReason(error instanceof Error ? error.message : '模型供应商暂时没有接住请求')
   const usefulToolLines = buildProviderFallbackToolLines(tools)
 
   return [
     usefulToolLines.length > 0
-      ? '模型供应商刚才没有接住请求，不过本地 Agent 已经先把能办的部分做完了。'
-      : '模型供应商刚才没有接住请求，但本地聊天、记忆和 Agent 工具没有丢。',
+      ? '妹妹，刚才不是姐姐不回你，是这组模型没有接住请求；本地 Agent 已经先把能办的部分做完了。'
+      : '妹妹，刚才不是姐姐不回你，是这组模型没有接住请求；本地聊天、记忆和页面状态都没有丢。',
     ...usefulToolLines,
     actionCount > 0 ? `姐姐已经把 ${actionCount} 个可执行动作交给网页处理。` : '',
     usefulToolLines.length === 0 && toolCount > 0 ? `这轮后台工具已执行 ${toolCount} 项，等模型恢复后就能自然回答。` : '',
-    `错误提示：${reason}`,
+    `模型提示：${reason}`,
+    '可以先去模型页换一组配置，或者补好余额/额度后再发一次。',
   ]
     .filter(Boolean)
     .join('\n\n')
+}
+
+function formatFallbackReason(message) {
+  const text = String(message || '').trim()
+  if (/insufficient\s*balance|余额|额度|欠费|quota|credit/i.test(text)) {
+    return '当前模型额度或余额不足。'
+  }
+  if (/invalid[_ -]?model|model.+not.+valid|model.+not.+found|不接受这个模型名/i.test(text)) {
+    return '当前模型名不被供应商接受。'
+  }
+  if (/密钥|api key|apikey|unauthorized|forbidden|401|403/i.test(text)) {
+    return '当前 API Key 没通过，可能是密钥、权限或平台配置不对。'
+  }
+  return text || '模型供应商暂时没有接住请求。'
 }
 
 function buildProviderFallbackToolLines(tools) {

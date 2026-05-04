@@ -32,7 +32,7 @@ export function migrateAppState(state: AppState): AppState {
     settings: {
       ...defaults.settings,
       ...sourceSettings,
-      model: normalizeDefaultModel(sourceSettings.model),
+      model: normalizeDefaultModel(sourceSettings.model, sourceSettings.modelProfileId),
       modelProfileId: sourceSettings.modelProfileId || defaults.settings.modelProfileId,
       customAccentColor: normalizeHexColor(sourceSettings.customAccentColor) ?? defaults.settings.customAccentColor,
       dataStorageMode: sourceSettings.dataStorageMode === 'local' ? 'local' : defaults.settings.dataStorageMode,
@@ -60,8 +60,11 @@ function mergeMissingSeedMemories(memories: LongTermMemory[], seedMemories: Long
   return [...missingSeeds, ...memories]
 }
 
-function normalizeDefaultModel(model: string | undefined): string {
-  if (!model || model === 'gpt-5.5' || model === 'deepseek/deepseek-v4-pro-free') return 'deepseek-v4-flash'
+function normalizeDefaultModel(model: string | undefined, modelProfileId: string | undefined): string {
+  if (modelProfileId && model) return model
+  if (!model || model === 'gpt-5.5' || model === 'deepseek/deepseek-v4-pro-free' || model === 'deepseek-v4-flash') {
+    return ''
+  }
   return model
 }
 

@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs'
 import { basename, dirname, join, resolve, sep } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
+import { clampNumber, quoteSqlString } from './shared/utils.mjs'
 
 const snapshotId = 'default'
 
@@ -129,10 +130,6 @@ function toCloudBackupSummary(backupPath) {
   }
 }
 
-function quoteSqlString(value) {
-  return `'${String(value).replace(/'/g, "''")}'`
-}
-
 export function isValidAppStateShape(state) {
   return (
     state &&
@@ -144,10 +141,4 @@ export function isValidAppStateShape(state) {
     state.settings &&
     typeof state.settings === 'object'
   )
-}
-
-function clampNumber(value, min, max, fallback) {
-  const numericValue = Number(value)
-  if (Number.isNaN(numericValue)) return fallback
-  return Math.min(max, Math.max(min, numericValue))
 }

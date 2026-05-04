@@ -355,7 +355,6 @@ export function MemoryPanel({
           modelProfileBusy={modelProfileBusy}
           modelProfileStatus={modelProfileStatus}
           modelProfiles={modelProfiles}
-          onConnectCloud={onConnectCloud}
           onDeleteModelProfile={onDeleteModelProfile}
           onFetchModelCatalog={onFetchModelCatalog}
           onSaveModelProfile={onSaveModelProfile}
