@@ -221,6 +221,47 @@
   }
 }
 
+/* Third-pass density polish: closer to modern QQ proportions, less blown-up. */
+@media (min-width: 761px) {
+  .app-shell,
+  .app-shell.feature-mode {
+    grid-template-columns: clamp(360px, 20vw, 430px) minmax(0, 1fr);
+    grid-template-rows: 50px minmax(0, 1fr);
+  }
+
+  .desktop-titlebar {
+    min-height: 50px;
+    padding: 0 15px;
+    background: rgba(255, 250, 253, 0.96);
+  }
+
+  .desktop-titlebar-logo {
+    font-size: 16px;
+  }
+
+  .desktop-titlebar-avatar {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+    font-size: 12px;
+    box-shadow: none;
+  }
+
+  .desktop-titlebar-profile b {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .desktop-titlebar-profile small {
+    font-size: 12px;
+  }
+
+  .feature-mode .left-panel,
+  .left-panel {
+    grid-template-columns: 66px minmax(0, 1fr);
+  }
+}
+
 /* ── 工作区标题 ── */
 
 .workspace-title {

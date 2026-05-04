@@ -501,3 +501,189 @@
   background: #fff6fb;
   color: #ee78b0;
 }
+
+/* Third-pass desktop polish: lighter QQ-like density and flatter texture. */
+@media (min-width: 761px) {
+  .qq-icon-rail {
+    gap: 5px;
+    padding: 10px 6px 14px;
+    background: #fde8f3;
+  }
+
+  .qq-brand-button {
+    width: 48px;
+    height: 30px;
+    font-size: 14px;
+  }
+
+  .primary-nav,
+  .qq-dock-icons {
+    gap: 5px;
+  }
+
+  .nav-button {
+    width: 48px;
+    height: 43px;
+    border-radius: 9px;
+  }
+
+  .nav-button svg {
+    width: 23px;
+    height: 23px;
+  }
+
+  .nav-button b {
+    top: 4px;
+    right: 7px;
+    min-width: 18px;
+    height: 18px;
+    font-size: 11px;
+  }
+
+  .nav-button b.nav-dot {
+    top: 7px;
+    right: 9px;
+  }
+
+  .qq-dock-icons button {
+    width: 48px;
+    height: 36px;
+    border-radius: 9px;
+  }
+
+  .qq-dock-icons button svg {
+    width: 21px;
+    height: 21px;
+  }
+
+  .desktop-rail-menu {
+    left: 66px;
+  }
+
+  .conversation-pane {
+    background: rgba(247, 221, 234, 0.86);
+  }
+
+  .conversation-search-row {
+    grid-template-columns: minmax(0, 1fr) 38px;
+    gap: 8px;
+    padding: 14px 12px 10px;
+  }
+
+  .conversation-add-button {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+  }
+
+  .conversation-search {
+    height: 38px;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.54);
+  }
+
+  .character-button {
+    min-height: 78px;
+    gap: 11px;
+    padding: 8px 10px 8px 14px;
+    border-radius: 7px;
+  }
+
+  .character-button.active {
+    background: rgba(64, 48, 57, 0.1);
+  }
+
+  .avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 15px;
+    box-shadow: none;
+  }
+
+  .conversation-copy {
+    gap: 4px;
+  }
+
+  .conversation-copy strong {
+    font-size: 15.5px;
+    font-weight: 600;
+  }
+
+  .conversation-copy small {
+    font-size: 12.5px;
+  }
+
+  .conversation-meta time {
+    font-size: 12px;
+  }
+
+  .qq-contact-manager {
+    min-height: 42px;
+    margin: 0 18px 8px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+
+  .qq-contact-notice,
+  .qq-contact-group-title {
+    min-height: 46px;
+    padding: 0 18px;
+    font-size: 15px;
+  }
+
+  .qq-contact-tabs {
+    margin: 12px 18px;
+  }
+
+  .qq-contact-friends button {
+    min-height: 72px;
+    gap: 12px;
+    padding: 8px 14px;
+  }
+
+  .avatar {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    background: transparent;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.36);
+  }
+
+  .avatar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background:
+      radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.72), transparent 30%),
+      radial-gradient(circle at 74% 76%, color-mix(in srgb, var(--avatar-accent) 26%, transparent), transparent 42%),
+      conic-gradient(
+        from 150deg,
+        color-mix(in srgb, var(--avatar-accent) 34%, #fff),
+        color-mix(in srgb, var(--avatar-accent) 12%, #fff),
+        color-mix(in srgb, var(--avatar-accent) 24%, #f7f1ff),
+        color-mix(in srgb, var(--avatar-accent) 34%, #fff)
+      );
+  }
+
+  .avatar::after {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    z-index: -1;
+    border-radius: inherit;
+    box-shadow: inset 0 -12px 22px rgba(255, 255, 255, 0.28);
+  }
+
+  .avatar b {
+    z-index: 1;
+  }
+
+  .system-avatar::before,
+  .channel-avatar::before {
+    background:
+      radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.58), transparent 28%),
+      linear-gradient(135deg, #1f9df0, #1688e8);
+  }
+}

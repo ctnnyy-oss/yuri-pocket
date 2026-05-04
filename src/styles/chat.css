@@ -1423,3 +1423,111 @@
     min-height: 100%;
   }
 }
+
+/* Third-pass chat texture polish. */
+@media (min-width: 761px) {
+  .chat-topbar {
+    min-height: 68px;
+    background: rgba(255, 250, 253, 0.88);
+  }
+
+  .chat-topbar-text strong {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .chat-topbar-text span {
+    font-size: 11.5px;
+  }
+
+  .chat-topbar-actions button {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+
+  .chat-topbar-actions button svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .message-list {
+    padding: 16px 0 18px;
+    background:
+      linear-gradient(90deg, rgba(255, 229, 241, 0.78), rgba(255, 251, 247, 0.86)),
+      #fff8fb;
+  }
+
+  .message-column {
+    gap: 8px;
+  }
+
+  .chat-row {
+    padding: 4px 24px;
+    gap: 10px;
+  }
+
+  .chat-row-avatar {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    font-size: 13px;
+    box-shadow: none;
+  }
+
+  .message {
+    max-width: min(58%, 640px);
+    padding: 9px 13px;
+    border-radius: 9px;
+    box-shadow: none;
+  }
+
+  .message p {
+    font-size: 14px;
+    line-height: 1.58;
+  }
+
+  .message-user {
+    background: #ec83bb;
+  }
+
+  .message-user::before {
+    border-left-color: #ec83bb;
+  }
+
+  .sticker-message {
+    width: 46px;
+    height: 46px;
+    font-size: 25px;
+  }
+
+  .composer {
+    min-height: 124px;
+    padding: 8px 20px 14px;
+    background: rgba(255, 253, 254, 0.96);
+  }
+
+  .composer-entry {
+    min-height: 48px;
+  }
+
+  .composer textarea {
+    min-height: 38px;
+    font-size: 14px;
+  }
+
+  .composer-tool {
+    width: 31px;
+    height: 30px;
+  }
+}
+
+@media (max-width: 760px) {
+  .chat-topbar-text strong {
+    letter-spacing: 0;
+  }
+
+  .message {
+    box-shadow: none;
+  }
+}

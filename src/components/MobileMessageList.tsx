@@ -20,7 +20,6 @@ function MobileStatusBar() {
   return (
     <div className="mobile-status-bar" aria-hidden="true">
       <b>7:03</b>
-      <span className="mobile-dynamic-island">AI</span>
       <span className="mobile-signal">5G 5G ▰▰▰ 37</span>
     </div>
   )
