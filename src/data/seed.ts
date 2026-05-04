@@ -411,6 +411,7 @@ export function createSeedState(): AppState {
       trashRetentionDays: 30,
       autoMemoryEnabled: true,
       memoryConfidenceFloor: 0.7,
+      showDevTrace: false,
     },
   }
 }

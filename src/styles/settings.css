@@ -108,7 +108,7 @@
 
 /* ── 输入控件 ── */
 
-.settings-stack input:not([type='checkbox']):not([type='range']),
+.settings-stack input:not([type='checkbox']):not([type='range']):not([type='color']),
 .settings-stack select {
   width: 100%;
   min-width: 0;
@@ -129,7 +129,7 @@
   cursor: pointer;
 }
 
-.settings-stack input:not([type='checkbox']):not([type='range']):focus,
+.settings-stack input:not([type='checkbox']):not([type='range']):not([type='color']):focus,
 .settings-stack select:focus {
   border-color: var(--pink-400);
   box-shadow: 0 0 0 3px var(--rose-glow), var(--shadow-sm);
@@ -598,9 +598,19 @@
   display: block;
 }
 
+.custom-color-control > span {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .custom-color-control strong {
   color: var(--ink);
   font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.custom-color-control small {
+  overflow-wrap: anywhere;
 }
 
 .custom-color-control input[type='color'] {

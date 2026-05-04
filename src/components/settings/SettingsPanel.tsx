@@ -173,6 +173,24 @@ export function SettingsPanel({
 
         <div className="settings-section">
           <div className="settings-section-title">
+            <Sparkles size={18} />
+            <span>聊天显示</span>
+          </div>
+          <label className="toggle-row">
+            <span>
+              <strong>显示 Agent 调试信息</strong>
+              <small>开启后聊天气泡内会显示 Agent 工具和记忆调用详情</small>
+            </span>
+            <input
+              checked={settings.showDevTrace}
+              onChange={(event) => onUpdateSettings({ ...settings, showDevTrace: event.target.checked })}
+              type="checkbox"
+            />
+          </label>
+        </div>
+
+        <div className="settings-section">
+          <div className="settings-section-title">
             <Database size={18} />
             <span>数据与同步</span>
           </div>

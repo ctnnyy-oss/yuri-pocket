@@ -1,29 +1,77 @@
-import type { AgentAction, AgentRunSummary, AgentToolStatus, ChatMessage } from '../domain/types'
+import type { CSSProperties } from 'react'
+import type { AgentAction, AgentRunSummary, AgentToolStatus, CharacterCard, ChatMessage } from '../domain/types'
 import type { MemoryFeedbackAction } from '../services/memoryFeedback'
 import type { MessageMemoryTrace } from '../services/memoryTrace'
 
 interface MessageBubbleProps {
   message: ChatMessage
+  character: CharacterCard
+  previousMessage: ChatMessage | null
+  showDevTrace: boolean
   memoryTrace?: MessageMemoryTrace
   onMemoryFeedback?: (memoryId: string, action: MemoryFeedbackAction) => void
 }
 
-export function MessageBubble({ memoryTrace, message, onMemoryFeedback }: MessageBubbleProps) {
+const TIME_GAP_MS = 5 * 60 * 1000
+
+export function MessageBubble({
+  memoryTrace,
+  message,
+  character,
+  previousMessage,
+  showDevTrace,
+  onMemoryFeedback,
+}: MessageBubbleProps) {
   const content = formatDisplayText(message.content)
+  const isUser = message.role === 'user'
+  const isSameRole = previousMessage?.role === message.role
+  const showAvatar = !isSameRole
+  const showTimeSeparator = shouldShowTimeSeparator(previousMessage, message)
 
   return (
-    <article className={`message message-${message.role}`}>
-      <p>{content}</p>
-      {message.agent && <AgentTrace trace={message.agent} />}
-      {memoryTrace && <MemoryTrace onMemoryFeedback={onMemoryFeedback} trace={memoryTrace} />}
-      <time dateTime={message.createdAt}>
-        {new Intl.DateTimeFormat('zh-CN', {
-          hour: '2-digit',
-          minute: '2-digit',
-        }).format(new Date(message.createdAt))}
-      </time>
-    </article>
+    <>
+      {showTimeSeparator && (
+        <div className="chat-time-separator">
+          {formatTimeSeparator(message.createdAt)}
+        </div>
+      )}
+      <div className={`chat-row ${isUser ? 'chat-row-user' : 'chat-row-assistant'}`}>
+        <span
+          className="chat-row-avatar"
+          style={{ '--avatar-accent': isUser ? 'var(--pink-400)' : character.accent, visibility: showAvatar ? 'visible' : 'hidden' } as CSSProperties}
+        >
+          {isUser ? '我' : character.avatar}
+        </span>
+        <article className={`message message-${message.role}`}>
+          <p>{content}</p>
+          {showDevTrace && message.agent && <AgentTrace trace={message.agent} />}
+          {showDevTrace && memoryTrace && <MemoryTrace onMemoryFeedback={onMemoryFeedback} trace={memoryTrace} />}
+        </article>
+      </div>
+    </>
   )
+}
+
+function shouldShowTimeSeparator(prev: ChatMessage | null, current: ChatMessage): boolean {
+  if (!prev) return true
+  const prevTime = new Date(prev.createdAt).getTime()
+  const currTime = new Date(current.createdAt).getTime()
+  return currTime - prevTime > TIME_GAP_MS
+}
+
+function formatTimeSeparator(isoString: string): string {
+  const date = new Date(isoString)
+  const now = new Date()
+  const isToday = date.toDateString() === now.toDateString()
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const isYesterday = date.toDateString() === yesterday.toDateString()
+
+  const time = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit' }).format(date)
+
+  if (isToday) return time
+  if (isYesterday) return `昨天 ${time}`
+  return new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(date)
 }
 
 const toolStatusLabels: Record<AgentToolStatus, string> = {

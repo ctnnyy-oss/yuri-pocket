@@ -334,6 +334,7 @@ export interface AppSettings {
   trashRetentionDays: number
   autoMemoryEnabled: boolean
   memoryConfidenceFloor: number
+  showDevTrace: boolean
 }
 
 export interface AppState {

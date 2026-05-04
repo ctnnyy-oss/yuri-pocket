@@ -74,7 +74,6 @@ function App() {
     modelProfiles,
     navigateView,
     notice,
-    promptBundle,
     setDraft,
     state,
   } = useYuriNestApp()
@@ -91,8 +90,9 @@ function App() {
 
       {activeView === 'chat' ? (
         <ChatPhone
+          activeCharacterId={state.activeCharacterId}
           character={character}
-          contextBlocks={promptBundle.contextBlocks}
+          characters={state.characters}
           draft={draft}
           isSending={isSending}
           memories={state.memories}
@@ -100,6 +100,7 @@ function App() {
           messages={conversation.messages}
           onDraftChange={setDraft}
           onMemoryFeedback={handleMemoryFeedbackFromChat}
+          onSelectCharacter={handleSelectCharacter}
           onSend={handleSend}
           settings={state.settings}
         />
