@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AppState, LocalBackupSummary, ModelProfileInput, ModelProfileSummary } from '../domain/types'
 import {
   checkCloudHealth,
@@ -37,6 +37,10 @@ interface UseCloudSyncDeps {
   makeLocalBackup: (reason: string) => Promise<LocalBackupSummary>
 }
 
+function createAutoPushSignature(state: AppState): string {
+  return JSON.stringify(state)
+}
+
 export function useCloudSync({ state, setState, setNotice, characterId, makeLocalBackup }: UseCloudSyncDeps) {
   const [cloudToken, setCloudToken] = useState(() => getSavedCloudToken())
   const [cloudStatus, setCloudStatus] = useState(() => {
@@ -54,6 +58,17 @@ export function useCloudSync({ state, setState, setNotice, characterId, makeLoca
   const [modelProfileBusy, setModelProfileBusy] = useState(false)
   const autoCloudReadyRef = useRef(false)
   const skipNextAutoPushRef = useRef(false)
+  const cloudBusyRef = useRef<CloudBusyTask | null>(cloudBusy)
+  const cloudMetaRef = useRef<CloudMetadata | null>(cloudMeta)
+  const cloudTokenRef = useRef(cloudToken)
+  const autoPushInFlightRef = useRef(false)
+  const lastAutoPushSignatureRef = useRef('')
+
+  useEffect(() => {
+    cloudBusyRef.current = cloudBusy
+    cloudMetaRef.current = cloudMeta
+    cloudTokenRef.current = cloudToken
+  }, [cloudBusy, cloudMeta, cloudToken])
 
   const refreshCloudBackups = useCallback(async (token: string) => {
     if (!isCloudSyncConfigured()) {
@@ -127,6 +142,7 @@ export function useCloudSync({ state, setState, setNotice, characterId, makeLoca
       if (snapshot.state) {
         const pulledState = migrateAppState(snapshot.state)
         skipNextAutoPushRef.current = true
+        lastAutoPushSignatureRef.current = createAutoPushSignature(applyTrashRetention(pulledState))
         setState(pulledState)
         setCloudMeta({
           hasState: true,
@@ -136,9 +152,11 @@ export function useCloudSync({ state, setState, setNotice, characterId, makeLoca
         setCloudStatus(`已自动读取云端 v${snapshot.revision}`)
         setNotice('云端数据已自动同步')
       } else {
-        const result = await pushCloudState(applyTrashRetention(localState), cloudToken, {
+        const stateToPush = applyTrashRetention(localState)
+        const result = await pushCloudState(stateToPush, cloudToken, {
           baseRevision: snapshot.revision,
         })
+        lastAutoPushSignatureRef.current = createAutoPushSignature(stateToPush)
         setCloudMeta({ hasState: true, revision: result.revision, updatedAt: result.updatedAt })
         setCloudStatus(`已创建云端同步 v${result.revision}`)
       }
@@ -277,6 +295,7 @@ export function useCloudSync({ state, setState, setNotice, characterId, makeLoca
         baseRevision: cloudMeta?.revision ?? 0,
       })
       setState(stateToPush)
+      lastAutoPushSignatureRef.current = createAutoPushSignature(stateToPush)
       setCloudMeta({
         hasState: true,
         revision: result.revision,
@@ -442,29 +461,38 @@ export function useCloudSync({ state, setState, setNotice, characterId, makeLoca
   }, [refreshModelProfileList])
 
   const autoPush = useCallback((currentState: AppState) => {
-    if (!autoCloudReadyRef.current || cloudBusy) return
+    if (!autoCloudReadyRef.current || cloudBusyRef.current || autoPushInFlightRef.current) return
     if (skipNextAutoPushRef.current) {
       skipNextAutoPushRef.current = false
       return
     }
 
+    const stateToPush = applyTrashRetention(currentState)
+    const signature = createAutoPushSignature(stateToPush)
+    if (signature === lastAutoPushSignatureRef.current) return
+
+    autoPushInFlightRef.current = true
     void (async () => {
       try {
-        const stateToPush = applyTrashRetention(currentState)
-        const result = await pushCloudState(stateToPush, cloudToken, {
-          baseRevision: cloudMeta?.revision ?? 0,
+        const result = await pushCloudState(stateToPush, cloudTokenRef.current, {
+          baseRevision: cloudMetaRef.current?.revision ?? 0,
         })
-        setCloudMeta({
+        const nextMeta = {
           hasState: true,
           revision: result.revision,
           updatedAt: result.updatedAt,
-        })
+        }
+        cloudMetaRef.current = nextMeta
+        lastAutoPushSignatureRef.current = signature
+        setCloudMeta(nextMeta)
         setCloudStatus(`自动保存 v${result.revision}`)
       } catch (error) {
         setCloudStatus(error instanceof Error ? error.message : '自动保存失败，请稍后手动检查云端状态')
+      } finally {
+        autoPushInFlightRef.current = false
       }
     })()
-  }, [cloudBusy, cloudMeta, cloudToken])
+  }, [])
 
   const onSwitchToLocal = useCallback(() => {
     autoCloudReadyRef.current = false
