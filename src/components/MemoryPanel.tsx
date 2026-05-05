@@ -82,7 +82,9 @@ interface MemoryPanelProps {
   cloudBusy: 'checking' | 'pulling' | 'pushing' | 'backing-up' | null
   cloudBackups: CloudBackupSummary[]
   cloudSyncConfigured: boolean
+  cloudToken: string
   onConnectCloud: () => void
+  onSaveCloudToken: (token: string) => void
   onPullCloud: () => void
   onPushCloud: () => void
   onRefreshCloud: () => void
@@ -135,7 +137,9 @@ export function MemoryPanel({
   cloudBusy,
   cloudBackups,
   cloudSyncConfigured,
+  cloudToken,
   onConnectCloud,
+  onSaveCloudToken,
   onPullCloud,
   onPushCloud,
   onRefreshCloud,
@@ -357,12 +361,15 @@ export function MemoryPanel({
       {activeView === 'model' && (
         <ModelAndDataPanel
           cloudSyncConfigured={cloudSyncConfigured}
+          cloudToken={cloudToken}
+          cloudStatus={cloudStatus}
           modelProfileBusy={modelProfileBusy}
           modelProfileStatus={modelProfileStatus}
           modelProfiles={modelProfiles}
           onDeleteModelProfile={onDeleteModelProfile}
           onFetchModelCatalog={onFetchModelCatalog}
           onSaveModelProfile={onSaveModelProfile}
+          onSaveCloudToken={onSaveCloudToken}
           onTestModelProfile={onTestModelProfile}
           onUpdateSettings={onUpdateSettings}
           settings={settings}

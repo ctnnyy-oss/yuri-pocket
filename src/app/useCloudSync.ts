@@ -12,6 +12,7 @@ import {
   listCloudBackups,
   pullCloudState,
   pushCloudState,
+  saveCloudToken,
 } from '../services/cloudSync'
 import { migrateAppState } from '../data/migrations'
 import {
@@ -37,7 +38,7 @@ interface UseCloudSyncDeps {
 }
 
 export function useCloudSync({ state, setState, setNotice, characterId, makeLocalBackup }: UseCloudSyncDeps) {
-  const [cloudToken] = useState(() => getSavedCloudToken())
+  const [cloudToken, setCloudToken] = useState(() => getSavedCloudToken())
   const [cloudStatus, setCloudStatus] = useState(() => {
     if (!isCloudSyncConfigured()) return '云端后端未配置'
     return '云端直连已启用'
@@ -166,6 +167,26 @@ export function useCloudSync({ state, setState, setNotice, characterId, makeLoca
     void refreshCloudMetadata(cloudToken)
     void refreshModelProfileList(cloudToken)
     setNotice('云端连接已检查')
+  }
+
+  function handleSaveCloudToken(token: string) {
+    const cleanedToken = token.trim()
+    saveCloudToken(cleanedToken)
+    setCloudToken(cleanedToken)
+
+    if (!cleanedToken) {
+      setCloudMeta(null)
+      setCloudStatus('云端口令已清空')
+      setModelProfileStatus('模型保险箱需要云端口令后再读取')
+      setNotice('云端口令已清空')
+      return
+    }
+
+    setCloudStatus('云端口令已保存，正在检查连接...')
+    setModelProfileStatus('云端口令已保存，正在读取模型配置...')
+    setNotice('云端口令已保存')
+    void refreshCloudMetadata(cleanedToken)
+    void refreshModelProfileList(cleanedToken)
   }
 
   async function handlePullCloud() {
@@ -474,6 +495,7 @@ export function useCloudSync({ state, setState, setNotice, characterId, makeLoca
     refreshCloudMetadata,
     bootstrapCloudState,
     handleConnectCloud,
+    handleSaveCloudToken,
     handlePullCloud,
     handlePushCloud,
     handleCreateCloudBackup,

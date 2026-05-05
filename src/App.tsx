@@ -34,6 +34,7 @@ function App() {
     cloudMeta,
     cloudStatus,
     cloudSyncConfigured,
+    cloudToken,
     conversation,
     draft,
     handleAddMemory,
@@ -65,6 +66,7 @@ function App() {
     handleRestoreMemoryRevision,
     handleRestoreWorldNode,
     handleSaveModelProfile,
+    handleSaveCloudToken,
     handleSelectCharacter,
     handleSend,
     handleTestModelProfile,
@@ -252,6 +254,7 @@ function App() {
           cloudMeta={cloudMeta}
           cloudStatus={cloudStatus}
           cloudSyncConfigured={cloudSyncConfigured}
+          cloudToken={cloudToken}
           localBackups={localBackups}
           memories={state.memories}
           memoryEmbeddings={state.memoryEmbeddings}
@@ -285,6 +288,7 @@ function App() {
           onRestoreMemoryRevision={handleRestoreMemoryRevision}
           onRestoreWorldNode={handleRestoreWorldNode}
           onSaveModelProfile={handleSaveModelProfile}
+          onSaveCloudToken={handleSaveCloudToken}
           onTestModelProfile={handleTestModelProfile}
           onTrashMemory={handleTrashMemory}
           onTrashWorldNode={handleTrashWorldNode}

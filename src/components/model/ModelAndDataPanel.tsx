@@ -1,4 +1,5 @@
 import { SlidersHorizontal } from 'lucide-react'
+import { useState } from 'react'
 import type { AppSettings, ModelProfileInput, ModelProfileSummary } from '../../domain/types'
 import type { ModelCatalogResult } from '../../services/modelProfiles'
 import { WorkspaceTitle } from '../memory/atoms'
@@ -15,6 +16,9 @@ interface ModelAndDataPanelProps {
   modelProfileStatus: string
   modelProfileBusy: boolean
   cloudSyncConfigured: boolean
+  cloudToken: string
+  cloudStatus?: string
+  onSaveCloudToken: (token: string) => void
   onSaveModelProfile: (profile: ModelProfileInput) => Promise<void>
   onDeleteModelProfile: (profileId: string) => Promise<void>
   onFetchModelCatalog: (input: { profileId?: string; profile?: ModelProfileInput }) => Promise<ModelCatalogResult>
@@ -28,6 +32,9 @@ export function ModelAndDataPanel({
   modelProfileStatus,
   modelProfileBusy,
   cloudSyncConfigured,
+  cloudToken,
+  cloudStatus,
+  onSaveCloudToken,
   onSaveModelProfile,
   onDeleteModelProfile,
   onFetchModelCatalog,
@@ -44,6 +51,7 @@ export function ModelAndDataPanel({
     onTestModelProfile,
   })
   const modelBackendHint = cloudSyncConfigured ? '云端模型后端' : '本机 /api 模型后端'
+  const [cloudTokenDraft, setCloudTokenDraft] = useState(cloudToken)
 
   function handleUseProfile(profile: ModelProfileSummary) {
     onUpdateSettings({
@@ -63,6 +71,11 @@ export function ModelAndDataPanel({
     void onTestModelProfile({ profileId: activeProfile.id })
   }
 
+  function handleStoreCloudToken(token: string) {
+    setCloudTokenDraft(token)
+    onSaveCloudToken(token)
+  }
+
   return (
     <>
       <WorkspaceTitle
@@ -72,6 +85,36 @@ export function ModelAndDataPanel({
       />
 
       <section className="settings-stack model-settings-stack model-connect-stack">
+        {cloudSyncConfigured && (
+          <section className="settings-section model-auth-section">
+            <div className="settings-section-title">
+              <span>云端口令</span>
+            </div>
+            <label>
+              <span>后端授权</span>
+              <input
+                autoComplete="off"
+                onChange={(event) => setCloudTokenDraft(event.target.value)}
+                placeholder={cloudToken ? '已保存到当前浏览器，留空可清除' : '填入云端同步口令'}
+                type="password"
+                value={cloudTokenDraft}
+              />
+              <small>
+                公开后端开启授权时，先保存一次口令；口令只存在当前浏览器，不会写进仓库或导出文件。
+                {cloudStatus ? ` 当前状态：${cloudStatus}` : ''}
+              </small>
+            </label>
+            <div className="settings-actions">
+              <button onClick={() => handleStoreCloudToken(cloudTokenDraft)} type="button">
+                保存口令
+              </button>
+              <button className="quiet-action" onClick={() => handleStoreCloudToken('')} type="button">
+                清空口令
+              </button>
+            </div>
+          </section>
+        )}
+
         <ModelCurrentStrip
           activeProfile={activeProfile}
           modelBackendHint={modelBackendHint}
