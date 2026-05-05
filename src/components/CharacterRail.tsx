@@ -4,6 +4,7 @@ import {
   BellOff,
   Brain,
   ChevronRight,
+  ListTodo,
   MessageCircle,
   Plus,
   Search,
@@ -46,6 +47,7 @@ const channelRows = [
 const appRows = [
   { title: '模型管理', text: 'URL、API Key、官方或第三方协议', icon: SlidersHorizontal, view: 'model' as AppView },
   { title: '记忆管理', text: '长期记忆、关系记忆、世界观资料', icon: Brain, view: 'memory' as AppView },
+  { title: 'Agent 任务', text: '后台队列、自检和任务推进状态', icon: ListTodo, view: 'tasks' as AppView },
   { title: '设置中心', text: '不属于聊天、角色、模型、记忆的入口都放这里', icon: Settings, view: 'settings' as AppView },
 ]
 

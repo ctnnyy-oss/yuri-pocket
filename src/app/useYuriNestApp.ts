@@ -241,6 +241,53 @@ export function useYuriNestApp() {
     return characterId
   }
 
+  function handleUpdateCharacter(input: {
+    id: string
+    name: string
+    relation: string
+    mood: string
+    persona: string
+  }): boolean {
+    const target = state.characters.find((item) => item.id === input.id)
+    if (!target) {
+      setNotice('没有找到这个角色')
+      return false
+    }
+
+    const canEdit = target.id.startsWith('character_') || target.tags.includes('自定义角色')
+    if (!canEdit) {
+      setNotice('内置三对 CP 先保留，后续妹妹确认后再开放编辑')
+      return false
+    }
+
+    const name = input.name.trim() || target.name
+    const relation = input.relation.trim() || target.relationship || '角色'
+    const mood = input.mood.trim() || target.mood || '等待补全'
+    const persona = input.persona.trim() || target.systemPrompt || '还没有导入人设。'
+
+    setState((currentState) => ({
+      ...currentState,
+      characters: currentState.characters.map((characterItem) =>
+        characterItem.id === input.id
+          ? {
+              ...characterItem,
+              name,
+              title: relation,
+              subtitle: mood,
+              avatar: name.slice(0, 1),
+              relationship: relation,
+              mood,
+              systemPrompt: persona,
+              greeting: `${name}已经加入百合小窝。`,
+              tags: ['自定义角色', relation, name],
+            }
+          : characterItem,
+      ),
+    }))
+    setNotice(`已保存角色：${name}`)
+    return true
+  }
+
   function handleDeleteCharacter(characterId: string): boolean {
     const target = state.characters.find((item) => item.id === characterId)
     if (!target) {
@@ -360,6 +407,7 @@ export function useYuriNestApp() {
     handleTestModelProfile: cloud.handleTestModelProfile,
     handleTrashMemory: memory.handleTrashMemory,
     handleTrashWorldNode: memory.handleTrashWorldNode,
+    handleUpdateCharacter,
     handleUpdateMemory: memory.handleUpdateMemory,
     handleUpdateSettings,
     handleUpdateTaskStatus: tasks.handleUpdateTaskStatus,

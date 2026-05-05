@@ -20,6 +20,7 @@ import { MemoryPanel } from './components/MemoryPanel'
 import { MobileMessageList } from './components/MobileMessageList'
 import { MobileNav } from './components/MobileNav'
 import { QqFeaturePanel } from './components/QqFeaturePanel'
+import { AgentTaskPanel } from './components/agent/AgentTaskPanel'
 
 function App() {
   const [mobileMessageListOpen, setMobileMessageListOpen] = useState(true)
@@ -36,6 +37,7 @@ function App() {
     conversation,
     draft,
     handleAddMemory,
+    handleClearCompletedTasks,
     handleConnectCloud,
     handleCreateCharacter,
     handleCreateCloudBackup,
@@ -68,8 +70,10 @@ function App() {
     handleTestModelProfile,
     handleTrashMemory,
     handleTrashWorldNode,
+    handleUpdateCharacter,
     handleUpdateMemory,
     handleUpdateSettings,
+    handleUpdateTaskStatus,
     handleUpdateWorldNode,
     isSending,
     localBackups,
@@ -226,8 +230,16 @@ function App() {
           characters={state.characters}
           onCreateCharacter={handleCreateCharacter}
           onDeleteCharacter={handleDeleteCharacter}
+          onUpdateCharacter={handleUpdateCharacter}
           onShellAction={showShellTip}
           onOpenChat={handleOpenMobileChat}
+        />
+      ) : activeView === 'tasks' ? (
+        <AgentTaskPanel
+          characters={state.characters}
+          onClearCompleted={handleClearCompletedTasks}
+          onUpdateTaskStatus={handleUpdateTaskStatus}
+          tasks={state.agentTasks}
         />
       ) : (
         <MemoryPanel
@@ -242,6 +254,7 @@ function App() {
           cloudSyncConfigured={cloudSyncConfigured}
           localBackups={localBackups}
           memories={state.memories}
+          memoryEmbeddings={state.memoryEmbeddings}
           memoryConflicts={memoryConflicts}
           memoryEvents={memoryEvents}
           memoryUsageLogs={state.memoryUsageLogs}

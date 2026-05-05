@@ -3,27 +3,18 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Camera,
   ChevronLeft,
-  Clock3,
-  File,
-  Gift,
   Image,
-  Laugh,
   Menu,
   Mic,
   MonitorUp,
   MoreHorizontal,
-  Paintbrush,
   Paperclip,
   Phone,
   Plus,
   PlusCircle,
-  Search,
   Send,
   Smile,
-  Star,
-  ToggleLeft,
   Video,
-  WalletCards,
 } from 'lucide-react'
 import type {
   AppSettings,
@@ -35,6 +26,10 @@ import type {
 import type { MemoryFeedbackAction } from '../services/memoryFeedback'
 import { buildMessageMemoryTrace } from '../services/memoryTrace'
 import { MessageBubble } from './MessageBubble'
+import { MobileStatusBar } from './chat/MobileStatusBar'
+import { ChatToolPanels } from './chat/ChatToolPanels'
+import { ChatInfoDrawer } from './chat/ChatInfoDrawer'
+import { canDeleteCharacter, chatSettingRows } from './chat/data'
 
 interface ChatPhoneProps {
   character: CharacterCard
@@ -57,76 +52,6 @@ interface ChatPhoneProps {
 }
 
 type ToolPanel = 'emoji' | 'sticker' | 'more' | 'info' | 'settings' | null
-type ChatSettingRow = {
-  label: string
-  value: string
-  switcher?: boolean
-  danger?: boolean
-  link?: boolean
-  action?: 'clear-conversation' | 'delete-character'
-}
-
-const emojiRows = [
-  '🥰',
-  '🙂',
-  '😱',
-  '☺️',
-  '🥺',
-  '😊',
-  '🤢',
-  '😂',
-  '😭',
-  '😎',
-  '🤔',
-  '👍',
-  '🙄',
-  '🤨',
-  '🥳',
-  '😵‍💫',
-  '🤧',
-  '😳',
-]
-
-const stickers = ['(>△<)', 'QwQ', '摸摸', '抱抱', '收到', '贴贴', '猫猫探头', '努力中', '已打卡', '+1', '晚安', '姐姐在']
-
-const moreTools = [
-  { label: '相册', icon: Image },
-  { label: '拍摄', icon: Camera },
-  { label: '文件', icon: File },
-  { label: '收藏', icon: Star },
-  { label: '礼物', icon: Gift },
-  { label: '钱包', icon: WalletCards },
-  { label: '聊天记录', icon: Clock3 },
-  { label: '聊天背景', icon: Paintbrush },
-]
-
-const chatSettingRows: ChatSettingRow[] = [
-  { label: '设置置顶', value: 'off', switcher: true },
-  { label: '特别关心', value: 'NEW 未开启' },
-  { label: '隐藏会话', value: 'off', switcher: true },
-  { label: '消息免打扰', value: 'off', switcher: true },
-  { label: '消息通知设置', value: '通知预览、提示音等' },
-  { label: '设置当前聊天背景', value: '' },
-  { label: '删除聊天记录', value: '', danger: true, action: 'clear-conversation' },
-  { label: '被骚扰了？举报该用户', value: '', link: true },
-]
-
-function canDeleteCharacter(character: CharacterCard) {
-  return (
-    character.relationship === '群聊' ||
-    character.id.startsWith('character_') ||
-    character.tags.includes('自定义角色')
-  )
-}
-
-function MobileStatusBar() {
-  return (
-    <div className="mobile-status-bar" aria-hidden="true">
-      <b>7:03</b>
-      <span className="mobile-signal">5G 5G ▰▰▰ 37</span>
-    </div>
-  )
-}
 
 export function ChatPhone({
   character,
@@ -304,94 +229,18 @@ export function ChatPhone({
         </div>
       </div>
 
-      {activePanel === 'info' && (
-        <aside className="chat-side-drawer" aria-label="聊天信息">
-          <header>
-            <button aria-label="关闭" onClick={() => setActivePanel(null)} type="button">
-              <ChevronLeft size={26} />
-            </button>
-            <strong>聊天信息</strong>
-            <button aria-label="更多" type="button">
-              <MoreHorizontal size={24} />
-            </button>
-          </header>
-          <section className="chat-info-hero">
-            <span className="avatar" style={{ '--avatar-accent': character.accent } as CSSProperties}>
-              {character.avatar}
-            </span>
-            <div>
-              <strong>{character.name}</strong>
-              <small>QQ：3400470281</small>
-            </div>
-            <GridDots />
-          </section>
-          <section className="chat-info-card">
-            <h3>群成员 <span>3人</span></h3>
-            <div className="chat-member-row">
-              {characters.slice(0, 3).map((item) => (
-                <span key={item.id}>
-                  <i className="avatar" style={{ '--avatar-accent': item.accent } as CSSProperties}>{item.avatar}</i>
-                  {item.name}
-                </span>
-              ))}
-              <span><i>+</i>邀请</span>
-              <span><i>-</i>移除</span>
-            </div>
-          </section>
-          <button className="chat-info-card row" onClick={() => setActivePanel('settings')} type="button">
-            查找聊天记录
-            <small>图片、视频、文件等</small>
-          </button>
-          <button className="chat-info-card row" type="button">
-            群应用
-            <small>文件、相册、精华消息</small>
-          </button>
-        </aside>
-      )}
-
-      {activePanel === 'settings' && (
-        <aside className="chat-side-drawer settings-drawer" aria-label="聊天设置">
-          <header>
-            <button aria-label="返回聊天信息" onClick={() => setActivePanel('info')} type="button">
-              <ChevronLeft size={26} />
-            </button>
-            <strong>聊天设置</strong>
-            <span />
-          </header>
-          <section className="chat-info-card settings-head">
-            <span className="avatar" style={{ '--avatar-accent': character.accent } as CSSProperties}>
-              {character.avatar}
-            </span>
-            <strong>{character.name}</strong>
-          </section>
-          <section className="chat-setting-list">
-            {settingRows.map((row) => (
-              <button
-                className={row.link ? 'link-row' : row.danger ? 'danger-row' : ''}
-                key={row.label}
-                onClick={() => {
-                  if (row.action === 'clear-conversation' && window.confirm(`清空和“${character.name}”的聊天记录吗？`)) {
-                    onClearConversation(character.id)
-                    setActivePanel(null)
-                  }
-                  if (row.action === 'delete-character' && window.confirm(`删除“${character.name}”和对应聊天记录吗？`)) {
-                    if (onDeleteCharacter(character.id)) {
-                      setActivePanel(null)
-                    }
-                  }
-                }}
-                type="button"
-              >
-                <span>{row.label}</span>
-                {row.switcher ? (
-                  <ToggleLeft size={46} />
-                ) : row.value ? (
-                  <small>{row.value}</small>
-                ) : null}
-              </button>
-            ))}
-          </section>
-        </aside>
+      {(activePanel === 'info' || activePanel === 'settings') && (
+        <ChatInfoDrawer
+          panel={activePanel}
+          character={character}
+          characters={characters}
+          settingRows={settingRows}
+          onClose={() => setActivePanel(null)}
+          onOpenSettings={() => setActivePanel('settings')}
+          onBackToInfo={() => setActivePanel('info')}
+          onClearConversation={onClearConversation}
+          onDeleteCharacter={onDeleteCharacter}
+        />
       )}
 
       <form
@@ -477,90 +326,14 @@ export function ChatPhone({
         </div>
 
         {(activePanel === 'emoji' || activePanel === 'sticker' || activePanel === 'more') && (
-          <section className="chat-tool-panel" aria-label="聊天工具面板">
-            {activePanel === 'emoji' && (
-              <>
-                <h3>最近使用</h3>
-                <div className="emoji-grid">
-                  {emojiRows.map((emoji) => (
-                    <button key={emoji} onClick={() => onDraftChange(`${draft}${emoji}`)} type="button">
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-                <h3>超级表情</h3>
-                <div className="emoji-grid compact">
-                  {emojiRows.slice(6).map((emoji) => (
-                    <button key={`super-${emoji}`} onClick={() => onDraftChange(`${draft}${emoji}`)} type="button">
-                      {emoji}
-                    </button>
-                  ))}
-                  <button type="button">...</button>
-                </div>
-                <div className="emoji-tabs">
-                  <Search size={23} />
-                  <Smile size={23} />
-                  <Laugh size={23} />
-                  <Star size={23} />
-                  <b>GIF</b>
-                  <b>AI</b>
-                </div>
-              </>
-            )}
-
-            {activePanel === 'sticker' && (
-              <>
-                <div className="sticker-grid">
-                  <button className="sticker-add" type="button">+</button>
-                  <button className="sticker-add" type="button">☺</button>
-                  {stickers.map((sticker) => (
-                    <button key={sticker} onClick={() => onDraftChange(`${draft}${sticker}`)} type="button">
-                      <span>{sticker}</span>
-                    </button>
-                  ))}
-                </div>
-                <div className="emoji-tabs">
-                  <Search size={23} />
-                  <Smile size={23} />
-                  <Laugh size={23} />
-                  <Star size={23} />
-                  <b>GIF</b>
-                  <b>AI</b>
-                </div>
-              </>
-            )}
-
-            {activePanel === 'more' && (
-              <div className="more-tool-grid">
-                {moreTools.map((tool) => {
-                  const Icon = tool.icon
-                  return (
-                    <button
-                      key={tool.label}
-                      onClick={() => onShellAction?.(`${tool.label}入口已保留，后续接入真实功能`)}
-                      type="button"
-                    >
-                      <Icon size={24} />
-                      <span>{tool.label}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </section>
+          <ChatToolPanels
+            panel={activePanel}
+            draft={draft}
+            onDraftChange={onDraftChange}
+            onShellAction={onShellAction}
+          />
         )}
       </form>
     </main>
-  )
-}
-
-function GridDots() {
-  return (
-    <span className="grid-dots" aria-hidden="true">
-      <i />
-      <i />
-      <i />
-      <i />
-    </span>
   )
 }

@@ -86,6 +86,12 @@ export interface MemorySnapshot {
   sensitivity: MemorySensitivity
   mentionPolicy: MemoryMentionPolicy
   cooldownUntil?: string
+  memoryStrength?: number
+  emotionalSalience?: number
+  semanticSignature?: string[]
+  semanticSignatureVersion?: number
+  reviewIntervalDays?: number
+  nextReviewAt?: string
 }
 
 export interface MemoryRevision {
@@ -116,11 +122,29 @@ export interface LongTermMemory {
   sources: MemorySource[]
   accessCount: number
   lastAccessedAt?: string
+  memoryStrength?: number
+  emotionalSalience?: number
+  semanticSignature?: string[]
+  semanticSignatureVersion?: number
+  reviewIntervalDays?: number
+  nextReviewAt?: string
   revisions: MemoryRevision[]
   createdAt: string
   updatedAt: string
   userEdited?: boolean
   aiGenerated?: boolean
+}
+
+export interface MemoryEmbeddingRecord {
+  id: string
+  memoryId: string
+  model: string
+  dimensions: number
+  textHash: string
+  signatureVersion: number
+  vector: number[]
+  createdAt: string
+  updatedAt: string
 }
 
 export interface WorldNode {
@@ -346,6 +370,7 @@ export interface AppState {
   worldNodes: WorldNode[]
   trash: AppTrash
   memoryTombstones: MemoryTombstone[]
+  memoryEmbeddings: MemoryEmbeddingRecord[]
   memoryUsageLogs: MemoryUsageLog[]
   memoryEvents: MemoryEvent[]
   agentReminders: AgentReminder[]
@@ -400,6 +425,17 @@ export interface AgentToolTrace {
   createdAt: string
 }
 
+export interface AgentDecisionSummary {
+  intentLabel: string
+  confidence: string
+  workflow: string
+  riskLevel: 'low' | 'medium' | 'high'
+  memoryMode: string
+  selectedTools: string[]
+  selectedActions: string[]
+  nextStep: string
+}
+
 export type AgentActionType =
   | 'character_profile_update'
   | 'reminder_create'
@@ -447,6 +483,7 @@ export interface AgentAction {
 export interface AgentRunSummary {
   tools: AgentToolTrace[]
   actions: AgentAction[]
+  decision?: AgentDecisionSummary
 }
 
 export interface AssistantReplyResult {

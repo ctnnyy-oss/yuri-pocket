@@ -1,21 +1,30 @@
-import type { LongTermMemory, PromptContextBlock, WorldNode } from '../domain/types'
+import type { LongTermMemory, MemoryEmbeddingRecord, PromptContextBlock, WorldNode } from '../domain/types'
 import { memoryKindLabels } from '../domain/memoryLabels'
 import {
   normalizeMemory,
   scoreMemory,
+  isCoreMemoryAnchor,
   isMemoryAllowedInContext,
   isMemoryMentionable,
   isMemoryRelevantEnough,
+  isExplicitMemoryQuery,
   formatMemoryForPrompt,
   getMemoryGroupRank,
+  rehearseMemory,
   nowIso,
 } from './memoryCore'
+import { getVectorRecallHits } from './memoryVectorIndex'
+import { getEmbeddingRecallHits, getEmbeddingRecallHitsForVector } from './memoryEmbeddingIndex'
 
 interface MemoryRetrievalOptions {
   characterId?: string
   conversationId?: string
   maxItems?: number
   includeSensitive?: boolean
+  recallMode?: boolean
+  memoryEmbeddings?: MemoryEmbeddingRecord[]
+  embeddingQueryVector?: number[]
+  embeddingModel?: string
 }
 
 interface MemoryContextGroup {
@@ -40,16 +49,27 @@ export function getActiveMemories(
   query = '',
   options: MemoryRetrievalOptions = {},
 ): LongTermMemory[] {
+  const recallMode = options.recallMode ?? isExplicitMemoryQuery(query)
   const normalized = memories
     .map((memory) => normalizeMemory(memory))
     .filter((memory) => memory.status === 'active')
     .filter((memory) => isMemoryAllowedInContext(memory, options))
-    .filter((memory) => isMemoryMentionable(memory, query))
+    .filter((memory) => (recallMode ? isMemoryRecallable(memory) : isMemoryMentionable(memory, query)))
     .filter((memory) => options.includeSensitive || memory.kind === 'taboo' || memory.kind === 'safety' || memory.sensitivity !== 'critical')
 
-  const groups = buildMemoryRetrievalGroups(normalized, query)
-  const selected: LongTermMemory[] = []
+  const groups = buildMemoryRetrievalGroups(normalized, query, recallMode)
+  const vectorHits = recallMode && shouldUseVectorRecall(query)
+    ? getVectorRecallHits(normalized, query, { limit: 8, minSimilarity: 0.12 })
+    : []
+  const embeddingHits = getRecallEmbeddingHits(normalized, query, options, recallMode)
+  const vectorHitScores = new Map(vectorHits.map((hit) => [hit.memory.id, hit.similarity]))
+  const embeddingHitScores = new Map(embeddingHits.map((hit) => [hit.memory.id, hit.similarity]))
+  const selected: LongTermMemory[] = normalized
+    .filter(isCoreMemoryAnchor)
+    .sort((a, b) => scoreMemory(b, query) - scoreMemory(a, query))
+    .slice(0, recallMode ? 6 : 4)
   const seen = new Set<string>()
+  selected.forEach((memory) => seen.add(memory.id))
 
   for (const group of groups) {
     const items = group.items
@@ -63,13 +83,126 @@ export function getActiveMemories(
     }
   }
 
+  if (recallMode) {
+    for (const hit of vectorHits) {
+      if (seen.has(hit.memory.id)) continue
+      seen.add(hit.memory.id)
+      selected.push(hit.memory)
+    }
+
+    for (const hit of embeddingHits) {
+      if (seen.has(hit.memory.id)) continue
+      seen.add(hit.memory.id)
+      selected.push(hit.memory)
+    }
+
+    for (const memory of getAssociativeMemories(selected, normalized, query)) {
+      if (seen.has(memory.id)) continue
+      seen.add(memory.id)
+      selected.push(memory)
+    }
+  }
+
   return selected
     .sort((a, b) => {
+      if (recallMode) {
+        const firstBoundaryRank = getBoundaryRank(a)
+        const secondBoundaryRank = getBoundaryRank(b)
+        if (firstBoundaryRank !== secondBoundaryRank) return firstBoundaryRank - secondBoundaryRank
+        return getRecallSortScore(b, query, vectorHitScores, embeddingHitScores) - getRecallSortScore(a, query, vectorHitScores, embeddingHitScores)
+      }
       const firstRank = getMemoryGroupRank(a)
       const secondRank = getMemoryGroupRank(b)
       return firstRank === secondRank ? scoreMemory(b, query) - scoreMemory(a, query) : firstRank - secondRank
     })
-    .slice(0, options.maxItems ?? 10)
+    .slice(0, options.maxItems ?? (recallMode ? 18 : 10))
+}
+
+function getRecallSortScore(
+  memory: LongTermMemory,
+  query: string,
+  vectorHitScores: Map<string, number>,
+  embeddingHitScores: Map<string, number>,
+): number {
+  const vectorScore = vectorHitScores.get(memory.id) ?? 0
+  const embeddingScore = embeddingHitScores.get(memory.id) ?? 0
+  return scoreMemory(memory, query) +
+    (vectorScore >= 0.2 ? vectorScore * 120 : vectorScore * 40) +
+    (embeddingScore >= 0.2 ? embeddingScore * 110 : embeddingScore * 36)
+}
+
+function shouldUseVectorRecall(query: string): boolean {
+  if (/(截图|图片|照片|PDF|pdf|Word|word|docx|文件|文档|模型|中转|供应商|百合|CP|双洁|说话|语气|称呼|低风险|五一|5月|最后一天)/.test(query)) {
+    return false
+  }
+  return true
+}
+
+function getRecallEmbeddingHits(
+  memories: LongTermMemory[],
+  query: string,
+  options: MemoryRetrievalOptions,
+  recallMode: boolean,
+) {
+  if (!recallMode || !shouldUseVectorRecall(query) || !options.memoryEmbeddings?.length) return []
+  if (options.embeddingQueryVector?.length) {
+    return getEmbeddingRecallHitsForVector(memories, options.embeddingQueryVector, options.memoryEmbeddings, {
+      limit: 8,
+      minSimilarity: 0.08,
+      model: options.embeddingModel,
+    })
+  }
+  return getEmbeddingRecallHits(memories, query, options.memoryEmbeddings, { limit: 8, minSimilarity: 0.08 })
+}
+
+function getBoundaryRank(memory: LongTermMemory): number {
+  return memory.kind === 'taboo' || memory.kind === 'safety' ? 0 : 1
+}
+
+function getAssociativeMemories(selected: LongTermMemory[], candidates: LongTermMemory[], query: string): LongTermMemory[] {
+  if (selected.length === 0) return []
+  return candidates
+    .filter((memory) => !selected.some((item) => item.id === memory.id))
+    .map((memory) => ({ memory, score: scoreAssociation(memory, selected, query) }))
+    .filter((item) => item.score >= 4)
+    .sort((a, b) => b.score - a.score || scoreMemory(b.memory, query) - scoreMemory(a.memory, query))
+    .slice(0, 4)
+    .map((item) => item.memory)
+}
+
+function scoreAssociation(memory: LongTermMemory, anchors: LongTermMemory[], query: string): number {
+  let score = 0
+  for (const anchor of anchors) {
+    const sharedTags = memory.tags.filter((tag) => anchor.tags.includes(tag)).length
+    score += sharedTags * 2
+    if (memory.kind === anchor.kind) score += 1
+    if (getScopeKey(memory) === getScopeKey(anchor)) score += 1
+    if (memory.sources.some((source) => anchor.sources.some((anchorSource) => getSourceKey(source) === getSourceKey(anchorSource)))) score += 3
+  }
+  if (isMemoryRelevantEnough(memory, query)) score += 2
+  if (memory.accessCount > 0) score += 1
+  return score
+}
+
+function getScopeKey(memory: LongTermMemory): string {
+  const scope = memory.scope
+  if (scope.kind === 'relationship' || scope.kind === 'character_private') return `${scope.kind}:${scope.characterId}`
+  if (scope.kind === 'project') return `project:${scope.projectId}`
+  if (scope.kind === 'world') return `world:${scope.worldId}`
+  if (scope.kind === 'world_branch') return `world_branch:${scope.worldId}:${scope.branchId}`
+  if (scope.kind === 'conversation') return `conversation:${scope.conversationId}`
+  return scope.kind
+}
+
+function getSourceKey(source: LongTermMemory['sources'][number]): string {
+  return source.messageId || source.conversationId || source.excerpt
+}
+
+function isMemoryRecallable(memory: LongTermMemory): boolean {
+  if (memory.kind === 'taboo' || memory.kind === 'safety') return true
+  if (memory.mentionPolicy === 'silent') return false
+  if (memory.sensitivity === 'critical') return false
+  return true
 }
 
 export function touchRelevantMemories(
@@ -85,7 +218,7 @@ export function touchRelevantMemories(
     if (!activeIds.has(normalized.id)) return normalized
 
     return {
-      ...normalized,
+      ...rehearseMemory(normalized, touchedAt),
       accessCount: normalized.accessCount + 1,
       lastAccessedAt: touchedAt,
     }
@@ -154,8 +287,10 @@ export function buildMemoryContextBlocks(
     })
 }
 
-function buildMemoryRetrievalGroups(memories: LongTermMemory[], query: string): MemoryContextGroup[] {
-  const relevantMemories = memories.filter((memory) => isMemoryRelevantEnough(memory, query))
+function buildMemoryRetrievalGroups(memories: LongTermMemory[], query: string, recallMode: boolean): MemoryContextGroup[] {
+  const relevantMemories = recallMode
+    ? memories.filter((memory) => isMemoryRelevantEnough(memory, query) || memory.accessCount > 0 || memory.priority >= 3)
+    : memories.filter((memory) => isMemoryRelevantEnough(memory, query))
 
   return [
     {
@@ -163,7 +298,7 @@ function buildMemoryRetrievalGroups(memories: LongTermMemory[], query: string): 
       category: 'boundary',
       reason: '最高优先级，用来避免冒犯和危险误用',
       items: memories.filter((memory) => memory.kind === 'taboo' || memory.kind === 'safety'),
-      limit: 4,
+      limit: recallMode ? 6 : 4,
     },
     {
       title: '用户稳定记忆',
@@ -174,7 +309,7 @@ function buildMemoryRetrievalGroups(memories: LongTermMemory[], query: string): 
           memory.layer === 'stable' &&
           (memory.kind === 'profile' || memory.kind === 'preference' || memory.kind === 'procedure'),
       ),
-      limit: 4,
+      limit: recallMode ? 6 : 4,
     },
     {
       title: '关系与角色记忆',
@@ -183,14 +318,14 @@ function buildMemoryRetrievalGroups(memories: LongTermMemory[], query: string): 
       items: relevantMemories.filter(
         (memory) => memory.layer === 'stable' && (memory.kind === 'relationship' || memory.kind === 'character'),
       ),
-      limit: 3,
+      limit: recallMode ? 5 : 3,
     },
     {
       title: '项目与世界记忆',
       category: 'project',
       reason: '当前话题相关的项目决策和世界观规则',
       items: relevantMemories.filter((memory) => memory.layer !== 'working' && (memory.kind === 'project' || memory.kind === 'world')),
-      limit: 4,
+      limit: recallMode ? 5 : 4,
     },
     {
       title: '相关事件与反思',
@@ -199,7 +334,7 @@ function buildMemoryRetrievalGroups(memories: LongTermMemory[], query: string): 
       items: relevantMemories.filter(
         (memory) => memory.layer === 'episode' || memory.kind === 'event' || memory.kind === 'reflection' || memory.layer === 'working',
       ),
-      limit: 3,
+      limit: recallMode ? 6 : 3,
     },
   ]
 }

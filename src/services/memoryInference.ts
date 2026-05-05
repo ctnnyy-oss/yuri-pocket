@@ -8,7 +8,11 @@ import type {
   MemoryStatus,
 } from '../domain/types'
 import { brand } from '../config/brand'
-import { clampNumber, createId, nowIso, unique } from './memoryUtils'
+import { clampNumber, createId, estimateTextEmotionalSalience, nowIso, unique } from './memoryUtils'
+import {
+  buildMemorySemanticSignature,
+  MEMORY_SEMANTIC_SIGNATURE_VERSION,
+} from './memoryVectorIndex'
 
 export function inferMemoryScope(
   kind: MemoryKind,
@@ -86,6 +90,11 @@ export function classifyMemory(
     return { kind, confidence: 0.9, sensitivity, status: getAutoMemoryStatus(kind, sensitivity, 'active') }
   }
 
+  if (/(我|妹妹).{0,8}(喜欢|不喜欢|讨厌|偏好|希望|想要|不想要|更喜欢|最喜欢)/.test(content)) {
+    const sensitivity = inferSensitivity('preference', content)
+    return { kind: 'preference', confidence: 0.84, sensitivity, status: getAutoMemoryStatus('preference', sensitivity, 'candidate') }
+  }
+
   if (/(百合帝国|项目|架构|应用|产品|百合小窝|Yuri Nest|小手机|世界树|记忆系统)/i.test(content)) {
     return { kind: 'project', confidence: 0.85, sensitivity: 'low', status: 'active' }
   }
@@ -106,6 +115,8 @@ export function classifyMemory(
 }
 
 export function normalizeMemory(memory: LongTermMemory): LongTermMemory {
+  const normalizedText = `${memory.title || ''} ${memory.body || ''} ${(memory.tags || []).join(' ')}`
+
   return {
     id: memory.id || createId('memory'),
     title: (memory.title || '').trim() || '未命名记忆',
@@ -124,6 +135,17 @@ export function normalizeMemory(memory: LongTermMemory): LongTermMemory {
     origin: memory.origin || 'user',
     sources: Array.isArray(memory.sources) ? memory.sources : [],
     accessCount: memory.accessCount || 0,
+    memoryStrength: clampNumber(memory.memoryStrength ?? 0.5, 0.1, 1, 0.5),
+    emotionalSalience: clampNumber(
+      memory.emotionalSalience ?? estimateTextEmotionalSalience(`${memory.title} ${memory.body} ${(memory.tags || []).join(' ')}`),
+      0.1,
+      1,
+      0.35,
+    ),
+    semanticSignature: buildMemorySemanticSignature(normalizedText),
+    semanticSignatureVersion: MEMORY_SEMANTIC_SIGNATURE_VERSION,
+    reviewIntervalDays: clampNumber(memory.reviewIntervalDays ?? 7, 1, 365, 7),
+    nextReviewAt: memory.nextReviewAt,
     revisions: Array.isArray(memory.revisions) ? memory.revisions : [],
     createdAt: memory.createdAt || nowIso(),
     updatedAt: memory.updatedAt || nowIso(),

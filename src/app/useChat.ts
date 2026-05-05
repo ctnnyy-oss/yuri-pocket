@@ -2,12 +2,19 @@ import type { Dispatch, SetStateAction } from 'react'
 import { useState } from 'react'
 import type { AppState, CharacterCard, ConversationState } from '../domain/types'
 import { requestAssistantReply } from '../services/chatApi'
+import { getSavedCloudToken, isCloudSyncConfigured } from '../services/cloudSync'
+import {
+  getMemoryEmbeddingInput,
+  upsertMemoryEmbeddingRecordsFromVectors,
+} from '../services/memoryEmbeddingIndex'
 import {
   attachAssistantToMemoryUsageLog,
   buildPromptBundle,
   createMemoryUsageLog,
   createMessage,
+  getMemoryUsageLogLimit,
   integrateMemoryCandidate,
+  isExplicitMemoryQuery,
   isMemoryBlockedByTombstones,
   maybeCaptureMemory,
   nowIso,
@@ -15,6 +22,7 @@ import {
   updateConversationSummary,
   upsertConversation,
 } from '../services/memoryEngine'
+import { requestModelEmbeddings } from '../services/modelProfiles'
 import { addMemoryEventToState, applyAgentActionsToState, enqueueAgentTaskActions } from './agentActions'
 
 interface UseChatDeps {
@@ -39,10 +47,13 @@ export function useChat({ state, setState, setNotice, character, conversation }:
       messages: [...conversation.messages, userMessage],
       updatedAt: nowIso(),
     })
+    const recallMode = isExplicitMemoryQuery(content)
     const touchedMemories = touchRelevantMemories(state.memories, content, {
       characterId: character.id,
       conversationId: nextConversation.id,
-      maxItems: 12,
+      memoryEmbeddings: state.memoryEmbeddings,
+      maxItems: recallMode ? 18 : 12,
+      recallMode,
     })
     const capturedMemory = state.settings.autoMemoryEnabled
       ? maybeCaptureMemory(userMessage, nextConversation, character)
@@ -69,7 +80,12 @@ export function useChat({ state, setState, setNotice, character, conversation }:
         conversationId: nextConversation.id,
       })
     }
-    const requestBundle = buildPromptBundle(nextState)
+    const embeddingContext = await prepareExternalEmbeddingContext(nextState, content, recallMode)
+    const stateForPrompt = embeddingContext.state
+    const requestBundle = buildPromptBundle(stateForPrompt, {
+      embeddingModel: embeddingContext.embeddingModel,
+      embeddingQueryVector: embeddingContext.embeddingQueryVector,
+    })
     const usageLog = createMemoryUsageLog({
       bundle: requestBundle,
       conversation: nextConversation,
@@ -77,8 +93,8 @@ export function useChat({ state, setState, setNotice, character, conversation }:
       userMessage,
     })
     const nextStateWithUsage = {
-      ...nextState,
-      memoryUsageLogs: [usageLog, ...nextState.memoryUsageLogs].slice(0, 50),
+      ...stateForPrompt,
+      memoryUsageLogs: [usageLog, ...stateForPrompt.memoryUsageLogs].slice(0, getMemoryUsageLogLimit()),
     }
 
     setState(nextStateWithUsage)
@@ -152,4 +168,56 @@ export function useChat({ state, setState, setNotice, character, conversation }:
     isSending,
     handleSend,
   }
+}
+
+async function prepareExternalEmbeddingContext(
+  state: AppState,
+  query: string,
+  recallMode: boolean,
+): Promise<{ state: AppState; embeddingModel?: string; embeddingQueryVector?: number[] }> {
+  if (!recallMode || !isCloudSyncConfigured()) return { state }
+
+  const memories = state.memories
+    .filter((memory) => memory.status === 'active' && memory.mentionPolicy !== 'silent' && memory.sensitivity !== 'critical')
+    .sort((a, b) => b.priority - a.priority || (b.memoryStrength ?? 0) - (a.memoryStrength ?? 0))
+    .slice(0, 31)
+  if (memories.length === 0) return { state }
+
+  try {
+    const result = await withTimeout(
+      requestModelEmbeddings(getSavedCloudToken(), {
+        profileId: state.settings.modelProfileId || 'server-env',
+        texts: [...memories.map(getMemoryEmbeddingInput), query],
+      }),
+      3_500,
+    )
+    const queryVector = result.embeddings[memories.length]
+    if (!queryVector?.length) return { state }
+
+    const embeddingModel = `external:${result.model}`
+    return {
+      state: {
+        ...state,
+        memoryEmbeddings: upsertMemoryEmbeddingRecordsFromVectors(
+          memories,
+          state.memoryEmbeddings,
+          embeddingModel,
+          result.embeddings.slice(0, memories.length),
+        ),
+      },
+      embeddingModel,
+      embeddingQueryVector: queryVector,
+    }
+  } catch {
+    return { state }
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_resolve, reject) => {
+      window.setTimeout(() => reject(new Error('embedding timeout')), timeoutMs)
+    }),
+  ])
 }

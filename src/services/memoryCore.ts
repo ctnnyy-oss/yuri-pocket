@@ -20,18 +20,26 @@ import {
 import {
   clampNumber,
   createId,
-  daysSince,
   getKeywordOverlap,
+  getMemorySemanticSimilarity,
   normalizeComparable,
   nowIso,
   unique,
 } from './memoryUtils'
+import {
+  estimateMemoryEmotionalSalience,
+  estimateMemoryStrength,
+} from './memoryScoring'
 import {
   inferMemoryLayer,
   inferMentionPolicy,
   normalizeMemory,
   normalizeMemoryScope,
 } from './memoryInference'
+import {
+  buildMemorySemanticSignature,
+  MEMORY_SEMANTIC_SIGNATURE_VERSION,
+} from './memoryVectorIndex'
 
 // re-export everything consumers need from sub-modules
 export {
@@ -42,8 +50,27 @@ export {
   unique,
   normalizeComparable,
   extractKeywords,
+  estimateTextEmotionalSalience,
+  buildMemorySparseVector,
   getKeywordOverlap,
+  getMemorySemanticSimilarity,
+  getTemporalSignalOverlap,
+  hasEmotionalRecallIntent,
+  hasTemporalRecallIntent,
 } from './memoryUtils'
+
+export {
+  estimateMemoryEmotionalSalience,
+  estimateMemoryStrength,
+  isCoreMemoryAnchor,
+  isCoolingDown,
+  isExplicitMemoryQuery,
+  isMemoryMentionable,
+  isMemoryRelevantEnough,
+  isMemoryReviewDue,
+  rehearseMemory,
+  scoreMemory,
+} from './memoryScoring'
 
 export {
   inferMemoryScope,
@@ -70,6 +97,20 @@ export {
 
 export type { MemoryMaintenanceReport } from './memoryFactory'
 
+export {
+  getEmbeddingCacheStats,
+  getEmbeddingRecallHits,
+  refreshLocalMemoryEmbeddingCache,
+  refreshMemoryEmbeddingCache,
+} from './memoryEmbeddingIndex'
+
+export {
+  buildMemorySemanticSignature,
+  getVectorIndexStats,
+  getVectorRecallHits,
+  MEMORY_SEMANTIC_SIGNATURE_VERSION,
+} from './memoryVectorIndex'
+
 // ============ 记忆创建（内部） ============
 
 export function createLongTermMemory(input: {
@@ -91,6 +132,7 @@ export function createLongTermMemory(input: {
   reason: string
 }): LongTermMemory {
   const createdAt = nowIso()
+  const semanticSignature = buildMemorySemanticSignature(`${input.title} ${input.body} ${input.tags.join(' ')}`)
   const memory: LongTermMemory = {
     id: createId('memory'),
     title: input.title.trim() || '未命名记忆',
@@ -109,6 +151,26 @@ export function createLongTermMemory(input: {
     origin: input.origin,
     sources: input.sources,
     accessCount: 0,
+    memoryStrength: estimateMemoryStrength({
+      priority: input.priority,
+      pinned: input.pinned,
+      kind: input.kind,
+      confidence: input.confidence,
+      sources: input.sources,
+      accessCount: 0,
+    }),
+    emotionalSalience: estimateMemoryEmotionalSalience({
+      title: input.title,
+      body: input.body,
+      tags: input.tags,
+      priority: input.priority,
+      pinned: input.pinned,
+      sensitivity: input.sensitivity,
+    }),
+    semanticSignature,
+    semanticSignatureVersion: MEMORY_SEMANTIC_SIGNATURE_VERSION,
+    reviewIntervalDays: input.pinned || input.priority >= 5 ? 14 : 7,
+    nextReviewAt: getFutureIso(input.pinned || input.priority >= 5 ? 14 : 7),
     revisions: [],
     createdAt,
     updatedAt: createdAt,
@@ -158,6 +220,12 @@ function snapshotMemory(memory: LongTermMemory): MemorySnapshot {
     sensitivity: memory.sensitivity,
     mentionPolicy: memory.mentionPolicy,
     cooldownUntil: memory.cooldownUntil,
+    memoryStrength: memory.memoryStrength,
+    emotionalSalience: memory.emotionalSalience,
+    semanticSignature: memory.semanticSignature,
+    semanticSignatureVersion: memory.semanticSignatureVersion,
+    reviewIntervalDays: memory.reviewIntervalDays,
+    nextReviewAt: memory.nextReviewAt,
   }
 }
 
@@ -274,33 +342,6 @@ export function getPolarity(text: string): 'positive' | 'negative' | 'neutral' {
   return 'neutral'
 }
 
-// ============ 冷却 ============
-
-export function isCoolingDown(cooldownUntil?: string): boolean {
-  if (!cooldownUntil) return false
-  return new Date(cooldownUntil).getTime() > Date.now()
-}
-
-// ============ 记忆评分与检索辅助 ============
-
-export function scoreMemory(memory: LongTermMemory, query: string): number {
-  let score = memory.priority * 10
-  if (memory.pinned) score += 30
-  if (memory.kind === 'taboo' || memory.kind === 'safety') score += 50
-  if (memory.kind === 'preference' || memory.kind === 'procedure') score += 15
-  score += Math.min(memory.accessCount, 10) * 2
-  score += memory.confidence * 20
-  if (query) {
-    const text = `${memory.title} ${memory.body} ${memory.tags.join(' ')}`
-    score += getKeywordOverlap(text, query) * 8
-  }
-  if (memory.lastAccessedAt) {
-    const days = daysSince(memory.lastAccessedAt)
-    score -= Math.min(days * 2, 20)
-  }
-  return score
-}
-
 export function isMemoryAllowedInContext(
   memory: LongTermMemory,
   options: { characterId?: string; conversationId?: string },
@@ -323,35 +364,6 @@ export function isMemoryAllowedInContext(
   }
 }
 
-export function isMemoryMentionable(memory: LongTermMemory, query: string): boolean {
-  if (memory.kind === 'taboo' || memory.kind === 'safety') return true
-  if (isCoolingDown(memory.cooldownUntil)) return false
-
-  switch (memory.mentionPolicy) {
-    case 'proactive':
-      return true
-    case 'contextual':
-      return isMemoryRelevantEnough(memory, query)
-    case 'explicit':
-      return isExplicitMemoryQuery(query)
-    case 'silent':
-      return false
-    default:
-      return true
-  }
-}
-
-export function isMemoryRelevantEnough(memory: LongTermMemory, query: string): boolean {
-  if (!query) return memory.priority >= 4 || memory.pinned
-
-  const text = `${memory.title} ${memory.body} ${memory.tags.join(' ')}`
-  return memory.priority >= 4 || getKeywordOverlap(text, query) > 0 || normalizeComparable(query).includes(normalizeComparable(memory.title))
-}
-
-export function isExplicitMemoryQuery(query: string): boolean {
-  return /(还记得|记得吗|记不记得|上次|之前|以前|记忆|档案|为什么你|你刚才为什么|想起来|回忆)/.test(query)
-}
-
 export function getMemoryGroupRank(memory: LongTermMemory): number {
   if (memory.kind === 'taboo' || memory.kind === 'safety') return 0
   if (memory.layer === 'working') return 5
@@ -369,28 +381,91 @@ export function formatMemoryForPrompt(memory: LongTermMemory): string {
     `层级：${memoryLayerLabels[memory.layer]}`,
     `空间：${formatMemoryScopeLabel(memory.scope)}；敏感度：${memorySensitivityLabels[memory.sensitivity]}`,
     `提及策略：${memoryMentionPolicyLabels[memory.mentionPolicy]}${memory.cooldownUntil ? `；冷却到：${new Date(memory.cooldownUntil).toLocaleString('zh-CN')}` : ''}`,
-    `权重：${memory.priority}；可信度：${Math.round(memory.confidence * 100)}%；来源：${source || '手动整理'}`,
+    `权重：${memory.priority}；可信度：${Math.round(memory.confidence * 100)}%；强度：${Math.round((memory.memoryStrength ?? estimateMemoryStrength(memory)) * 100)}%；显著性：${Math.round((memory.emotionalSalience ?? estimateMemoryEmotionalSalience(memory)) * 100)}%；来源：${source || '手动整理'}`,
+    `记录：${formatMemoryTime(memory.createdAt)}；更新：${formatMemoryTime(memory.updatedAt)}${memory.lastAccessedAt ? `；上次调用：${formatMemoryTime(memory.lastAccessedAt)}` : ''}`,
   ].join('\n')
+}
+
+function getFutureIso(days: number, from = nowIso()): string {
+  const date = new Date(from)
+  if (Number.isNaN(date.getTime())) return nowIso()
+  date.setDate(date.getDate() + days)
+  return date.toISOString()
+}
+
+function formatMemoryTime(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '未知'
+  return new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
 }
 
 export function isPotentialDuplicate(a: LongTermMemory, b: LongTermMemory): boolean {
   if (a.id === b.id) return true
-  if (normalizeComparable(a.body) === normalizeComparable(b.body)) return true
-  if (a.kind === b.kind && getKeywordOverlap(a.body, b.body) >= 3) return true
+  const leftBody = normalizeComparable(a.body)
+  const rightBody = normalizeComparable(b.body)
+  if (leftBody === rightBody) return true
+  if (isMeaningfulContainment(leftBody, rightBody)) return true
+  if (a.kind !== b.kind || !areMemoryScopesMergeCompatible(a.scope, b.scope)) return false
+
+  const keywordOverlap = getKeywordOverlap(a.body, b.body)
+  const semanticSimilarity = getMemorySemanticSimilarity(`${a.title} ${a.body}`, `${b.title} ${b.body}`)
+  if (keywordOverlap >= 5 && semanticSimilarity >= 0.55) return true
+  if (keywordOverlap >= 3 && semanticSimilarity >= 0.72) return true
+  return false
+}
+
+function isMeaningfulContainment(leftBody: string, rightBody: string): boolean {
+  const shorter = leftBody.length < rightBody.length ? leftBody : rightBody
+  const longer = leftBody.length < rightBody.length ? rightBody : leftBody
+  return shorter.length >= 18 && longer.includes(shorter)
+}
+
+function areMemoryScopesMergeCompatible(a: MemoryScope, b: MemoryScope): boolean {
+  const left = normalizeMemoryScope(a)
+  const right = normalizeMemoryScope(b)
+  if (serializeMemoryScope(left) === serializeMemoryScope(right)) return true
+  if (left.kind === 'global_user' && right.kind === 'global_user') return true
+  if ((left.kind === 'project' || right.kind === 'project') && left.kind !== right.kind) return false
+  if ((left.kind === 'world' || right.kind === 'world' || left.kind === 'world_branch' || right.kind === 'world_branch') && left.kind !== right.kind) {
+    return false
+  }
+  if (left.kind === 'global_user' || right.kind === 'global_user') return false
   return false
 }
 
 export function mergeMemories(primary: LongTermMemory, incoming: LongTermMemory, reason: string): LongTermMemory {
+  const mergedSources = mergeSources(primary.sources, incoming.sources)
+  const repeatedEvidenceBonus = mergedSources.length > primary.sources.length ? 0.04 : 0.02
+  const mergedBody = mergeBody(primary.body, incoming.body)
+  const mergedTags = unique([...primary.tags, ...incoming.tags])
+  const mergedStrength = Math.max(
+    primary.memoryStrength ?? estimateMemoryStrength(primary),
+    incoming.memoryStrength ?? estimateMemoryStrength(incoming),
+  )
   const merged: LongTermMemory = {
     ...primary,
-    body: mergeBody(primary.body, incoming.body),
-    tags: unique([...primary.tags, ...incoming.tags]),
-    priority: Math.max(primary.priority, incoming.priority),
+    body: mergedBody,
+    tags: mergedTags,
+    priority: Math.min(5, Math.max(primary.priority, incoming.priority) + (mergedSources.length >= 2 ? 1 : 0)),
     pinned: primary.pinned || incoming.pinned,
-    confidence: Math.max(primary.confidence, incoming.confidence),
+    confidence: Math.min(1, Math.max(primary.confidence, incoming.confidence) + repeatedEvidenceBonus),
     sensitivity: maxSensitivity(primary.sensitivity, incoming.sensitivity),
     layer: mergeMemoryLayer(primary.layer, incoming.layer),
-    sources: mergeSources(primary.sources, incoming.sources),
+    sources: mergedSources,
+    memoryStrength: clampNumber(mergedStrength + repeatedEvidenceBonus + mergedSources.length * 0.01, 0.1, 1, mergedStrength),
+    emotionalSalience: Math.max(
+      primary.emotionalSalience ?? estimateMemoryEmotionalSalience(primary),
+      incoming.emotionalSalience ?? estimateMemoryEmotionalSalience(incoming),
+    ),
+    semanticSignature: buildMemorySemanticSignature(`${primary.title} ${mergedBody} ${mergedTags.join(' ')}`),
+    semanticSignatureVersion: MEMORY_SEMANTIC_SIGNATURE_VERSION,
+    reviewIntervalDays: Math.max(primary.reviewIntervalDays ?? 7, incoming.reviewIntervalDays ?? 7),
+    nextReviewAt: getFutureIso(Math.max(primary.reviewIntervalDays ?? 7, incoming.reviewIntervalDays ?? 7)),
     updatedAt: nowIso(),
   }
 

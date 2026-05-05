@@ -38,7 +38,9 @@ export {
   maybeCaptureMemory,
   classifyMemory,
   inferMemoryKind,
+  isExplicitMemoryQuery,
   serializeMemoryScope,
+  isCoreMemoryAnchor,
 } from './memoryCore'
 
 export {
@@ -51,6 +53,7 @@ export {
   buildPromptBundle,
   createMemoryUsageLog,
   attachAssistantToMemoryUsageLog,
+  getMemoryUsageLogLimit,
 } from './promptBuilder'
 
 // ---- 对话管理（留在入口） ----
@@ -134,21 +137,6 @@ export function detectMemoryConflicts(memories: LongTermMemory[]): MemoryConflic
       if (serializeMemoryScope(first.scope) !== serializeMemoryScope(second.scope)) continue
       if (first.kind !== second.kind) continue
 
-      if (isPotentialDuplicate(first, second) && normalizeComparable(first.body) !== normalizeComparable(second.body)) {
-        conflicts.push({
-          id: `conflict-duplicate-${first.id}-${second.id}`,
-          memoryIds: [first.id, second.id],
-          conflictType: 'duplicate',
-          status: 'unresolved',
-          title: '相似记忆可能重复',
-          description: `"${first.title}" 和 "${second.title}" 很像，但内容不完全一致。`,
-          suggestedResolution: '保留更准确的一条，或手动合并后删除另一条。',
-          requiresUserConfirmation: false,
-          createdAt: nowIso(),
-        })
-        continue
-      }
-
       if (hasOppositePreference(first, second)) {
         conflicts.push({
           id: `conflict-value-${first.id}-${second.id}`,
@@ -159,6 +147,21 @@ export function detectMemoryConflicts(memories: LongTermMemory[]): MemoryConflic
           description: `"${first.title}" 和 "${second.title}" 可能表达了相反偏好。`,
           suggestedResolution: '以妹妹当前真实偏好为准，编辑旧记忆、归档旧记忆，或把其中一条改成特定场景偏好。',
           requiresUserConfirmation: true,
+          createdAt: nowIso(),
+        })
+        continue
+      }
+
+      if (isPotentialDuplicate(first, second) && normalizeComparable(first.body) !== normalizeComparable(second.body)) {
+        conflicts.push({
+          id: `conflict-duplicate-${first.id}-${second.id}`,
+          memoryIds: [first.id, second.id],
+          conflictType: 'duplicate',
+          status: 'unresolved',
+          title: '相似记忆可能重复',
+          description: `"${first.title}" 和 "${second.title}" 很像，但内容不完全一致。`,
+          suggestedResolution: '保留更准确的一条，或手动合并后删除另一条。',
+          requiresUserConfirmation: false,
           createdAt: nowIso(),
         })
       }

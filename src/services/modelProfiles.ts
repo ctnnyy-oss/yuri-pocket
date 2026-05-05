@@ -37,6 +37,15 @@ export interface ModelCatalogResult {
   models: ModelCatalogItem[]
 }
 
+export interface ModelEmbeddingResult {
+  ok: boolean
+  provider: string
+  model: string
+  dimensions: number
+  embeddings: number[][]
+  latencyMs: number
+}
+
 export const modelProviderPresets: ModelProviderPreset[] = [
   {
     id: 'custom',
@@ -190,6 +199,20 @@ export async function fetchModelCatalog(
   input: { profileId?: string; profile?: ModelProfileInput },
 ): Promise<ModelCatalogResult> {
   const response = await modelFetch('/api/model/models', token, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(input),
+  })
+  return response.json()
+}
+
+export async function requestModelEmbeddings(
+  token: string,
+  input: { texts: string[]; profileId?: string; profile?: ModelProfileInput; model?: string; dimensions?: number },
+): Promise<ModelEmbeddingResult> {
+  const response = await modelFetch('/api/model/embeddings', token, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

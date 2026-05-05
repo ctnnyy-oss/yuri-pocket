@@ -38,7 +38,7 @@ AI_API_KEY=你的密钥
 AI_BASE_URL=http://127.0.0.1:18788/v1
 AI_MODEL=deepseek-v4-flash
 AI_MAX_TOKENS=4096
-AI_ESCAPE_UNICODE_CONTENT=true
+AI_ESCAPE_UNICODE_CONTENT=false
 ```
 
 当前按妹妹单人使用处理：前端直接连接服务器，聊天、记忆、设置和模型配置会自动同步到云端。模型 API Key 保存在服务器模型保险箱，不保存在浏览器里。

@@ -341,7 +341,9 @@ function buildAnthropicSystem(bundle) {
 function shouldEscapeUnicodeContent(baseUrl) {
   const configured = process.env.AI_ESCAPE_UNICODE_CONTENT
   if (configured) return configured.toLowerCase() === 'true'
-  return String(baseUrl).includes('127.0.0.1:18788')
+  const normalizedBaseUrl = String(baseUrl).toLowerCase()
+  // Legacy local proxies can still need escaped Chinese; modern relays should receive UTF-8 directly.
+  return normalizedBaseUrl.includes('127.0.0.1:18788')
 }
 
 function buildCompatibilitySystemPrompt(characterName) {

@@ -6,6 +6,7 @@ import type {
   MemoryMentionPolicy,
   MemoryUsageLog,
 } from '../domain/types'
+import { isCoreMemoryAnchor, isMemoryReviewDue } from './memoryCore'
 import { getMemoryEventTypeLabel } from './memoryEvents'
 
 export type MemoryGuardianSeverity = 'danger' | 'warning' | 'info'
@@ -284,6 +285,17 @@ function buildReviewItems(
         detail: '这条记忆很久没有被调用，可能已经过期或权重过高。',
         severity: 'info',
         suggestedAction: '复查是否还需要保留，或者降权归档。',
+      })
+    }
+
+    if (isCoreMemoryAnchor(memory) && isMemoryReviewDue(memory, now)) {
+      items.push({
+        id: `rehearsal-${memory.id}`,
+        memoryId: memory.id,
+        title: memory.title,
+        detail: '这条是核心记忆，但很久没有被主动调用。真人记忆会靠复习和线索重新巩固，这条适合在整理时确认一次。',
+        severity: 'info',
+        suggestedAction: '打开档案确认仍然准确；确认后保持置顶或提高可信度。',
       })
     }
   })

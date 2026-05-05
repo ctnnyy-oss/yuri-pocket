@@ -38,6 +38,11 @@ const cases = [
     includes: ['autonomy_budget', 'default_policy', 'action_checklist', 'task_queue', 'agent_quality_check'],
   },
   {
+    name: 'document and image capability uses attachment guide',
+    bundle: simpleBundle('姐姐这个 Agent 现在能不能看文档、看图片和读截图？'),
+    includes: ['capability_guide', 'attachment_guide', 'agent_quality_check'],
+  },
+  {
     name: 'dangerous operation hits risk gate',
     bundle: simpleBundle('姐姐帮我删除所有记忆并直接发布上线。'),
     includes: ['risk_gate', 'failure_recovery', 'deliverable_contract', 'response_quality_gate', 'agent_quality_check', 'tool_governance'],
@@ -83,6 +88,13 @@ const cases = [
     actionIncludes: ['memory_candidate_create'],
     doesNotRequireConfirmationActions: ['memory_candidate_create'],
   },
+  {
+    name: 'reminder keeps explicit quoted title',
+    bundle: simpleBundle('请创建一个试玩提醒：10分钟后提醒我喝水，标题叫“试玩喝水提醒”。'),
+    includes: ['tool_governance'],
+    actionIncludes: ['reminder_create'],
+    expectedReminderTitle: '试玩喝水提醒',
+  },
 ]
 
 const previous = await prepareAgentBundle(simpleBundle('姐姐帮我规划agent第二阶段，一次性搞完。'))
@@ -126,14 +138,20 @@ for (const testCase of cases) {
   const unexpectedlyConfirmedActions = (testCase.doesNotRequireConfirmationActions || []).filter((type) =>
     agent.actions.some((action) => action.type === type && action.requiresConfirmation),
   )
+  const wrongReminderTitle =
+    testCase.expectedReminderTitle &&
+    !agent.actions.some((action) => action.type === 'reminder_create' && action.payload?.reminder?.title === testCase.expectedReminderTitle)
   const unexpected = (testCase.excludes || []).filter((name) => names.has(name))
+  const wrongDecisionIntent = testCase.decisionIntent && agent.decision?.intentLabel !== testCase.decisionIntent
 
   if (
     missing.length > 0 ||
     missingActions.length > 0 ||
     missingConfirmedActions.length > 0 ||
     unexpectedlyConfirmedActions.length > 0 ||
-    unexpected.length > 0
+    wrongReminderTitle ||
+    unexpected.length > 0 ||
+    wrongDecisionIntent
   ) {
     failed += 1
     console.error(`FAIL ${testCase.name}`)
@@ -141,7 +159,13 @@ for (const testCase of cases) {
     if (missingActions.length > 0) console.error(`  missing actions: ${missingActions.join(', ')}`)
     if (missingConfirmedActions.length > 0) console.error(`  missing confirmed actions: ${missingConfirmedActions.join(', ')}`)
     if (unexpectedlyConfirmedActions.length > 0) console.error(`  unexpectedly confirmed actions: ${unexpectedlyConfirmedActions.join(', ')}`)
+    if (wrongReminderTitle) {
+      console.error(
+        `  reminder title: ${agent.actions.find((action) => action.type === 'reminder_create')?.payload?.reminder?.title || 'missing'}`,
+      )
+    }
     if (unexpected.length > 0) console.error(`  unexpected: ${unexpected.join(', ')}`)
+    if (wrongDecisionIntent) console.error(`  decision intent: ${agent.decision?.intentLabel || 'missing'}`)
     console.error(`  actual: ${Array.from(names).join(', ')}`)
     console.error(`  actions: ${Array.from(actionTypes).join(', ')}`)
     console.error(

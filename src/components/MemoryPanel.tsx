@@ -9,6 +9,7 @@ import type {
   CharacterCard,
   LocalBackupSummary,
   LongTermMemory,
+  MemoryEmbeddingRecord,
   MemoryConflict,
   MemoryEvent,
   MemoryUsageLog,
@@ -27,6 +28,7 @@ import { MemoryArchiveModal } from './memory/sections/MemoryArchiveModal'
 import { MemoryCandidateReview } from './memory/sections/MemoryCandidateReview'
 import { MemoryDiagnostics } from './memory/sections/MemoryDiagnostics'
 import { MemoryGardenInsight } from './memory/sections/MemoryGardenInsight'
+import { MemoryRecallMap } from './memory/sections/MemoryRecallMap'
 import { MemorySpaceOverview } from './memory/sections/MemorySpaceOverview'
 import { ModelAndDataPanel } from './model/ModelAndDataPanel'
 import { SettingsPanel } from './settings/SettingsPanel'
@@ -41,6 +43,7 @@ import {
 import type { AppView } from './CharacterRail'
 interface MemoryPanelProps {
   memories: LongTermMemory[]
+  memoryEmbeddings: MemoryEmbeddingRecord[]
   memoryConflicts: MemoryConflict[]
   memoryEvents: MemoryEvent[]
   memoryUsageLogs: MemoryUsageLog[]
@@ -93,6 +96,7 @@ interface MemoryPanelProps {
 }
 export function MemoryPanel({
   memories,
+  memoryEmbeddings,
   memoryConflicts,
   memoryEvents,
   memoryUsageLogs,
@@ -244,6 +248,7 @@ export function MemoryPanel({
             characters={characters}
             memories={memories}
           />
+          <MemoryRecallMap memoryEmbeddings={memoryEmbeddings} memories={memories} usageLogs={memoryUsageLogs} />
           <ErrorBoundary
             fallbackTitle="记忆守护台暂时罢工啦"
             fallbackHint="花园其他地方都还在哟。点一下再试一次，或者刷新整个页面就能恢复。"

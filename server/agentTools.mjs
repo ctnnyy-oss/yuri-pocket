@@ -14,6 +14,7 @@ import {
   shouldUseSafetyGuardTool,
   shouldUseConversationTool,
   shouldUseCapabilityGuide,
+  shouldUseAttachmentGuideTool,
   shouldUseExternalSearchGuide,
   shouldUseWebPageTool,
   shouldUseAgentContinuityTool,
@@ -52,6 +53,7 @@ import {
   createSafetyGuardToolResult,
   createConversationSnapshotToolResult,
   createCapabilityGuideToolResult,
+  createAttachmentGuideToolResult,
   createAgentContinuityToolResult,
   createAutonomyBudgetToolResult,
   createTaskPlannerToolResult,
@@ -84,6 +86,7 @@ import {
   toolResultToContextBlock,
   actionToContextBlock,
   findPreviousAgentRun,
+  buildAgentDecisionSummary,
 } from './agent/actionDetectors.mjs'
 
 function createEmptyAgentRun() {
@@ -156,6 +159,10 @@ export async function prepareAgentBundle(bundle) {
 
   if (shouldUseCapabilityGuide(latestUserText)) {
     agent.tools.push(createCapabilityGuideToolResult())
+  }
+
+  if (shouldUseAttachmentGuideTool(latestUserText)) {
+    agent.tools.push(createAttachmentGuideToolResult())
   }
 
   // ---- 多轮接力 ----
@@ -252,6 +259,8 @@ export async function prepareAgentBundle(bundle) {
   if (shouldUseAgentBrief(latestUserText, agent)) {
     agent.tools.unshift(createAgentBriefToolResult(latestUserText, agent))
   }
+
+  agent.decision = buildAgentDecisionSummary(latestUserText, agent, contextBlocks)
 
   // ---- 组装上下文 ----
   const toolBlocks = [

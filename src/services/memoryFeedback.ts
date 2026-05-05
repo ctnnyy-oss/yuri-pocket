@@ -14,59 +14,59 @@ export function applyMemoryFeedback(memory: LongTermMemory, action: MemoryFeedba
     case 'cooldown':
       return {
         detail: '妹妹在聊天记忆透镜中让这条记忆冷却 7 天，避免继续误用。',
-        memory: {
+        memory: adjustMemoryFeedbackSignals({
           ...memory,
           cooldownUntil: addDaysIso(7),
           userEdited: true,
-        },
+        }, action),
         notice: '这条记忆已冷却 7 天',
         revisionReason: '聊天记忆透镜冷却',
       }
     case 'contextual':
       return {
         detail: '妹妹在聊天记忆透镜中把这条记忆改为只在相关话题时使用。',
-        memory: {
+        memory: adjustMemoryFeedbackSignals({
           ...memory,
           mentionPolicy: 'contextual',
           priority: Math.min(memory.priority, 4),
           userEdited: true,
-        },
+        }, action),
         notice: '这条记忆以后会少主动出现',
         revisionReason: '聊天记忆透镜减少提及',
       }
     case 'explicit':
       return {
         detail: '妹妹在聊天记忆透镜中把这条记忆改为问起再提。',
-        memory: {
+        memory: adjustMemoryFeedbackSignals({
           ...memory,
           mentionPolicy: 'explicit',
           sensitivity: maxSensitivity(memory.sensitivity, 'medium'),
           userEdited: true,
-        },
+        }, action),
         notice: '这条记忆已改成问起再提',
         revisionReason: '聊天记忆透镜改为问起再提',
       }
     case 'sensitive':
       return {
         detail: '妹妹在聊天记忆透镜中把这条记忆标为高敏，并限制为问起再提。',
-        memory: {
+        memory: adjustMemoryFeedbackSignals({
           ...memory,
           mentionPolicy: 'explicit',
           sensitivity: maxSensitivity(memory.sensitivity, 'high'),
           userEdited: true,
-        },
+        }, action),
         notice: '这条记忆已设为高敏',
         revisionReason: '聊天记忆透镜标为敏感',
       }
     case 'archive':
       return {
         detail: '妹妹在聊天记忆透镜中把这条记忆归档，保留档案但停止参与聊天检索。',
-        memory: {
+        memory: adjustMemoryFeedbackSignals({
           ...memory,
           cooldownUntil: undefined,
           status: 'archived',
           userEdited: true,
-        },
+        }, action),
         notice: '这条记忆已归档',
         revisionReason: '聊天记忆透镜归档',
       }
@@ -78,6 +78,50 @@ export function applyMemoryFeedback(memory: LongTermMemory, action: MemoryFeedba
         revisionReason: '聊天记忆透镜反馈',
       }
   }
+}
+
+function adjustMemoryFeedbackSignals(memory: LongTermMemory, action: MemoryFeedbackAction): LongTermMemory {
+  const currentStrength = memory.memoryStrength ?? 0.5
+  const currentSalience = memory.emotionalSalience ?? 0.35
+
+  if (action === 'archive') {
+    return {
+      ...memory,
+      memoryStrength: clampSignal(currentStrength - 0.22),
+      emotionalSalience: clampSignal(currentSalience - 0.18),
+      reviewIntervalDays: Math.max(memory.reviewIntervalDays ?? 14, 30),
+    }
+  }
+
+  if (action === 'cooldown') {
+    return {
+      ...memory,
+      memoryStrength: clampSignal(currentStrength - 0.12),
+      emotionalSalience: clampSignal(currentSalience - 0.08),
+      reviewIntervalDays: Math.max(memory.reviewIntervalDays ?? 7, 14),
+    }
+  }
+
+  if (action === 'contextual' || action === 'explicit') {
+    return {
+      ...memory,
+      memoryStrength: clampSignal(currentStrength - 0.06),
+      emotionalSalience: clampSignal(currentSalience - 0.04),
+    }
+  }
+
+  if (action === 'sensitive') {
+    return {
+      ...memory,
+      emotionalSalience: clampSignal(currentSalience + 0.08),
+    }
+  }
+
+  return memory
+}
+
+function clampSignal(value: number): number {
+  return Math.min(Math.max(value, 0.1), 1)
 }
 
 function addDaysIso(days: number): string {

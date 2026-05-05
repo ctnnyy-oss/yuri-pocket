@@ -1,6 +1,7 @@
 import type { AgentRoom, AppState, CharacterCard, ConversationState, LongTermMemory, WorldNode } from '../domain/types'
 import { brand } from '../config/brand'
 import { createId, nowIso } from '../services/memoryEngine'
+import { refreshLocalMemoryEmbeddingCache } from '../services/memoryEmbeddingIndex'
 
 const allCharacters: CharacterCard[] = [
   {
@@ -390,7 +391,7 @@ export function createSeedState(): AppState {
   }))
 
   return {
-    version: 20,
+    version: 21,
     activeCharacterId: characters[0].id,
     characters,
     conversations,
@@ -401,6 +402,7 @@ export function createSeedState(): AppState {
       worldNodes: [],
     },
     memoryTombstones: [],
+    memoryEmbeddings: refreshLocalMemoryEmbeddingCache(memories),
     memoryUsageLogs: [],
     memoryEvents: [],
     agentReminders: [],

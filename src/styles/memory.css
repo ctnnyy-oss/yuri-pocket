@@ -7,6 +7,7 @@
 
 .memory-insight,
 .space-overview,
+.memory-recall-map,
 .candidate-review,
 .core-cp-section,
 .memory-item {
@@ -21,6 +22,7 @@
 
 .memory-insight,
 .space-overview,
+.memory-recall-map,
 .candidate-review,
 .core-cp-section {
   display: grid;
@@ -38,6 +40,7 @@
 
 .memory-insight-head,
 .space-overview-head,
+.memory-recall-head,
 .candidate-review-head {
   display: flex;
   align-items: center;
@@ -47,6 +50,7 @@
 
 .memory-insight-head strong,
 .space-overview-head strong,
+.memory-recall-head strong,
 .candidate-review-head strong {
   display: block;
   color: var(--ink);
@@ -57,6 +61,7 @@
 
 .memory-insight-head span,
 .space-overview-head span,
+.memory-recall-head span,
 .candidate-review-head span {
   display: block;
   color: var(--muted);
@@ -68,9 +73,101 @@
 
 .memory-insight-head svg,
 .space-overview-head svg,
+.memory-recall-head svg,
 .candidate-review-head svg {
   color: var(--pink-400);
   flex: 0 0 auto;
+}
+
+.memory-recall-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.memory-recall-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 84px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  background: var(--pink-50);
+  padding: 12px;
+}
+
+.memory-recall-index {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--pink-600);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.memory-recall-step strong,
+.memory-recall-step p {
+  display: block;
+}
+.memory-recall-step strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+.memory-recall-step p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.memory-recall-step em {
+  color: var(--pink-600);
+  font-size: 20px;
+  font-style: normal;
+  font-weight: 800;
+}
+.memory-recall-watch {
+  background: var(--sky-soft);
+}
+.memory-recall-action {
+  background: var(--lavender-soft);
+}
+
+.memory-principles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.memory-principles span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-full);
+  background: var(--panel);
+  color: var(--ink-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+}
+
+.memory-principles svg {
+  color: var(--pink-500);
+}
+
+@media (max-width: 560px) {
+  .memory-recall-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-recall-step {
+    min-height: 72px;
+  }
 }
 
 /* ── Stat 网格 (4 列大数字) ── */

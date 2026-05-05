@@ -55,9 +55,13 @@ export function shouldUseConversationTool(text) {
 }
 
 export function shouldUseCapabilityGuide(text) {
-  return /agent|Agent|LLM|llm|大语言模型|大预言模型|词语接龙|工具|功能|能做|全能|智能化|联网|文件|除了聊天|不只是聊天|只能聊天/.test(
+  return /agent|Agent|智能体|LLM|llm|大语言模型|大预言模型|词语接龙|工具|功能|能做|全能|智能化|联网|文件|除了聊天|不只是聊天|只能聊天|动作识别|工具路由|工具调用|Agent 检测|手脚/.test(
     text,
   )
+}
+
+export function shouldUseAttachmentGuideTool(text) {
+  return /看图|看图片|图片|截图|照片|拍照|视觉|文档|文件|附件|上传|PDF|pdf|docx|Word|表格|xlsx|Excel|读取文件|看文件|看文档/.test(text)
 }
 
 export function shouldUseExternalSearchGuide(text) {
@@ -80,13 +84,13 @@ export function shouldUseAutonomyBudgetTool(text, previousAgentRun) {
 }
 
 export function shouldUseTaskPlannerTool(text) {
-  return /计划|规划|路线|步骤|流程|下一步|优先级|怎么做|怎么办|拆解|安排|方案|工作流|里程碑|复盘|全方位|加强|优化|迭代|一次性|一口气|搞完|做完|长冲刺/.test(
+  return /计划|规划|路线|步骤|流程|下一步|优先级|怎么做|怎么办|拆解|安排|方案|工作流|里程碑|复盘|全方位|加强|优化|升级|更新|完善|开发|迭代|一次性|一口气|搞完|做完|长冲刺/.test(
     text,
   )
 }
 
 export function shouldUseActionChecklistTool(text) {
-  return /一一实现|逐步实现|拉满|max|MAX|全方位|继续加强|单点突破|做到最好|直接做|帮我做|实现|落地|执行|推进|开工|加油|一次性|一口气|搞完|做完|长冲刺|减少.*继续|少.*继续/.test(
+  return /一一实现|逐步实现|拉满|max|MAX|全方位|继续加强|单点突破|做到最好|直接做|帮我做|实现|落地|执行|推进|开工|加油|升级|更新|完善|开发|迭代|一次性|一口气|搞完|做完|长冲刺|减少.*继续|少.*继续/.test(
     text,
   )
 }
@@ -184,7 +188,7 @@ export function shouldUseAgentBrief(text, agent) {
 
 export function shouldUseAgentQualityCheckTool(text, agent) {
   if (agent.tools.length > 0 || agent.actions.length > 0) return true
-  return /agent|Agent|能力|功能|工具|优化|加强|拉满|全方位|继续/.test(text)
+  return /agent|Agent|智能体|能力|功能|工具|动作识别|工具路由|工具调用|优化|升级|更新|完善|加强|拉满|全方位|继续/.test(text)
 }
 
 export function shouldUseHandoffMarkerTool(text, agent) {

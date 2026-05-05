@@ -1,5 +1,5 @@
 import { useMemo, useState, type CSSProperties } from 'react'
-import { ChevronRight, FileText, Plus, Search, Sparkles, Trash2, UserRound } from 'lucide-react'
+import { ChevronRight, FileText, Plus, Save, Search, Sparkles, Trash2, UserRound } from 'lucide-react'
 import type { CharacterCard } from '../domain/types'
 import type { AppView } from './CharacterRail'
 
@@ -9,6 +9,7 @@ interface QqFeaturePanelProps {
   activeCharacterId: string
   onCreateCharacter: (input: { name: string; relation: string; mood: string; persona: string }) => string
   onDeleteCharacter: (characterId: string) => boolean
+  onUpdateCharacter: (input: { id: string; name: string; relation: string; mood: string; persona: string }) => boolean
   onOpenChat: (characterId: string) => void
   onShellAction?: (message: string) => void
 }
@@ -22,6 +23,13 @@ type ManagedRole = {
   mood: string
   persona: string
   source: '内置' | '自定义'
+}
+
+type RoleDraft = {
+  name: string
+  relation: string
+  mood: string
+  persona: string
 }
 
 const roleTemplates = [
@@ -68,11 +76,22 @@ function toManagedRole(character: CharacterCard): ManagedRole {
   }
 }
 
+function toRoleDraft(role?: ManagedRole): RoleDraft {
+  if (!role || role.source !== '自定义') return { name: '', relation: '角色', mood: '', persona: '' }
+  return {
+    name: role.name,
+    relation: role.relation,
+    mood: role.mood,
+    persona: role.persona,
+  }
+}
+
 export function QqFeaturePanel({
   characters,
   activeCharacterId,
   onCreateCharacter,
   onDeleteCharacter,
+  onUpdateCharacter,
   onOpenChat,
   onShellAction,
 }: QqFeaturePanelProps) {
@@ -80,17 +99,19 @@ export function QqFeaturePanel({
     () => characters.filter((character) => character.relationship !== '群聊').map(toManagedRole),
     [characters],
   )
+  const initialSelectedRole = builtInRoles.find((role) => role.id === activeCharacterId) ?? builtInRoles[0]
   const [selectedRoleId, setSelectedRoleId] = useState(activeCharacterId)
   const [roleTab, setRoleTab] = useState<'roles' | 'templates'>('roles')
-  const [roleDraft, setRoleDraft] = useState({
-    name: '',
-    relation: '姐姐',
-    mood: '',
-    persona: '',
-  })
+  const [roleDraft, setRoleDraft] = useState<RoleDraft>(() => toRoleDraft(initialSelectedRole))
   const [importText, setImportText] = useState('')
   const managedRoles = builtInRoles
   const selectedRole = managedRoles.find((role) => role.id === selectedRoleId) ?? managedRoles[0]
+
+  function selectRole(role: ManagedRole) {
+    setSelectedRoleId(role.id)
+    setRoleDraft(toRoleDraft(role))
+    setImportText('')
+  }
 
   function fillTemplate(template: (typeof roleTemplates)[number]) {
     setRoleDraft(template)
@@ -102,14 +123,17 @@ export function QqFeaturePanel({
     const persona = roleDraft.persona.trim() || importText.trim()
     const nameFromImport = importText.trim().split(/\r?\n/).find(Boolean)?.replace(/^#+\s*/, '')
     const name = roleDraft.name.trim() || nameFromImport || '新角色'
+    const relation = roleDraft.relation.trim() || '角色'
+    const mood = roleDraft.mood.trim() || '等待补全'
+    const finalPersona = persona || '还没有导入人设。'
     const roleId = onCreateCharacter({
       name,
-      relation: roleDraft.relation.trim() || '角色',
-      mood: roleDraft.mood.trim() || '等待补全',
-      persona: persona || '还没有导入人设。',
+      relation,
+      mood,
+      persona: finalPersona,
     })
     setSelectedRoleId(roleId)
-    setRoleDraft({ name: '', relation: '姐姐', mood: '', persona: '' })
+    setRoleDraft({ name, relation, mood, persona: finalPersona })
     setImportText('')
     onShellAction?.('角色已加入管理列表和聊天列表，可以直接打开聊天')
   }
@@ -126,9 +150,20 @@ export function QqFeaturePanel({
     }
     if (!window.confirm(`删除“${selectedRole.name}”和对应聊天记录吗？`)) return
     const nextRole = managedRoles.find((role) => role.id !== selectedRole.id)
-    if (nextRole) setSelectedRoleId(nextRole.id)
+    if (nextRole) selectRole(nextRole)
     if (onDeleteCharacter(selectedRole.id)) {
       onShellAction?.('角色和对应聊天记录已删除')
+    }
+  }
+
+  function saveSelectedRole() {
+    if (!selectedRole) return
+    if (selectedRole.source !== '自定义') {
+      onShellAction?.('内置三对 CP 先保留，后续妹妹确认后再开放编辑')
+      return
+    }
+    if (onUpdateCharacter({ id: selectedRole.id, ...roleDraft })) {
+      onShellAction?.('角色设定已保存')
     }
   }
 
@@ -154,7 +189,7 @@ export function QqFeaturePanel({
               <button
                 className={role.id === selectedRole?.id ? 'active' : ''}
                 key={role.id}
-                onClick={() => setSelectedRoleId(role.id)}
+                onClick={() => selectRole(role)}
                 type="button"
               >
                 <span className="avatar" style={{ '--avatar-accent': role.accent } as CSSProperties}>{role.avatar}</span>
@@ -207,10 +242,16 @@ export function QqFeaturePanel({
                 </button>
               )}
               {selectedRole?.source === '自定义' && (
-                <button className="danger-role-action" onClick={deleteSelectedRole} type="button">
-                  <Trash2 size={17} />
-                  <span>删除角色</span>
-                </button>
+                <>
+                  <button onClick={saveSelectedRole} type="button">
+                    <Save size={17} />
+                    <span>保存角色</span>
+                  </button>
+                  <button className="danger-role-action" onClick={deleteSelectedRole} type="button">
+                    <Trash2 size={17} />
+                    <span>删除角色</span>
+                  </button>
+                </>
               )}
               {roleTemplates.map((template) => (
                 <button key={template.name} onClick={() => fillTemplate(template)} type="button">
@@ -246,7 +287,7 @@ export function QqFeaturePanel({
           <>
             <div className="mobile-contact-list">
               {managedRoles.map((role) => (
-                <button key={role.id} onClick={() => setSelectedRoleId(role.id)} type="button">
+                <button key={role.id} onClick={() => selectRole(role)} type="button">
                   <span className="avatar" style={{ '--avatar-accent': role.accent } as CSSProperties}>{role.avatar}</span>
                   <span>
                     <strong>{role.name}</strong>

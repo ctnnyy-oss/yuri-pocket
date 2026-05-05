@@ -97,6 +97,16 @@ function AgentTrace({ trace }: { trace: AgentRunSummary }) {
         <span>Agent 做了 {itemCount} 件事</span>
         <small>{buildAgentSummary(coreTools.length, metaTools.length, visibleActions.length, pendingActions.length)}</small>
       </summary>
+      {trace.decision && (
+        <div className={`agent-decision-card agent-decision-${trace.decision.riskLevel}`}>
+          <div>
+            <strong>{trace.decision.intentLabel}</strong>
+            <span>{trace.decision.workflow}</span>
+          </div>
+          <p>{trace.decision.memoryMode}</p>
+          <small>下一步：{trace.decision.nextStep}</small>
+        </div>
+      )}
       {tools.length > 0 && (
         <div className="agent-trace-list">
           {tools.map((tool) => (
@@ -140,6 +150,7 @@ function isMetaTraceTool(name: string): boolean {
   return [
     'agent_brief',
     'capability_guide',
+    'attachment_guide',
     'agent_continuity',
     'memory_bridge',
     'autonomy_budget',
@@ -154,6 +165,7 @@ function isMetaTraceTool(name: string): boolean {
     'response_quality_gate',
     'agent_quality_check',
     'handoff_marker',
+    'tool_governance',
   ].includes(name)
 }
 

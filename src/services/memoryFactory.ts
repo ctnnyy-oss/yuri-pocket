@@ -15,6 +15,7 @@ import type {
 import { createId, extractKeywords, nowIso, unique } from './memoryUtils'
 import {
   classifyMemory,
+  getAutoMemoryStatus,
   inferMemoryLayer,
   inferMemoryScope,
   inferMentionPolicy,
@@ -28,10 +29,12 @@ import {
   mergeMemories,
   scoreMemory,
 } from './memoryCore'
+import { buildReflectionCandidates } from './memoryReflection'
 
 export type MemoryMaintenanceReport = {
   memories: LongTermMemory[]
   mergedCount: number
+  reflectedCount: number
   reviewedCount: number
 }
 
@@ -126,14 +129,20 @@ export function maybeCaptureMemory(
   if (message.role !== 'user') return null
 
   const content = message.content.trim()
-  const signal = classifyMemory(content)
+  const payload = extractMemoryPayload(content)
+  const explicitMemoryCommand = hasExplicitMemoryCommand(content)
+  const signal = explicitMemoryCommand
+    ? classifyMemory(payload) ?? inferExplicitMemorySignal(payload)
+    : classifyMemory(content)
+
   if (!signal || content.length < 6) return null
+  if (payload.length < 4) return null
 
   const source = createMemorySourceFromMessage(message, conversation, character)
   return createLongTermMemory({
-    title: buildMemoryTitle(signal.kind, content),
-    body: content.slice(0, 360),
-    tags: buildMemoryTags(signal.kind, content, character?.name),
+    title: buildMemoryTitle(signal.kind, payload),
+    body: payload.slice(0, 360),
+    tags: buildMemoryTags(signal.kind, payload, character?.name),
     priority: signal.kind === 'procedure' || signal.kind === 'project' ? 5 : 4,
     pinned: signal.kind === 'procedure',
     kind: signal.kind,
@@ -180,10 +189,12 @@ export function consolidateMemoryGarden(memories: LongTermMemory[]): MemoryMaint
     consolidated[duplicateIndex] = mergeMemories(consolidated[duplicateIndex], memory, '后台整理合并')
     mergedCount += 1
   }
+  const reflected = buildReflectionCandidates(consolidated)
 
   return {
-    memories: consolidated,
+    memories: [...reflected, ...consolidated],
     mergedCount,
+    reflectedCount: reflected.length,
     reviewedCount: sorted.length,
   }
 }
@@ -211,4 +222,52 @@ function buildMemoryTags(kind: MemoryKind, content: string, characterName?: stri
   const keywords = extractKeywords(content).slice(0, 3)
   tags.push(...keywords)
   return unique(tags)
+}
+
+export function extractMemoryPayload(content: string): string {
+  const explicitCommandPattern =
+    /(?:帮我|请|麻烦|顺手)?\s*(?:记住|记一下|写进记忆|加入记忆|保存到记忆|别忘了?)\s*[：:，,。 ]*/gu
+  let explicitPayloadStart = -1
+
+  for (const match of content.matchAll(explicitCommandPattern)) {
+    explicitPayloadStart = (match.index ?? 0) + match[0].length
+  }
+
+  if (explicitPayloadStart >= 0) {
+    return cleanMemoryPayload(content.slice(explicitPayloadStart))
+  }
+
+  return cleanMemoryPayload(content
+    .replace(/^(姐姐|妹妹|你)?\s*(帮我|给我|请)?\s*(记住|记一下|写进记忆|加入记忆|保存到记忆|别忘了?|以后|下次|默认)\s*[：:，,。 ]*/u, '')
+    .replace(/^(我的|我|妹妹)\s*(偏好|规则|习惯|设定)\s*(是|就是|：|:)?\s*/u, '$1$2是')
+    .replace(/^(请|麻烦)?\s*(以后|下次)\s*/u, '')
+  )
+}
+
+function hasExplicitMemoryCommand(content: string): boolean {
+  return /(?:记住|记一下|写进记忆|加入记忆|保存到记忆|别忘了?|帮我记住|请记住|顺手记住)/u.test(content)
+}
+
+function inferExplicitMemorySignal(payload: string): NonNullable<ReturnType<typeof classifyMemory>> {
+  const kind: MemoryKind = /(暗号|称呼|昵称|关系|姐姐|妹妹|恋人|朋友|家人)/.test(payload)
+    ? 'relationship'
+    : /(项目|应用|百合小窝|Yuri Nest|架构|模型|Agent|云服务器)/i.test(payload)
+      ? 'project'
+      : /(角色|人设|世界观|CP|百合)/i.test(payload)
+        ? 'world'
+        : 'preference'
+  const sensitivity = inferSensitivity(kind, payload)
+
+  return {
+    kind,
+    confidence: 0.82,
+    sensitivity,
+    status: getAutoMemoryStatus(kind, sensitivity, 'candidate'),
+  }
+}
+
+function cleanMemoryPayload(content: string): string {
+  return content
+    .replace(/^(这件事|这一点|一下|内容是|就是|是)\s*[：:，,。 ]*/u, '')
+    .trim()
 }

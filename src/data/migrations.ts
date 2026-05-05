@@ -1,9 +1,10 @@
 import type { AppState, CharacterCard, LongTermMemory } from '../domain/types'
+import { refreshLocalMemoryEmbeddingCache } from '../services/memoryEmbeddingIndex'
 import { normalizeMemories } from '../services/memoryEngine'
 import { normalizeTrashRetentionSettings } from '../services/trashRetention'
 import { agentRooms, createSeedState } from './seed'
 
-const currentStateVersion = 20
+const currentStateVersion = 21
 
 export function migrateAppState(state: AppState): AppState {
   const defaults = createSeedState()
@@ -31,6 +32,10 @@ export function migrateAppState(state: AppState): AppState {
       worldNodes: state.trash?.worldNodes ?? defaults.trash.worldNodes,
     },
     memoryTombstones: Array.isArray(state.memoryTombstones) ? state.memoryTombstones : defaults.memoryTombstones,
+    memoryEmbeddings: refreshLocalMemoryEmbeddingCache(
+      baseMemories,
+      Array.isArray(state.memoryEmbeddings) ? state.memoryEmbeddings : defaults.memoryEmbeddings,
+    ),
     memoryUsageLogs: Array.isArray(state.memoryUsageLogs) ? state.memoryUsageLogs : defaults.memoryUsageLogs,
     memoryEvents: Array.isArray(state.memoryEvents) ? state.memoryEvents : defaults.memoryEvents,
     agentReminders: Array.isArray(state.agentReminders) ? state.agentReminders : defaults.agentReminders,

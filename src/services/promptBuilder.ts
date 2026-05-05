@@ -1,12 +1,13 @@
 import type { AppState, ChatMessage, MemoryUsageLog, PromptBundle, PromptContextBlock } from '../domain/types'
 import { brand } from '../config/brand'
-import { createId, nowIso } from './memoryCore'
+import { createId, isExplicitMemoryQuery, nowIso } from './memoryCore'
 import { getActiveMemories, getTriggeredWorldNodes, buildMemoryContextBlocks } from './memoryRetrieval'
 
 type PromptBlockCategory = NonNullable<PromptContextBlock['category']>
 
 const DEFAULT_PROMPT_BLOCK_CATEGORY: PromptBlockCategory = 'stable'
 const PROMPT_CONTEXT_TOTAL_BUDGET = 8_200
+const MEMORY_USAGE_LOG_LIMIT = 500
 const PROMPT_CONTEXT_BLOCK_BUDGET: Record<PromptBlockCategory, number> = {
   boundary: 1_800,
   stable: 1_800,
@@ -26,17 +27,27 @@ const PROMPT_CONTEXT_CATEGORY_BUDGET: Record<PromptBlockCategory, number> = {
   summary: 1_400,
 }
 
-export function buildPromptBundle(state: AppState): PromptBundle {
+export function buildPromptBundle(
+  state: AppState,
+  options: { embeddingQueryVector?: number[]; embeddingModel?: string } = {},
+): PromptBundle {
   const character = getActiveCharacterInternal(state)
   const conversation = getConversationInternal(state, character.id)
   const maxMessages = Math.max(4, state.settings.maxContextMessages)
   const recentMessages = conversation.messages.slice(-maxMessages)
+  const latestUserText = [...conversation.messages].reverse().find((message) => message.role === 'user')?.content ?? ''
   const recentText = recentMessages.map((message) => message.content).join('\n')
+  const recallMode = isExplicitMemoryQuery(latestUserText)
+  const memoryQuery = recallMode ? latestUserText : recentText
   const activeWorldNodes = getTriggeredWorldNodes(state.worldNodes, recentText)
-  const activeMemories = getActiveMemories(state.memories, recentText, {
+  const activeMemories = getActiveMemories(state.memories, memoryQuery, {
     characterId: character.id,
     conversationId: conversation.id,
-    maxItems: 12,
+    embeddingModel: options.embeddingModel,
+    embeddingQueryVector: options.embeddingQueryVector,
+    maxItems: recallMode ? 18 : 12,
+    memoryEmbeddings: state.memoryEmbeddings,
+    recallMode,
   })
   const memoryContextBlocks = buildMemoryContextBlocks(activeMemories, {
     characterName: character.name,
@@ -47,6 +58,7 @@ export function buildPromptBundle(state: AppState): PromptBundle {
   const contextBlocks = applyPromptContextBudget([
     runtimeContext,
     companionRhythm,
+    ...(recallMode ? [buildRecallModeContextBlock(activeMemories)] : []),
     ...(reminderContext ? [reminderContext] : []),
     ...memoryContextBlocks,
     ...activeWorldNodes.map((node) => ({
@@ -105,6 +117,10 @@ export function buildPromptBundle(state: AppState): PromptBundle {
     contextBlocks,
     messages: recentMessages,
   }
+}
+
+export function getMemoryUsageLogLimit(): number {
+  return MEMORY_USAGE_LOG_LIMIT
 }
 
 export function createMemoryUsageLog(input: {
@@ -172,6 +188,21 @@ function buildReminderContextBlock(state: AppState): PromptContextBlock | null {
       .join('\n'),
     category: 'summary',
     reason: '当前未完成提醒',
+  }
+}
+
+function buildRecallModeContextBlock(memories: ReturnType<typeof getActiveMemories>): PromptContextBlock {
+  return {
+    title: '回忆模式',
+    content: [
+      '用户正在询问“以前 / 上次 / 还记得 / 记忆 / 档案”等旧事。',
+      memories.length > 0
+        ? `本轮已扩展召回 ${memories.length} 条长期记忆。回答时优先依据这些记忆，并区分稳定事实、阶段事件和临时工作。`
+        : '本轮没有召回到长期记忆。回答时要诚实说明当前小窝没有找到对应记忆，不要编造旧事。',
+      '如果记忆和用户当前说法冲突，以用户当前说法为准，并建议去记忆页修正旧记忆。',
+    ].join('\n'),
+    category: 'summary',
+    reason: '显式旧事询问触发扩展召回',
   }
 }
 

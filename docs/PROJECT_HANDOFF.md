@@ -52,6 +52,8 @@
 - 2026-05-03 已新增第一阶段轻量 Agent：后端 `server/agentTools.mjs` 会在 `/api/chat` 前执行白名单工具，包括当前北京时间、Open-Meteo 公开天气、用户提供的公开网页链接摘录、最近对话工作台、能力边界说明；还新增动作回传，用户明确要求时可更新当前聊天角色名称/头像字、创建网页内提醒、把内容写入候选记忆。
 - 2026-05-03 已完成早期架构整理：`App.tsx` 瘦身为页面外壳，应用状态与动作集中到 `src/app/useYuriNestApp.ts`；主题、路由、Agent 动作落地、格式化工具分别拆到 `src/app/*`；记忆编辑表单、记忆列表、设置页、世界树页、回收花园页拆成独立组件；后端模型供应商适配拆到 `server/modelProvider.mjs`，云端 SQLite 快照/备份拆到 `server/cloudStore.mjs`。
 - 2026-05-04 已完成 Claude 中断后的架构收尾：`useYuriNestApp.ts` 进一步拆出 `useChat`、`useCloudSync`、`useBackupRestore`、`useMemoryActions`、`useAgentTasks`；`memoryEngine.ts` 改成门面，核心、检索、推断、提示词构建分别落到 `src/services/memory*.ts` 和 `promptBuilder.ts`；`server/agentTools.mjs` 改成 Agent 编排入口，检测、执行、搜索、常量和工具函数拆到 `server/agent/*`。这轮同时修复了拆分后漏导入导致的 Agent 运行时错误，并补齐风险闸门、默认推进、任务队列、质量检查等 15 条 Agent 回归。
+- 2026-05-04 已做项目初期架构加固：后端认证拆到 `server/auth.mjs`，模型保险箱拆到 `server/modelProfiles.mjs`，`server/index.mjs` 只保留路由和编排；同时删除入口里旧版 Agent 工具块死代码。模型接入页拆成 `ModelCurrentStrip`、`ModelProfileEditor`、`SavedModelProfiles`、`GenerationSettings` 和 `useModelProfileDraft`，并把“服务器默认配置”纳入模型列表但禁止误删。新增 `npm run audit:architecture` 作为后续大改前后的模块体检命令。
+- 2026-05-05 已完成本轮架构收尾：后端 `utils`、`toolExecutors`、`actionDetectors`、`platform` 都是 facade；`ChatPhone.tsx` 和 `AgentTaskPanel.tsx` 已拆成子组件目录，并把断开的 `tasks` 视图重新接回 App 与设置侧栏入口。随后补了记忆系统 + Agent 能力升级：`agent.decision` 决策摘要、记忆页“记忆流水线”总览、核心记忆锚点、回忆模式、精准记忆 payload 捕捉、500 条调用日志、文档/图片能力边界工具，以及 `docs/MEMORY_AGENT_UPGRADE_RESEARCH.md` / `docs/HUMAN_MEMORY_TARGET.md`。`LongTermMemory` 现在保存 `semanticSignature` / `semanticSignatureVersion`，向量索引用签名分桶但不硬过滤候选；`AppState` 现在保存 `memoryEmbeddings`，状态版本升到 21，迁移、保存、本机备份会自动刷新本地投影缓存；回忆模式已把 embedding 缓存接入候选和排序；显式旧事询问时会尝试通过后端 `/api/model/embeddings` 生成外部 query vector，成功则参与本轮排序，失败或超时自动回落；后端新增 `/api/model/embeddings`，用于后续接 OpenAI-compatible embedding 模型但不把 API Key 暴露到前端。`npm run test:memory` 现在覆盖 13 个旧事召回用例和 17 维 human-memory proxy gate，当前为 13/13、17/17，并新增 `docs/HUMAN_MEMORY_90_TASK.md`。当前 `npm run audit:architecture` 只剩 `src/styles/mobile.css` 与 `src/styles/chat.css` 两个 CSS 观察项，代码模块已全部下榜。
 - 旧 AstrBot / NapCat 服务已经从服务器清理掉，释放资源。
 - GitHub 已经作为版本回溯和部署入口。
 
@@ -105,6 +107,7 @@ GitHub 仓库：
 - `AI_BASE_URL=https://api.yop.mom/v1`
 - `AI_API_KEY`
 - `AI_MODEL=deepseek-v4-flash`
+- `AI_ESCAPE_UNICODE_CONTENT=false`
 - `YURI_NEST_MODEL_SECRET`（可选但建议设置，用于加密服务器里保存的用户模型密钥；不设置时会退回使用同步口令或本地开发默认值派生密钥）
 - `YURI_NEST_REQUIRE_CLOUD_AUTH=true`（可选；只有想恢复口令门禁时才设置）
 - `YURI_NEST_REQUIRE_CHAT_AUTH=true`（可选；只有未来登录/授权阶段才设置）
@@ -151,6 +154,9 @@ flowchart LR
 - 前端跨页面状态和动作放 `src/app/`；纯领域规则放 `src/services/` 或 `src/domain/`。
 - 后端新 API 先在 `server/index.mjs` 接路由，再把数据库、模型供应商、Agent 工具等具体逻辑放到对应模块。
 - `server/modelProvider.mjs` 只管模型接口差异；`server/cloudStore.mjs` 只管 SQLite 快照/备份；`server/agentTools.mjs` 只做 Agent 编排；具体规则继续放到 `server/agent/toolDetectors.mjs`、`server/agent/toolExecutors.mjs`、`server/agent/actionDetectors.mjs`、`server/agent/searchEngines.mjs`。
+- `server/auth.mjs` 只管授权；`server/modelProfiles.mjs` 只管模型配置保险箱、密钥加密和运行时 profile 解析。以后不要把模型配置 CRUD、AES-GCM 加密或 token 比对再塞回 `server/index.mjs`。
+- 前端模型页新增能力优先沿 `src/components/model/` 拆分：表单草稿和模型列表拉取放 hook，纯 UI 放组件，平台标签和草稿工具放 `modelPanelUtils.ts`。
+- 前端 Agent 任务页新增能力优先沿 `src/components/agent/taskPanel/` 拆分：后台平台控制台、任务卡片和状态 helper 已分开，`AgentTaskPanel.tsx` 只做数据刷新与页面编排。
 
 GitHub 负责：
 
@@ -171,6 +177,12 @@ GitHub 负责：
 ```powershell
 npm install
 npm run dev
+```
+
+架构体检：
+
+```powershell
+npm run audit:architecture
 ```
 
 构建 GitHub Pages：

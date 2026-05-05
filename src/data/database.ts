@@ -1,6 +1,7 @@
 import { openDB } from 'idb'
 import { storageConfig } from '../config/storage'
 import type { AppState, LocalBackup, LocalBackupSummary } from '../domain/types'
+import { refreshLocalMemoryEmbeddingCache } from '../services/memoryEmbeddingIndex'
 import { applyTrashRetention } from '../services/trashRetention'
 import { migrateAppState } from './migrations'
 import { createSeedState } from './seed'
@@ -23,7 +24,7 @@ export async function loadAppState(): Promise<AppState> {
 
 export async function saveAppState(state: AppState): Promise<void> {
   const database = await getDatabase()
-  await database.put(storeName, applyTrashRetention(state), stateKey)
+  await database.put(storeName, applyTrashRetention(withMemoryEmbeddingCache(state)), stateKey)
 }
 
 export async function resetAppState(): Promise<AppState> {
@@ -60,19 +61,27 @@ export async function deleteLocalBackup(backupId: string): Promise<void> {
 function buildLocalBackup(state: AppState, reason: string): LocalBackup {
   const createdAt = new Date().toISOString()
   const suffix = createdAt.slice(0, 19).replace(/[T:]/g, '-')
+  const stateWithEmbeddingCache = withMemoryEmbeddingCache(state)
   return {
     id: `local-${suffix}-${Math.random().toString(36).slice(2, 8)}`,
     label: `本机备份 ${createdAt.slice(0, 10)}`,
     reason,
     createdAt,
-    stateVersion: state.version,
+    stateVersion: stateWithEmbeddingCache.version,
     counts: {
-      conversations: state.conversations.length,
-      memories: state.memories.length,
-      worldNodes: state.worldNodes.length,
-      trashedItems: state.trash.memories.length + state.trash.worldNodes.length,
+      conversations: stateWithEmbeddingCache.conversations.length,
+      memories: stateWithEmbeddingCache.memories.length,
+      worldNodes: stateWithEmbeddingCache.worldNodes.length,
+      trashedItems: stateWithEmbeddingCache.trash.memories.length + stateWithEmbeddingCache.trash.worldNodes.length,
     },
-    state,
+    state: stateWithEmbeddingCache,
+  }
+}
+
+function withMemoryEmbeddingCache(state: AppState): AppState {
+  return {
+    ...state,
+    memoryEmbeddings: refreshLocalMemoryEmbeddingCache(state.memories, state.memoryEmbeddings),
   }
 }
 

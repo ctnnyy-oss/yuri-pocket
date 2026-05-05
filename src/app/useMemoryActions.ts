@@ -151,8 +151,8 @@ export function useMemoryActions({
           actor: 'system',
           title: '后台整理',
           detail:
-            report.mergedCount > 0
-              ? `检查 ${report.reviewedCount} 条记忆，合并 ${report.mergedCount} 条重复内容。`
+            report.mergedCount > 0 || report.reflectedCount > 0
+              ? `检查 ${report.reviewedCount} 条记忆，合并 ${report.mergedCount} 条重复内容，生成 ${report.reflectedCount} 条反思候选。`
               : `检查 ${report.reviewedCount} 条记忆，暂时不需要合并。`,
           memoryIds: report.memories.slice(0, 8).map((memory) => memory.id),
           characterId,
@@ -160,7 +160,9 @@ export function useMemoryActions({
       ),
     )
     setNotice(
-      report.mergedCount > 0 ? `已整理 ${report.reviewedCount} 条，合并 ${report.mergedCount} 条` : '记忆系统已检查',
+      report.mergedCount > 0 || report.reflectedCount > 0
+        ? `已整理 ${report.reviewedCount} 条，合并 ${report.mergedCount} 条，生成 ${report.reflectedCount} 条反思候选`
+        : '记忆系统已检查',
     )
   }
 

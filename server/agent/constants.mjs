@@ -21,6 +21,7 @@ export const TOOL_DISPLAY_NAMES = {
   safety_guard: '风险边界',
   conversation_snapshot: '整理上下文',
   capability_guide: '能力边界',
+  attachment_guide: '文档图片边界',
   task_planner: '拆任务',
   action_checklist: '行动清单',
   clarification: '澄清缺口',
@@ -64,6 +65,7 @@ export const TOOL_GOVERNANCE_POLICIES = {
   web_page: { risk: '联网只读', mode: '自动', evidence: '用户给出的公开链接' },
   safety_guard: { risk: '高风险建议', mode: '自动加边界', evidence: '安全策略' },
   conversation_snapshot: { risk: '本轮上下文', mode: '自动', evidence: '当前聊天' },
+  attachment_guide: { risk: '能力边界', mode: '自动', evidence: '当前应用能力清单' },
 }
 
 export const ACTION_GOVERNANCE_POLICIES = {

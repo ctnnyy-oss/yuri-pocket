@@ -293,6 +293,59 @@
   margin-top: 6px;
 }
 
+.agent-decision-card {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.agent-decision-card div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.agent-decision-card strong {
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.agent-decision-card span,
+.agent-decision-card p,
+.agent-decision-card small {
+  font-size: 11px;
+}
+
+.agent-decision-card span {
+  color: var(--pink-600);
+  font-weight: 700;
+}
+
+.agent-decision-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.agent-decision-card small {
+  color: var(--muted-light);
+}
+
+.agent-decision-medium {
+  border-color: rgba(255, 183, 77, 0.55);
+  background: rgba(255, 248, 230, 0.88);
+}
+
+.agent-decision-high {
+  border-color: rgba(255, 124, 174, 0.5);
+  background: var(--pink-50);
+}
+
 .agent-trace-item,
 .trace-memory-item {
   padding: 6px 8px;

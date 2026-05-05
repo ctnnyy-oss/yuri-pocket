@@ -21,6 +21,7 @@ import {
   upsertConversation,
 } from '../services/memoryEngine'
 import { appendMemoryEvent, createMemoryEvent, type CreateMemoryEventInput } from '../services/memoryEvents'
+import { inferMemoryScope } from '../services/memoryInference'
 import { enqueueAgentTaskAction } from '../services/platform'
 
 export function addMemoryEventToState(state: AppState, input: CreateMemoryEventInput): AppState {
@@ -283,6 +284,7 @@ function createMemoryFromAgentAction(
   const title = sanitizeShortText(input?.title, 64)
 
   if (!input || !body || !title) return null
+  const kind = input.kind ?? 'event'
 
   return createManualMemory({
     title,
@@ -290,8 +292,9 @@ function createMemoryFromAgentAction(
     tags: [...(input.tags ?? []), context.character.name].slice(0, 8),
     priority: input.priority ?? 3,
     pinned: false,
-    kind: input.kind ?? 'event',
+    kind,
     layer: input.layer ?? 'episode',
+    scope: inferMemoryScope(kind, context.conversation, context.character),
     confidence: 0.82,
     status: 'candidate',
     sources: [createMemorySourceFromMessage(context.userMessage, context.conversation, context.character)],
