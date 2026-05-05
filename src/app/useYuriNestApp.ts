@@ -222,14 +222,7 @@ export function useYuriNestApp() {
         {
           id: createId('conversation'),
           characterId,
-          messages: [
-            {
-              id: createId('message'),
-              role: 'assistant',
-              content: character.greeting,
-              createdAt: now,
-            },
-          ],
+          messages: [],
           summary: '',
           createdAt: now,
           updatedAt: now,
@@ -321,22 +314,13 @@ export function useYuriNestApp() {
   }
 
   function handleClearConversation(characterId: string) {
-    const target = state.characters.find((item) => item.id === characterId) ?? character
     const now = nowIso()
+    chat.clearChatAlert()
     setState((currentState) => {
       const existingConversation = getConversation(currentState, characterId)
       return upsertConversation(currentState, {
         ...existingConversation,
-        messages: target.greeting
-          ? [
-              {
-                id: createId('message'),
-                role: 'assistant',
-                content: target.greeting,
-                createdAt: now,
-              },
-            ]
-          : [],
+        messages: [],
         summary: '',
         updatedAt: now,
       })
@@ -373,6 +357,7 @@ export function useYuriNestApp() {
     cloudSyncConfigured: isCloudSyncConfigured(),
     cloudToken: cloud.cloudToken,
     conversation,
+    chatAlert: chat.chatAlert,
     draft: chat.draft,
     handleAddMemory: memory.handleAddMemory,
     handleClearCompletedTasks: tasks.handleClearCompletedTasks,

@@ -40,6 +40,7 @@ interface ChatPhoneProps {
   memoryUsageLogs: MemoryUsageLog[]
   draft: string
   isSending: boolean
+  systemAlert?: string
   settings: AppSettings
   onDraftChange: (value: string) => void
   onBackToList?: () => void
@@ -62,6 +63,7 @@ export function ChatPhone({
   memoryUsageLogs,
   draft,
   isSending,
+  systemAlert,
   settings,
   onDraftChange,
   onBackToList,
@@ -114,7 +116,7 @@ export function ChatPhone({
       top: messageListRef.current.scrollHeight,
       behavior: 'smooth',
     })
-  }, [messages, isSending])
+  }, [messages, isSending, systemAlert])
 
   return (
     <main className="workspace chat-workspace">
@@ -180,7 +182,12 @@ export function ChatPhone({
 
       <div className="message-list" ref={messageListRef}>
         <div className="message-column">
-          <div className="chat-time-separator">2026/03/18 13:10</div>
+          {systemAlert && (
+            <div className="chat-system-banner" role="status">
+              <strong>系统提示</strong>
+              <span>{systemAlert}</span>
+            </div>
+          )}
           {messages.map((message, index) => (
             <MessageBubble
               key={message.id}
@@ -192,23 +199,6 @@ export function ChatPhone({
               onMemoryFeedback={onMemoryFeedback}
             />
           ))}
-          {messages.length <= 1 && (
-            <div className="chat-row chat-row-user qq-demo-user">
-              <span className="chat-row-avatar">妹</span>
-              <article className="message message-user">
-                <p>姐姐在吗 QAQ</p>
-              </article>
-            </div>
-          )}
-          <div className="chat-row chat-row-assistant qq-demo-stickers">
-            <span
-              className="chat-row-avatar"
-              style={{ '--avatar-accent': character.accent } as CSSProperties}
-            >
-              {character.avatar}
-            </span>
-            <article className="message message-assistant sticker-message">😊</article>
-          </div>
           {isSending && (
             <div className="chat-row chat-row-assistant">
               <span

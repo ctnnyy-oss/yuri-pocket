@@ -30,6 +30,7 @@ interface CharacterRailProps {
 }
 
 type RailItem = { id: AppView; label: string; description: string; icon: LucideIcon; badge?: string }
+type AppPaneRow = { title: string; text: string; icon: LucideIcon; view: AppView; active?: boolean }
 
 const primaryNavigationItems: RailItem[] = [
   { id: 'chat', label: '聊天', description: '最近聊天', icon: MessageCircle },
@@ -44,12 +45,41 @@ const channelRows = [
   { id: 'group:yuri-room', title: '百合创作小屋', text: '只保留项目需要的群聊入口', time: '星期六', avatar: '百', badge: '' },
 ]
 
-const appRows = [
+const appRows: AppPaneRow[] = [
   { title: '模型管理', text: 'URL、API Key、官方或第三方协议', icon: SlidersHorizontal, view: 'model' as AppView },
   { title: '记忆管理', text: '长期记忆、关系记忆、世界观资料', icon: Brain, view: 'memory' as AppView },
   { title: 'Agent 任务', text: '后台队列、自检和任务推进状态', icon: ListTodo, view: 'tasks' as AppView },
   { title: '设置中心', text: '不属于聊天、角色、模型、记忆的入口都放这里', icon: Settings, view: 'settings' as AppView },
 ]
+
+const featureRowsByView: Partial<Record<AppView, AppPaneRow[]>> = {
+  model: [
+    { title: '模型接入', text: 'Base URL、API Key、当前模型', icon: SlidersHorizontal, view: 'model', active: true },
+    { title: '一键巡检', text: '云端、模型档案、聊天响应', icon: ListTodo, view: 'model' },
+    { title: '已保存模型', text: '统一入口，后续可切换供应商', icon: Brain, view: 'model' },
+    { title: '生成参数', text: '温度、回复上限、短期记忆', icon: Settings, view: 'model' },
+  ],
+  memory: [
+    { title: '记忆空间', text: '长期记忆、关系记忆、世界观', icon: Brain, view: 'memory', active: true },
+    { title: '调用痕迹', text: '查看每轮聊天用到的记忆', icon: ListTodo, view: 'memory' },
+    { title: '记忆整理', text: '合并、确认、降噪和冲突处理', icon: SlidersHorizontal, view: 'memory' },
+    { title: '回收站', text: '误删内容可以先从这里找回', icon: Settings, view: 'trash' },
+  ],
+  settings: [
+    { title: '外观与输入', text: '主题、字号、回车发送', icon: Settings, view: 'settings', active: true },
+    { title: '数据同步', text: '云端口令、导入导出、备份', icon: SlidersHorizontal, view: 'settings' },
+    { title: '保留策略', text: '回收站保存天数和清理规则', icon: ListTodo, view: 'settings' },
+    { title: '关于应用', text: 'Yuri Chat 的基础信息', icon: Brain, view: 'settings' },
+  ],
+  trash: [
+    { title: '回收站', text: '被删除的记忆和世界观节点', icon: Settings, view: 'trash', active: true },
+    { title: '记忆管理', text: '返回长期记忆整理页面', icon: Brain, view: 'memory' },
+  ],
+}
+
+function getFeatureRows(view: AppView): AppPaneRow[] {
+  return featureRowsByView[view] ?? appRows
+}
 
 function characterThreadTime(index: number, active: boolean) {
   if (active) return '昨天20:21'
@@ -92,13 +122,20 @@ export function CharacterRail({
   onViewChange,
   onSelect,
 }: CharacterRailProps) {
-  const [query, setQuery] = useState('')
+  const [queryState, setQueryState] = useState<{ view: AppView; value: string }>(() => ({
+    view: activeView,
+    value: '',
+  }))
   const [pinnedThreadIds, setPinnedThreadIds] = useState<Set<string>>(() => new Set())
   const [pinTimer, setPinTimer] = useState<number | null>(null)
+
+  const query = queryState.view === activeView ? queryState.value : ''
   const normalizedQuery = query.trim().toLowerCase()
   const activeCharacter = characters.find((character) => character.id === activeCharacterId) ?? characters[0]
   const roleCharacters = useMemo(() => characters.filter((character) => !isGroupCharacter(character)), [characters])
   const groupCharacters = useMemo(() => characters.filter(isGroupCharacter), [characters])
+  const visibleChannelRows = useMemo(() => channelRows.filter((row) => row.id !== 'group:yuri-room'), [])
+  const featureRows = useMemo(() => getFeatureRows(activeView), [activeView])
   const conversationByCharacterId = useMemo(() => {
     return new Map(conversations.map((conversation) => [conversation.characterId, conversation]))
   }, [conversations])
@@ -129,8 +166,8 @@ export function CharacterRail({
     })
   }, [normalizedQuery, roleCharacters])
   const filteredChannelRows = useMemo(() => {
-    const defaultTitles = new Set(channelRows.map((row) => row.title))
-    const defaultRows = channelRows.map((row) => {
+    const defaultTitles = new Set(visibleChannelRows.map((row) => row.title))
+    const defaultRows = visibleChannelRows.map((row) => {
       const existing = groupCharacters.find((character) => character.name === row.title)
       return {
         ...row,
@@ -157,7 +194,7 @@ export function CharacterRail({
     const rows = [...defaultRows, ...customRows]
     if (!normalizedQuery) return rows
     return rows.filter((row) => `${row.title} ${row.text}`.toLowerCase().includes(normalizedQuery))
-  }, [conversationByCharacterId, groupCharacters, normalizedQuery])
+  }, [conversationByCharacterId, groupCharacters, normalizedQuery, visibleChannelRows])
   const chatThreads = useMemo(() => {
     const characterThreads = filteredCharacters.map((character, index) => {
       const conversation = conversationByCharacterId.get(character.id)
@@ -240,7 +277,7 @@ export function CharacterRail({
           title={brand.nameZh}
           type="button"
         >
-          <span>AIQ</span>
+          <span>YURI</span>
         </button>
 
         <nav className="primary-nav" aria-label="主要功能">
@@ -273,7 +310,7 @@ export function CharacterRail({
             <Search size={18} />
             <input
               aria-label="搜索"
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => setQueryState({ view: activeView, value: event.target.value })}
               placeholder="搜索"
               value={query}
             />
@@ -381,7 +418,7 @@ export function CharacterRail({
 
         {activeView === 'group' && (
           <div className="character-list conversation-list">
-            {channelRows.map((row, index) => (
+            {visibleChannelRows.map((row, index) => (
               <button className={`character-button ${index === 0 ? 'active' : ''}`} key={row.title} type="button">
                 <span className="avatar channel-avatar">
                   {row.avatar}
@@ -402,13 +439,19 @@ export function CharacterRail({
 
         {activeView !== 'chat' && activeView !== 'role' && activeView !== 'group' && (
           <div className="qq-app-pane">
-            {appRows.map((row) => {
+            {featureRows.map((row) => {
               const Icon = row.icon
               return (
                 <button
-                  className={activeView === row.view ? 'active' : ''}
+                  className={row.active ? 'active' : ''}
                   key={row.title}
-                  onClick={() => onViewChange(row.view)}
+                  onClick={() => {
+                    if (row.view !== activeView) {
+                      onViewChange(row.view)
+                      return
+                    }
+                    onShellAction?.(`${row.title} 已在右侧展示`)
+                  }}
                   type="button"
                 >
                   <span className="qq-app-pane-icon">

@@ -378,20 +378,13 @@ export function createSeedState(): AppState {
   const conversations: ConversationState[] = characters.map((character) => ({
     id: createId('conversation'),
     characterId: character.id,
-    messages: [
-      {
-        id: createId('message'),
-        role: 'assistant',
-        content: character.greeting,
-        createdAt: nowIso(),
-      },
-    ],
+    messages: [],
     summary: '',
     updatedAt: nowIso(),
   }))
 
   return {
-    version: 21,
+    version: 23,
     activeCharacterId: characters[0].id,
     characters,
     conversations,

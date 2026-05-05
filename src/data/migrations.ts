@@ -1,10 +1,10 @@
-import type { AppState, CharacterCard, LongTermMemory, MemoryTombstone } from '../domain/types'
+import type { AppState, CharacterCard, ConversationState, LongTermMemory, MemoryTombstone } from '../domain/types'
 import { refreshLocalMemoryEmbeddingCache } from '../services/memoryEmbeddingIndex'
 import { normalizeMemories } from '../services/memoryEngine'
 import { normalizeTrashRetentionSettings } from '../services/trashRetention'
 import { agentRooms, createSeedState } from './seed'
 
-const currentStateVersion = 22
+const currentStateVersion = 23
 
 export function migrateAppState(state: AppState): AppState {
   const defaults = createSeedState()
@@ -22,7 +22,10 @@ export function migrateAppState(state: AppState): AppState {
     version: currentStateVersion,
     activeCharacterId: characterIds.has(state.activeCharacterId) ? state.activeCharacterId : defaults.activeCharacterId,
     characters,
-    conversations: mergeCoreConversations(state.conversations ?? defaults.conversations, defaults.conversations, characterIds),
+    conversations: stripDefaultGreetingOnlyConversations(
+      mergeCoreConversations(state.conversations ?? defaults.conversations, defaults.conversations, characterIds),
+      characters,
+    ),
     memories: sourceVersion < 10 ? mergeMissingSeedMemories(baseMemories, defaults.memories) : baseMemories,
     trash: {
       memories: normalizeMemories(state.trash?.memories ?? defaults.trash.memories).map((memory, index) => ({
@@ -88,6 +91,29 @@ function mergeCoreConversations(
   const existingCharacterIds = new Set(kept.map((conversation) => conversation.characterId))
   const missingDefaults = defaultConversations.filter((conversation) => !existingCharacterIds.has(conversation.characterId))
   return [...kept, ...missingDefaults]
+}
+
+function stripDefaultGreetingOnlyConversations(
+  conversations: AppState['conversations'],
+  characters: CharacterCard[],
+): AppState['conversations'] {
+  const greetingByCharacterId = new Map(characters.map((character) => [character.id, character.greeting]))
+  return conversations.map((conversation): ConversationState => {
+    const [onlyMessage] = conversation.messages
+    const greeting = greetingByCharacterId.get(conversation.characterId)
+    if (
+      conversation.messages.length === 1 &&
+      onlyMessage.role === 'assistant' &&
+      onlyMessage.content === greeting
+    ) {
+      return {
+        ...conversation,
+        messages: [],
+        summary: '',
+      }
+    }
+    return conversation
+  })
 }
 
 function mergeMissingSeedMemories(memories: LongTermMemory[], seedMemories: LongTermMemory[]): LongTermMemory[] {

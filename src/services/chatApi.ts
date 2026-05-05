@@ -56,11 +56,17 @@ async function readChatError(response: Response): Promise<string> {
 }
 
 function formatChatError(status: number, detail: string): string {
-  if (status === 401) return detail || '模型代理拒绝访问。以后开启登录后，需要重新登录。'
-  if (status === 404) return detail || '模型代理入口没有找到'
-  if (status === 502) return detail || '模型供应商暂时没有接住请求'
-  if (status >= 500) return detail || `模型代理服务异常：${status}`
-  return detail || '聊天请求失败'
+  const suffix = detail ? ` ${detail}` : ''
+  if (status === 400) return `400 参数错误：模型名、上下文或接口格式可能不被上游接受。${suffix}`
+  if (status === 401) return `401 授权失败：请先保存云端口令，或检查模型中转站密钥。${suffix}`
+  if (status === 402 || status === 403) return `${status} 额度或权限不足：请检查中转站余额、套餐额度或模型权限。${suffix}`
+  if (status === 404) return `404 入口不存在：当前后端没有找到聊天接口或模型资源。${suffix}`
+  if (status === 429) return `429 请求过快：上游限流了，稍等一下再试。${suffix}`
+  if (status === 502 || status === 503 || status === 504) {
+    return `${status} 上游不可用：通常是中转站或模型供应商临时波动。${suffix}`
+  }
+  if (status >= 500) return `${status} 服务异常：模型后端或上游服务报错。${suffix}`
+  return `${status} 聊天请求失败。${suffix}`
 }
 
 function isStaticPreviewHost(): boolean {

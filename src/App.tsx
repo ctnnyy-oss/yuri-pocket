@@ -36,6 +36,7 @@ function App() {
     cloudSyncConfigured,
     cloudToken,
     conversation,
+    chatAlert,
     draft,
     handleAddMemory,
     handleClearCompletedTasks,
@@ -146,7 +147,7 @@ function App() {
     <div className={shellClassName} style={appStyle}>
       <header className="desktop-titlebar" aria-label="应用顶栏">
         <div className="desktop-titlebar-brand">
-          <strong className="desktop-titlebar-logo">AIQ</strong>
+          <strong className="desktop-titlebar-logo">Yuri Chat</strong>
           <span
             className="desktop-titlebar-avatar"
             style={{ '--avatar-accent': character.accent } as CSSProperties}
@@ -216,6 +217,7 @@ function App() {
           memories={state.memories}
           memoryUsageLogs={state.memoryUsageLogs}
           messages={conversation.messages}
+          systemAlert={chatAlert}
           onBackToList={() => setMobileMessageListOpen(true)}
           onDraftChange={setDraft}
           onMemoryFeedback={handleMemoryFeedbackFromChat}

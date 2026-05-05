@@ -118,6 +118,31 @@
   gap: 2px;
 }
 
+.chat-system-banner {
+  align-self: center;
+  width: min(680px, calc(100% - 48px));
+  display: grid;
+  gap: 4px;
+  margin: 2px auto 10px;
+  padding: 10px 14px;
+  border: 1px solid rgba(236, 131, 187, 0.24);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.76);
+  color: rgba(74, 46, 58, 0.76);
+  box-shadow: 0 8px 22px rgba(196, 72, 132, 0.08);
+}
+
+.chat-system-banner strong {
+  color: #c44884;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.chat-system-banner span {
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 /* ── 时间分隔符 (居中，微信风格) ── */
 
 .chat-time-separator {
@@ -579,6 +604,12 @@
   .message-list {
     padding: 12px 0;
     background: #f0f0f2;
+  }
+
+  .chat-system-banner {
+    width: calc(100% - 24px);
+    margin-bottom: 8px;
+    padding: 9px 12px;
   }
 
   .chat-row {

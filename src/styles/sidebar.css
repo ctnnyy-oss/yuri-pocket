@@ -25,11 +25,18 @@
   display: grid;
   place-items: center;
   border-radius: 0;
-  color: #1f141a;
+  color: #ee78b0;
   background: transparent;
   font-size: 15px;
   font-weight: 800;
   letter-spacing: 0;
+}
+
+.qq-brand-button span {
+  background: var(--grad-pink);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
 }
 
 .primary-nav {

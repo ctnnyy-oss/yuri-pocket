@@ -141,14 +141,24 @@ export function useCloudSync({ state, setState, setNotice, characterId, makeLoca
       const snapshot = await pullCloudState(cloudToken)
       if (snapshot.state) {
         const pulledState = migrateAppState(snapshot.state)
-        skipNextAutoPushRef.current = true
-        lastAutoPushSignatureRef.current = createAutoPushSignature(applyTrashRetention(pulledState))
-        setState(pulledState)
-        setCloudMeta({
+        const normalizedPulledState = applyTrashRetention(pulledState)
+        const migratedSignature = createAutoPushSignature(normalizedPulledState)
+        const sourceSignature = createAutoPushSignature(applyTrashRetention(snapshot.state))
+        let nextCloudMeta = {
           hasState: true,
           revision: snapshot.revision,
           updatedAt: snapshot.updatedAt,
-        })
+        }
+        if (migratedSignature !== sourceSignature) {
+          const result = await pushCloudState(normalizedPulledState, cloudToken, {
+            baseRevision: snapshot.revision,
+          })
+          nextCloudMeta = { hasState: true, revision: result.revision, updatedAt: result.updatedAt }
+        }
+        skipNextAutoPushRef.current = true
+        lastAutoPushSignatureRef.current = migratedSignature
+        setState(normalizedPulledState)
+        setCloudMeta(nextCloudMeta)
         setCloudStatus(`已自动读取云端 v${snapshot.revision}`)
         setNotice('云端数据已自动同步')
       } else {

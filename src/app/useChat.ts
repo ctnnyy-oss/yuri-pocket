@@ -36,10 +36,13 @@ interface UseChatDeps {
 export function useChat({ state, setState, setNotice, character, conversation }: UseChatDeps) {
   const [draft, setDraft] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [chatAlertState, setChatAlertState] = useState<{ conversationId: string; message: string } | null>(null)
+  const chatAlert = chatAlertState?.conversationId === conversation.id ? chatAlertState.message : ''
 
   async function handleSend() {
     const content = draft.trim()
     if (!content || isSending) return
+    setChatAlertState(null)
 
     const userMessage = createMessage('user', content)
     const nextConversation = updateConversationSummary({
@@ -145,41 +148,51 @@ export function useChat({ state, setState, setNotice, character, conversation }:
       setNotice(appliedLabels.length > 0 ? `已执行：${appliedLabels.slice(0, 2).join(' / ')}` : '回复完成')
       void enqueueAgentTaskActions(result.agent?.actions)
     } catch (error) {
-      const fallbackMessage = createMessage(
-        'assistant',
-        `模型代理刚才没接通，但本地聊天和记忆没有丢。\n\n${
-          error instanceof Error ? error.message : '未知错误'
-        }`,
-      )
-      setState(
-        upsertConversation(
-          {
-            ...nextStateWithUsage,
-            memoryUsageLogs: attachAssistantToMemoryUsageLog(
-              nextStateWithUsage.memoryUsageLogs,
-              usageLog.id,
-              fallbackMessage.id,
-            ),
-          },
-          {
-            ...nextConversation,
-            messages: [...nextConversation.messages, fallbackMessage],
-            updatedAt: nowIso(),
-          },
-        ),
-      )
+      setState(nextStateWithUsage)
+      setChatAlertState({ conversationId: conversation.id, message: formatChatFailure(error) })
       setNotice('模型代理未接通')
     } finally {
       setIsSending(false)
     }
   }
 
+  function clearChatAlert() {
+    setChatAlertState(null)
+  }
+
   return {
     draft,
     setDraft,
     isSending,
+    chatAlert,
+    clearChatAlert,
     handleSend,
   }
+}
+
+function formatChatFailure(error: unknown): string {
+  const rawMessage = error instanceof Error && error.message ? error.message : '模型代理刚才没有接通。'
+  const message = rawMessage.replace(/\s+/g, ' ').trim()
+
+  if (/401|授权|登录|口令|token/i.test(message)) {
+    return `需要授权：请先确认云端口令，或检查模型中转站的 API Key。${message}`
+  }
+  if (/400|参数|格式|invalid|bad request/i.test(message)) {
+    return `请求格式有问题：模型名、接口格式或上下文可能不被上游接受。${message}`
+  }
+  if (/402|403|余额|额度|quota|billing|forbidden/i.test(message)) {
+    return `额度或权限不足：请检查中转站余额、套餐额度或模型权限。${message}`
+  }
+  if (/429|频率|rate limit|too many/i.test(message)) {
+    return `请求太频繁：上游限流了，稍等一下再试。${message}`
+  }
+  if (/502|503|504|上游|供应商|gateway|unavailable|timeout/i.test(message)) {
+    return `模型上游暂时没接住：通常是中转站或模型供应商临时波动。${message}`
+  }
+  if (/500|服务异常|server/i.test(message)) {
+    return `模型服务临时异常：这更像后端或上游服务报错。${message}`
+  }
+  return `模型代理刚才没有接通：${message}`
 }
 
 async function prepareExternalEmbeddingContext(
