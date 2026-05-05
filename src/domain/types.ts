@@ -133,7 +133,10 @@ export interface LongTermMemory {
   updatedAt: string
   userEdited?: boolean
   aiGenerated?: boolean
+  mergeSuggestion?: MemoryMergeSuggestion
 }
+
+export interface MemoryMergeSuggestion { targetMemoryId: string; targetTitle: string; suggestedBody: string; reason: string; createdAt: string }
 
 export interface MemoryEmbeddingRecord {
   id: string
@@ -173,6 +176,8 @@ export interface MemoryTombstone {
   id: string
   memoryId: string
   fingerprint: string
+  semanticSignature?: string[]
+  semanticSignatureVersion?: number
   reason: string
   createdAt: string
 }

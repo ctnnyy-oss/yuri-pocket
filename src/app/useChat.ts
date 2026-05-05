@@ -58,10 +58,16 @@ export function useChat({ state, setState, setNotice, character, conversation }:
     const capturedMemory = state.settings.autoMemoryEnabled
       ? maybeCaptureMemory(userMessage, nextConversation, character)
       : null
+    const capturedMemoryMeetsFloor = Boolean(
+      capturedMemory && capturedMemory.confidence >= state.settings.memoryConfidenceFloor,
+    )
+    const memoryBlockedByTombstone = Boolean(
+      capturedMemory && capturedMemoryMeetsFloor && isMemoryBlockedByTombstones(capturedMemory, state.memoryTombstones),
+    )
     const keptMemory =
       capturedMemory &&
-      capturedMemory.confidence >= state.settings.memoryConfidenceFloor &&
-      !isMemoryBlockedByTombstones(capturedMemory, state.memoryTombstones)
+      capturedMemoryMeetsFloor &&
+      !memoryBlockedByTombstone
         ? capturedMemory
         : null
 
@@ -100,7 +106,13 @@ export function useChat({ state, setState, setNotice, character, conversation }:
     setState(nextStateWithUsage)
     setDraft('')
     setIsSending(true)
-    setNotice(keptMemory ? (keptMemory.status === 'candidate' ? '发现一条待确认记忆' : '已捕捉并归档一条记忆') : '消息已送达')
+    setNotice(
+      keptMemory
+        ? (keptMemory.status === 'candidate' ? '发现一条待确认记忆' : '已捕捉并归档一条记忆')
+        : memoryBlockedByTombstone
+          ? '这条像已彻底删除过的记忆，未自动写入'
+          : '消息已送达',
+    )
 
     try {
       const result = await requestAssistantReply(requestBundle, nextState.settings)

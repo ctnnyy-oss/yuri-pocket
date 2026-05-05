@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from 'node:crypto'
+import { isProductionRuntime } from './auth.mjs'
 import { getCloudDatabase } from './cloudStore.mjs'
 import { getBaseUrl, getModel, stripTrailingSlash } from './modelProvider.mjs'
 
@@ -8,6 +9,13 @@ const modelProviderKinds = new Set(['openai-compatible', 'anthropic', 'google-ge
 
 export function hasApiKey() {
   return Boolean(process.env.AI_API_KEY || process.env.OPENAI_API_KEY)
+}
+
+export function getModelSecretConfigurationIssue() {
+  if (isProductionRuntime() && !process.env.YURI_NEST_MODEL_SECRET) {
+    return '生产环境需要配置 YURI_NEST_MODEL_SECRET，才能安全使用服务器模型保险箱。'
+  }
+  return null
 }
 
 export function listModelProfiles() {
@@ -306,6 +314,9 @@ function decryptSecret(value) {
 }
 
 function getModelSecretKey() {
+  const configurationIssue = getModelSecretConfigurationIssue()
+  if (configurationIssue) throw new Error(configurationIssue)
+
   const material =
     process.env.YURI_NEST_MODEL_SECRET ||
     process.env.YURI_NEST_SYNC_TOKEN ||

@@ -3,10 +3,18 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
 import { prepareAgentBundle } from './agentTools.mjs'
-import { getCloudAuthFailure, hasCloudSyncToken, requireCloudAuth, shouldRequireModelAuth } from './auth.mjs'
+import {
+  getCloudAuthFailure,
+  getSecurityStartupHints,
+  hasCloudSyncToken,
+  isProductionRuntime,
+  requireCloudAuth,
+  shouldRequireModelAuth,
+} from './auth.mjs'
 import { callModelEmbeddings } from './embeddingProvider.mjs'
 import {
   createCloudBackup,
+  CloudRevisionConflictError,
   isValidAppStateShape,
   listCloudBackups,
   readSnapshot,
@@ -23,6 +31,7 @@ import {
 } from './modelProvider.mjs'
 import {
   deleteModelProfile,
+  getModelSecretConfigurationIssue,
   hasApiKey,
   listModelProfiles,
   resolveRuntimeProfileForChat,
@@ -54,6 +63,9 @@ const appName = 'Yuri Nest'
 
 app.use(cors({ origin: corsOrigin }))
 app.use(express.json({ limit: process.env.YURI_NEST_JSON_LIMIT || '10mb' }))
+getSecurityStartupHints().forEach((hint) => console.warn(`[${appName} 安全提示] ${hint}`))
+const modelSecretIssue = getModelSecretConfigurationIssue()
+if (modelSecretIssue) console.warn(`[${appName} 安全提示] ${modelSecretIssue}`)
 
 app.get('/api/health', (_request, response) => {
   response.json({
@@ -118,12 +130,24 @@ app.put('/api/cloud/state', requireCloudAuth, (request, response) => {
     return
   }
 
-  const snapshot = saveSnapshot(state)
-  response.json({
-    ok: true,
-    updatedAt: snapshot.updatedAt,
-    revision: snapshot.revision,
-  })
+  try {
+    const snapshot = saveSnapshot(state, { baseRevision: request.body?.baseRevision })
+    response.json({
+      ok: true,
+      updatedAt: snapshot.updatedAt,
+      revision: snapshot.revision,
+    })
+  } catch (error) {
+    if (error instanceof CloudRevisionConflictError) {
+      response.status(409).json({
+        error: error.message,
+        currentRevision: error.currentRevision,
+        updatedAt: error.updatedAt,
+      })
+      return
+    }
+    throw error
+  }
 })
 
 app.get('/api/model/profiles', requireCloudAuth, (_request, response) => {
@@ -303,7 +327,15 @@ app.post('/api/chat', async (request, response) => {
 
   const agentRun = await prepareAgentBundle(bundle)
   const agentBundle = agentRun.bundle
-  const runtimeProfile = resolveRuntimeProfileForChat(settings)
+  let runtimeProfile
+  try {
+    runtimeProfile = resolveRuntimeProfileForChat(settings)
+  } catch (error) {
+    response.status(formatModelConfigErrorStatus(error)).json({
+      error: error instanceof Error ? error.message : '模型配置暂时不可用',
+    })
+    return
+  }
   if (!runtimeProfile?.apiKey) {
     response.json({
       provider: 'local-demo',
@@ -453,10 +485,15 @@ function buildProviderFallbackToolLines(tools) {
 
 function getCorsOrigin() {
   const configured = process.env.YURI_NEST_CORS_ORIGIN
-  if (!configured) return true
+  if (!configured) return isProductionRuntime() ? ['https://ctnnyy-oss.github.io'] : true
   const origins = configured
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean)
   return origins.length > 1 ? origins : origins[0] || true
+}
+
+function formatModelConfigErrorStatus(error) {
+  const message = error instanceof Error ? error.message : ''
+  return /YURI_NEST_MODEL_SECRET|生产环境/.test(message) ? 503 : 400
 }

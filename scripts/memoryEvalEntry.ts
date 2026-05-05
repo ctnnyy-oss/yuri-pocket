@@ -1,5 +1,11 @@
 import type { LongTermMemory, MemoryKind, MemoryLayer, MemoryMentionPolicy, MemoryScope } from '../src/domain/types'
-import { consolidateMemoryGarden, integrateMemoryCandidate, maybeCaptureMemory } from '../src/services/memoryFactory'
+import {
+  consolidateMemoryGarden,
+  createMemoryTombstone,
+  integrateMemoryCandidate,
+  isMemoryBlockedByTombstones,
+  maybeCaptureMemory,
+} from '../src/services/memoryFactory'
 import { applyMemoryFeedback } from '../src/services/memoryFeedback'
 import { detectMemoryConflicts, updateMemoryWithRevision } from '../src/services/memoryEngine'
 import { getActiveMemories, touchRelevantMemories } from '../src/services/memoryRetrieval'
@@ -16,6 +22,7 @@ import {
   refreshLocalMemoryEmbeddingCache,
   upsertMemoryEmbeddingRecordsFromVectors,
 } from '../src/services/memoryEmbeddingIndex'
+import { buildMemoryGuardianReport } from '../src/services/memoryGuardian'
 
 interface MemoryEvalCase {
   name: string
@@ -404,6 +411,159 @@ if (!playtestMemoryIsIsolated) {
   console.log('PASS explicit mid-sentence memory does not contaminate unrelated stable memory')
 }
 
+const autoCaptureSamples = [
+  '以后姐姐默认先保护云端同步，再做花哨功能。',
+  '百合小窝的项目重点是记忆主权和安全。',
+  '姐姐记住：妹妹喜欢姐姐少追问，能推进就先推进。',
+].map((content, index) =>
+  maybeCaptureMemory(
+    {
+      id: `auto-candidate-message-${index}`,
+      role: 'user',
+      content,
+      createdAt: '2026-05-05T06:10:00.000Z',
+    },
+    {
+      id: 'conversation-auto-candidate',
+      characterId: 'sister',
+      messages: [],
+      summary: '',
+      updatedAt: '2026-05-05T06:10:00.000Z',
+    },
+    {
+      id: 'sister',
+      name: '姐姐大人',
+      title: '测试角色',
+      subtitle: '测试角色',
+      avatar: '姐',
+      accent: '#ef9ac6',
+      relationship: '姐姐',
+      mood: '测试',
+      tags: ['测试'],
+      systemPrompt: '测试角色',
+      greeting: '测试角色',
+    },
+  ),
+)
+const autoCaptureCandidateFirst = autoCaptureSamples.every((capture) => capture?.status === 'candidate')
+const candidateIds = new Set(autoCaptureSamples.filter(Boolean).map((capture) => capture!.id))
+const candidateRecallLeak = getActiveMemories(
+  [...memories, ...autoCaptureSamples.filter((capture): capture is LongTermMemory => Boolean(capture))],
+  '姐姐还记得项目重点和默认推进吗？',
+  { characterId: 'sister', maxItems: 18, recallMode: true },
+).some((memory) => candidateIds.has(memory.id))
+if (!autoCaptureCandidateFirst || candidateRecallLeak) {
+  console.error('FAIL automatic captures stay candidate-first and out of prompt recall')
+  console.error(
+    `  statuses=${autoCaptureSamples.map((capture) => capture?.status || 'none').join(', ')}, leaked=${candidateRecallLeak}`,
+  )
+} else {
+  console.log('PASS automatic captures stay candidate-first and out of prompt recall')
+}
+
+const duplicateActive = memory({
+  id: 'merge-target-default',
+  title: '默认推进偏好',
+  body: '妹妹喜欢姐姐少追问，能推进就先推进。',
+  tags: ['默认推进', '少追问'],
+  kind: 'preference',
+  layer: 'stable',
+  priority: 4,
+})
+const duplicateCandidate = maybeCaptureMemory(
+  {
+    id: 'merge-candidate-message',
+    role: 'user',
+    content: '姐姐记住：妹妹喜欢姐姐少追问，能推进就先推进。',
+    createdAt: '2026-05-05T06:20:00.000Z',
+  },
+  {
+    id: 'conversation-merge-candidate',
+    characterId: 'sister',
+    messages: [],
+    summary: '',
+    updatedAt: '2026-05-05T06:20:00.000Z',
+  },
+  {
+    id: 'sister',
+    name: '姐姐大人',
+    title: '测试角色',
+    subtitle: '测试角色',
+    avatar: '姐',
+    accent: '#ef9ac6',
+    relationship: '姐姐',
+    mood: '测试',
+    tags: ['测试'],
+    systemPrompt: '测试角色',
+    greeting: '测试角色',
+  },
+)
+const duplicateIntegrated = duplicateCandidate ? integrateMemoryCandidate([duplicateActive], duplicateCandidate) : [duplicateActive]
+const duplicateActiveAfter = duplicateIntegrated.find((item) => item.id === duplicateActive.id)
+const duplicateCandidateAfter = duplicateIntegrated.find((item) => item.id === duplicateCandidate?.id)
+const mergeSuggestionReview = buildMemoryGuardianReport({
+  memories: duplicateIntegrated,
+  conflicts: [],
+  usageLogs: [],
+  memoryEvents: [],
+  trash: { memories: [], worldNodes: [] },
+}).reviewItems.find((item) => item.memoryId === duplicateCandidate?.id)
+const candidateMergeSuggestionReady =
+  duplicateActiveAfter?.body === duplicateActive.body &&
+  duplicateCandidateAfter?.status === 'candidate' &&
+  duplicateCandidateAfter.mergeSuggestion?.targetMemoryId === duplicateActive.id &&
+  Boolean(mergeSuggestionReview?.detail.includes(duplicateActive.title))
+if (!candidateMergeSuggestionReady) {
+  console.error('FAIL candidate duplicate creates merge suggestion without changing active memory')
+  console.error(
+    `  active=${duplicateActiveAfter?.body || 'missing'}, candidate=${duplicateCandidateAfter?.status || 'missing'}, target=${duplicateCandidateAfter?.mergeSuggestion?.targetMemoryId || 'none'}`,
+  )
+} else {
+  console.log('PASS candidate duplicate creates merge suggestion without changing active memory')
+}
+
+const deletedMemory = memory({
+  id: 'deleted-default-rule',
+  title: '已删除的默认推进规则',
+  body: '妹妹希望姐姐在低风险任务里少追问，能推进就先推进。',
+  tags: ['默认推进', '少追问', '低风险'],
+  kind: 'preference',
+  layer: 'stable',
+  priority: 4,
+})
+const semanticTombstone = createMemoryTombstone(deletedMemory, 'semantic-test')
+const paraphrasedDeletedMemory = memory({
+  id: 'paraphrased-default-rule',
+  title: '换一种说法的默认推进规则',
+  body: '低风险任务里，妹妹更想让姐姐别总反问，能做就直接往前推。',
+  tags: ['默认推进', '少追问', '低风险'],
+  kind: 'preference',
+  layer: 'stable',
+  priority: 4,
+})
+const unrelatedMemory = memory({
+  id: 'unrelated-mint-theme',
+  title: '薄荷主题偏好',
+  body: '妹妹喜欢清爽薄荷色主题，适合夏天使用。',
+  tags: ['主题', '薄荷色'],
+  kind: 'preference',
+  layer: 'stable',
+  priority: 3,
+})
+const semanticTombstoneBlocksParaphrase =
+  isMemoryBlockedByTombstones(paraphrasedDeletedMemory, [semanticTombstone]) &&
+  !isMemoryBlockedByTombstones(unrelatedMemory, [semanticTombstone]) &&
+  Boolean(semanticTombstone.semanticSignature?.length) &&
+  !semanticTombstone.fingerprint.includes(deletedMemory.body)
+if (!semanticTombstoneBlocksParaphrase) {
+  console.error('FAIL semantic tombstone blocks paraphrase without blocking unrelated memory')
+  console.error(
+    `  signature=${semanticTombstone.semanticSignature?.join(', ') || 'none'}, paraphrase=${isMemoryBlockedByTombstones(paraphrasedDeletedMemory, [semanticTombstone])}, unrelated=${isMemoryBlockedByTombstones(unrelatedMemory, [semanticTombstone])}`,
+  )
+} else {
+  console.log('PASS semantic tombstone blocks paraphrase without blocking unrelated memory')
+}
+
 const vectorHits = getVectorRecallHits(
   memories,
   '以后隔很久再聊，这个小窝还会不会把关键往事弄丢？',
@@ -606,7 +766,8 @@ const dimensionResults = [
       caseResults.get('recall mode relaxes contextual memories') === true &&
       !getActiveMemories(memories, '你还记得所有私人档案吗？', { recallMode: true, maxItems: 18 }).some(
         (item) => item.id === 'silent-private',
-      ),
+      ) &&
+      semanticTombstoneBlocksParaphrase,
   },
   {
     name: '复习加固',
@@ -615,7 +776,7 @@ const dimensionResults = [
   },
   {
     name: '整合与重巩固',
-    passed: hasReflectionCandidate && valueConflictDetected && revisionLineKept && playtestMemoryIsIsolated,
+    passed: hasReflectionCandidate && valueConflictDetected && revisionLineKept && playtestMemoryIsIsolated && autoCaptureCandidateFirst && !candidateRecallLeak && candidateMergeSuggestionReady,
   },
   {
     name: '可解释反思',
@@ -662,7 +823,7 @@ dimensionResults.forEach((dimension) => {
 })
 console.log(`Human-memory proxy gate: ${dimensionPassed}/${dimensionResults.length} (${humanMemoryProxyScore}%)`)
 
-if (score < 0.9 || humanMemoryProxyScore < 90 || !hasReflectionCandidate || !reflectionIsExplainable || !rehearsedArchitecture || !valueConflictDetected || !revisionLineKept || !vectorIndexHit || !semanticSignatureReady || !embeddingCacheReady || !externalEmbeddingRecallReady || !noiseResistance || !feedbackCalibratesSignals) {
+if (score < 0.9 || humanMemoryProxyScore < 90 || !hasReflectionCandidate || !reflectionIsExplainable || !rehearsedArchitecture || !valueConflictDetected || !revisionLineKept || !playtestMemoryIsIsolated || !autoCaptureCandidateFirst || candidateRecallLeak || !candidateMergeSuggestionReady || !semanticTombstoneBlocksParaphrase || !vectorIndexHit || !semanticSignatureReady || !embeddingCacheReady || !externalEmbeddingRecallReady || !noiseResistance || !feedbackCalibratesSignals) {
   console.error('Memory eval failed: below human-memory proxy gate')
   process.exit(1)
 }

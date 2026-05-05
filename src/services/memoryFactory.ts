@@ -26,10 +26,15 @@ import {
   createLongTermMemory,
   fingerprintMemory,
   isPotentialDuplicate,
+  mergeBody,
   mergeMemories,
   scoreMemory,
 } from './memoryCore'
 import { buildReflectionCandidates } from './memoryReflection'
+import {
+  buildMemorySemanticSignature,
+  MEMORY_SEMANTIC_SIGNATURE_VERSION,
+} from './memoryVectorIndex'
 
 export type MemoryMaintenanceReport = {
   memories: LongTermMemory[]
@@ -106,6 +111,8 @@ export function createMemoryTombstone(memory: LongTermMemory, reason: string): M
     id: createId('tombstone'),
     memoryId: memory.id,
     fingerprint: fingerprintMemory(memory),
+    semanticSignature: buildMemorySemanticSignature(memory, 12),
+    semanticSignatureVersion: MEMORY_SEMANTIC_SIGNATURE_VERSION,
     reason,
     createdAt: nowIso(),
   }
@@ -114,10 +121,12 @@ export function createMemoryTombstone(memory: LongTermMemory, reason: string): M
 export function isMemoryBlockedByTombstones(memory: LongTermMemory, tombstones: MemoryTombstone[]): boolean {
   if (!tombstones.length) return false
   const fp = fingerprintMemory(memory)
+  const signature = getMemoryTombstoneSignature(memory)
   return tombstones.some(
     (tombstone) =>
       tombstone.memoryId === memory.id ||
-      tombstone.fingerprint === fp,
+      tombstone.fingerprint === fp ||
+      isSemanticTombstoneMatch(signature, tombstone),
   )
 }
 
@@ -147,7 +156,7 @@ export function maybeCaptureMemory(
     pinned: signal.kind === 'procedure',
     kind: signal.kind,
     confidence: signal.confidence,
-    status: signal.status,
+    status: 'candidate',
     scope: inferMemoryScope(signal.kind, conversation, character),
     sensitivity: signal.sensitivity,
     origin: 'auto',
@@ -168,6 +177,11 @@ export function integrateMemoryCandidate(
     return [normalizedCandidate, ...normalizedMemories]
   }
 
+  const duplicate = normalizedMemories[duplicateIndex]
+  if (shouldKeepCandidateForMergeReview(duplicate, normalizedCandidate)) {
+    return [attachMergeSuggestion(normalizedCandidate, duplicate, '自动捕捉发现相似正式记忆'), ...normalizedMemories]
+  }
+
   const merged = mergeMemories(normalizedMemories[duplicateIndex], normalizedCandidate, '自动合并相似记忆')
   return normalizedMemories.map((memory, index) => (index === duplicateIndex ? merged : memory))
 }
@@ -186,6 +200,17 @@ export function consolidateMemoryGarden(memories: LongTermMemory[]): MemoryMaint
       continue
     }
 
+    const duplicate = consolidated[duplicateIndex]
+    if (shouldKeepCandidateForMergeReview(duplicate, memory)) {
+      consolidated.push(attachMergeSuggestion(memory, duplicate, '后台整理发现相似正式记忆'))
+      continue
+    }
+    if (shouldKeepCandidateForMergeReview(memory, duplicate)) {
+      consolidated[duplicateIndex] = memory
+      consolidated.push(attachMergeSuggestion(duplicate, memory, '后台整理发现相似正式记忆'))
+      continue
+    }
+
     consolidated[duplicateIndex] = mergeMemories(consolidated[duplicateIndex], memory, '后台整理合并')
     mergedCount += 1
   }
@@ -197,6 +222,51 @@ export function consolidateMemoryGarden(memories: LongTermMemory[]): MemoryMaint
     reflectedCount: reflected.length,
     reviewedCount: sorted.length,
   }
+}
+
+function shouldKeepCandidateForMergeReview(activeMemory: LongTermMemory, candidate: LongTermMemory): boolean {
+  return activeMemory.status === 'active' && candidate.status === 'candidate'
+}
+
+function attachMergeSuggestion(candidate: LongTermMemory, target: LongTermMemory, reason: string): LongTermMemory {
+  const suggestedBody = mergeBody(target.body, candidate.body)
+  return normalizeMemory({
+    ...candidate,
+    mergeSuggestion: {
+      targetMemoryId: target.id,
+      targetTitle: target.title,
+      suggestedBody,
+      reason,
+      createdAt: nowIso(),
+    },
+  })
+}
+
+function getMemoryTombstoneSignature(memory: LongTermMemory): string[] {
+  if (
+    memory.semanticSignatureVersion === MEMORY_SEMANTIC_SIGNATURE_VERSION &&
+    Array.isArray(memory.semanticSignature) &&
+    memory.semanticSignature.length > 0
+  ) {
+    return memory.semanticSignature.slice(0, 12)
+  }
+  return buildMemorySemanticSignature(memory, 12)
+}
+
+function isSemanticTombstoneMatch(signature: string[], tombstone: MemoryTombstone): boolean {
+  if (
+    tombstone.semanticSignatureVersion !== MEMORY_SEMANTIC_SIGNATURE_VERSION ||
+    !Array.isArray(tombstone.semanticSignature) ||
+    tombstone.semanticSignature.length === 0 ||
+    signature.length === 0
+  ) {
+    return false
+  }
+
+  const tombstoneSignature = new Set(tombstone.semanticSignature)
+  const shared = signature.filter((item) => tombstoneSignature.has(item)).length
+  const smallerSignatureSize = Math.min(signature.length, tombstone.semanticSignature.length)
+  return shared >= 5 && shared / smallerSignatureSize >= 0.42
 }
 
 function buildMemoryTitle(kind: MemoryKind, content: string): string {

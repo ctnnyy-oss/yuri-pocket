@@ -54,6 +54,7 @@
 - 2026-05-04 已完成 Claude 中断后的架构收尾：`useYuriNestApp.ts` 进一步拆出 `useChat`、`useCloudSync`、`useBackupRestore`、`useMemoryActions`、`useAgentTasks`；`memoryEngine.ts` 改成门面，核心、检索、推断、提示词构建分别落到 `src/services/memory*.ts` 和 `promptBuilder.ts`；`server/agentTools.mjs` 改成 Agent 编排入口，检测、执行、搜索、常量和工具函数拆到 `server/agent/*`。这轮同时修复了拆分后漏导入导致的 Agent 运行时错误，并补齐风险闸门、默认推进、任务队列、质量检查等 15 条 Agent 回归。
 - 2026-05-04 已做项目初期架构加固：后端认证拆到 `server/auth.mjs`，模型保险箱拆到 `server/modelProfiles.mjs`，`server/index.mjs` 只保留路由和编排；同时删除入口里旧版 Agent 工具块死代码。模型接入页拆成 `ModelCurrentStrip`、`ModelProfileEditor`、`SavedModelProfiles`、`GenerationSettings` 和 `useModelProfileDraft`，并把“服务器默认配置”纳入模型列表但禁止误删。新增 `npm run audit:architecture` 作为后续大改前后的模块体检命令。
 - 2026-05-05 已完成本轮架构收尾：后端 `utils`、`toolExecutors`、`actionDetectors`、`platform` 都是 facade；`ChatPhone.tsx` 和 `AgentTaskPanel.tsx` 已拆成子组件目录，并把断开的 `tasks` 视图重新接回 App 与设置侧栏入口。随后补了记忆系统 + Agent 能力升级：`agent.decision` 决策摘要、记忆页“记忆流水线”总览、核心记忆锚点、回忆模式、精准记忆 payload 捕捉、500 条调用日志、文档/图片能力边界工具，以及 `docs/MEMORY_AGENT_UPGRADE_RESEARCH.md` / `docs/HUMAN_MEMORY_TARGET.md`。`LongTermMemory` 现在保存 `semanticSignature` / `semanticSignatureVersion`，向量索引用签名分桶但不硬过滤候选；`AppState` 现在保存 `memoryEmbeddings`，状态版本升到 21，迁移、保存、本机备份会自动刷新本地投影缓存；回忆模式已把 embedding 缓存接入候选和排序；显式旧事询问时会尝试通过后端 `/api/model/embeddings` 生成外部 query vector，成功则参与本轮排序，失败或超时自动回落；后端新增 `/api/model/embeddings`，用于后续接 OpenAI-compatible embedding 模型但不把 API Key 暴露到前端。`npm run test:memory` 现在覆盖 13 个旧事召回用例和 17 维 human-memory proxy gate，当前为 13/13、17/17，并新增 `docs/HUMAN_MEMORY_90_TASK.md`。当前 `npm run audit:architecture` 只剩 `src/styles/mobile.css` 与 `src/styles/chat.css` 两个 CSS 观察项，代码模块已全部下榜。
+- 2026-05-05 追加完成一轮保守安全与记忆主权加固：生产/公网模式默认要求云端与聊天授权，生产模型保险箱必须配置 `YURI_NEST_MODEL_SECRET`；云端快照 `PUT /api/cloud/state` 支持 `baseRevision` 并在旧版本覆盖时返回 409；自动捕捉记忆统一先进入 `candidate`，候选与 active 相似时只生成合并建议，用户确认后才合并；永久删除 tombstone 新增语义签名，能拦截同义改写复活。新增 `docs/SAFETY_AND_MEMORY_GUARDS.md`，并把安全、CAS、候选合并和语义墓碑回归接入 `npm run test:agent` / `npm run test:memory`。本轮验证：lint、build、test:memory、test:agent、audit:architecture 全部通过，Pages 构建已确认 `/yuri-nest/assets/...`。
 - 旧 AstrBot / NapCat 服务已经从服务器清理掉，释放资源。
 - GitHub 已经作为版本回溯和部署入口。
 
@@ -108,9 +109,10 @@ GitHub 仓库：
 - `AI_API_KEY`
 - `AI_MODEL=deepseek-v4-flash`
 - `AI_ESCAPE_UNICODE_CONTENT=false`
-- `YURI_NEST_MODEL_SECRET`（可选但建议设置，用于加密服务器里保存的用户模型密钥；不设置时会退回使用同步口令或本地开发默认值派生密钥）
-- `YURI_NEST_REQUIRE_CLOUD_AUTH=true`（可选；只有想恢复口令门禁时才设置）
-- `YURI_NEST_REQUIRE_CHAT_AUTH=true`（可选；只有未来登录/授权阶段才设置）
+- `YURI_NEST_MODEL_SECRET`（生产/公网环境必须设置，用于加密服务器里保存的用户模型密钥；本地开发才允许兜底）
+- `YURI_NEST_REQUIRE_CLOUD_AUTH=true`（生产/公网环境默认会要求授权；本地开发可不设）
+- `YURI_NEST_REQUIRE_CHAT_AUTH=true`（生产/公网环境默认会要求授权；如需私有开发直连可显式设为 `false`）
+- `YURI_NEST_CORS_ORIGIN=https://ctnnyy-oss.github.io`（可选；不设时生产默认只放行 GitHub Pages 域名，本地开发默认放行本机调试）
 
 可选备份配置：
 

@@ -1,4 +1,15 @@
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import {
+  getCloudAuthFailure,
+  isProductionRuntime,
+  shouldRequireCloudAuth,
+  shouldRequireModelAuth,
+} from './auth.mjs'
 import { prepareAgentBundle } from './agentTools.mjs'
+import { CloudRevisionConflictError, closeCloudDatabaseForTests, readSnapshot, saveSnapshot } from './cloudStore.mjs'
+import { getModelSecretConfigurationIssue } from './modelProfiles.mjs'
 
 const cases = [
   {
@@ -179,12 +190,14 @@ for (const testCase of cases) {
   }
 }
 
+failed += runSecurityRegression()
+
 if (failed > 0) {
-  console.error(`Agent eval failed: ${failed}/${cases.length}`)
+  console.error(`Agent/security eval failed: ${failed} check(s) failed`)
   process.exit(1)
 }
 
-console.log(`Agent eval passed: ${cases.length}/${cases.length}`)
+console.log(`Agent/security eval passed: ${cases.length} agent cases plus security regression checks`)
 
 function simpleBundle(content) {
   return {
@@ -192,5 +205,126 @@ function simpleBundle(content) {
     systemPrompt: '你是百合小窝里可靠、温柔、会做事的姐姐助手。',
     contextBlocks: [],
     messages: [{ role: 'user', content, createdAt: new Date().toISOString() }],
+  }
+}
+
+function runSecurityRegression() {
+  const checks = [
+    {
+      name: 'local development keeps auth optional',
+      run: () => withEnv({ NODE_ENV: 'development' }, () => !isProductionRuntime() && !shouldRequireCloudAuth() && !shouldRequireModelAuth()),
+    },
+    {
+      name: 'production defaults require cloud and chat auth',
+      run: () => withEnv({ NODE_ENV: 'production' }, () => isProductionRuntime() && shouldRequireCloudAuth() && shouldRequireModelAuth()),
+    },
+    {
+      name: 'explicit auth opt-out remains available for private dev servers',
+      run: () =>
+        withEnv(
+          {
+            NODE_ENV: 'production',
+            YURI_NEST_REQUIRE_CLOUD_AUTH: 'false',
+            YURI_NEST_REQUIRE_CHAT_AUTH: 'false',
+          },
+          () => !shouldRequireCloudAuth() && !shouldRequireModelAuth(),
+        ),
+    },
+    {
+      name: 'missing production token rejects without leaking expected token',
+      run: () =>
+        withEnv({ NODE_ENV: 'production', YURI_NEST_SYNC_TOKEN: 'expected-secret-token' }, () => {
+          const failure = getCloudAuthFailure({
+            get: () => '',
+          })
+          return failure?.status === 401 && !failure.message.includes('expected-secret-token')
+        }),
+    },
+    {
+      name: 'production model vault requires dedicated encryption secret',
+      run: () =>
+        withEnv({ NODE_ENV: 'production' }, () =>
+          Boolean(getModelSecretConfigurationIssue()?.includes('YURI_NEST_MODEL_SECRET')),
+        ),
+    },
+    {
+      name: 'local model vault can use development fallback',
+      run: () => withEnv({ NODE_ENV: 'development' }, () => getModelSecretConfigurationIssue() === null),
+    },
+    {
+      name: 'cloud snapshot rejects stale base revision',
+      run: () => {
+        const dir = mkdtempSync(join(tmpdir(), 'yuri-nest-cloud-cas-'))
+        try {
+          return withEnv({ NODE_ENV: 'development', YURI_NEST_DB_PATH: join(dir, 'cloud.sqlite') }, () => {
+            const first = saveSnapshot(minimalCloudState(), { baseRevision: 0 })
+            if (first.revision !== 1) return false
+            try {
+              saveSnapshot(minimalCloudState(), { baseRevision: 0 })
+              return false
+            } catch (error) {
+              return error instanceof CloudRevisionConflictError &&
+                error.currentRevision === 1 &&
+                readSnapshot()?.revision === 1
+            }
+          })
+        } finally {
+          closeCloudDatabaseForTests()
+          rmSync(dir, { recursive: true, force: true })
+        }
+      },
+    },
+  ]
+
+  let failedChecks = 0
+  for (const check of checks) {
+    if (check.run()) {
+      console.log(`PASS security: ${check.name}`)
+      continue
+    }
+    failedChecks += 1
+    console.error(`FAIL security: ${check.name}`)
+  }
+  return failedChecks
+}
+
+function withEnv(overrides, run) {
+  const keys = [
+    'NODE_ENV',
+    'YURI_NEST_PUBLIC_SERVER',
+    'YURI_NEST_PUBLIC_MODE',
+    'YURI_NEST_REQUIRE_CLOUD_AUTH',
+    'YURI_NEST_REQUIRE_CHAT_AUTH',
+    'YURI_NEST_SYNC_TOKEN',
+    'YURI_NEST_MODEL_SECRET',
+    'YURI_NEST_DB_PATH',
+  ]
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]))
+
+  for (const key of keys) {
+    delete process.env[key]
+  }
+  Object.assign(process.env, overrides)
+
+  try {
+    return run()
+  } finally {
+    for (const key of keys) {
+      if (previous[key] === undefined) {
+        delete process.env[key]
+      } else {
+        process.env[key] = previous[key]
+      }
+    }
+  }
+}
+
+function minimalCloudState() {
+  return {
+    characters: [],
+    conversations: [],
+    memories: [],
+    worldNodes: [],
+    settings: {},
   }
 }

@@ -181,9 +181,13 @@ function buildReviewItems(
         id: `candidate-${memory.id}`,
         memoryId: memory.id,
         title: memory.title,
-        detail: '这条还是候选记忆，确认前不会进入聊天提示。',
+        detail: memory.mergeSuggestion
+          ? `这条还是候选记忆，确认前不会进入聊天提示；它像是「${memory.mergeSuggestion.targetTitle}」的补充。`
+          : '这条还是候选记忆，确认前不会进入聊天提示。',
         severity: 'warning',
-        suggestedAction: '确认、编辑后保存，或删除它。',
+        suggestedAction: memory.mergeSuggestion
+          ? '打开候选检查来源；确认后合并到原记忆，或编辑成单独记忆。'
+          : '确认、编辑后保存，或删除它。',
       })
     }
 

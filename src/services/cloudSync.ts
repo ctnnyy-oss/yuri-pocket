@@ -47,13 +47,17 @@ export async function pullCloudState(token: string): Promise<CloudSnapshot> {
   return response.json()
 }
 
-export async function pushCloudState(state: AppState, token: string): Promise<Pick<CloudSnapshot, 'updatedAt' | 'revision'>> {
+export async function pushCloudState(
+  state: AppState,
+  token: string,
+  options: { baseRevision?: number | null } = {},
+): Promise<Pick<CloudSnapshot, 'updatedAt' | 'revision'>> {
   const response = await cloudFetch('/api/cloud/state', token, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ state }),
+    body: JSON.stringify({ state, baseRevision: options.baseRevision ?? null }),
   })
   return response.json()
 }
@@ -109,6 +113,7 @@ async function readCloudError(response: Response): Promise<string> {
 
 function formatCloudError(status: number, detail: string): string {
   if (status === 401) return '服务器拒绝访问。以后开启登录后，需要重新登录。'
+  if (status === 409) return detail || '云端版本已经变化。请先读取云端，或先创建本机备份后再决定如何处理。'
   if (status === 503) return '云端同步还没有在服务器启用'
   if (status >= 500) return `云端服务暂时没接住：${detail || status}`
   return detail || `云端请求失败：${status}`

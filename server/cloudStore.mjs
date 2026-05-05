@@ -7,6 +7,16 @@ const snapshotId = 'default'
 
 let cloudDatabase
 
+export class CloudRevisionConflictError extends Error {
+  constructor(currentSnapshot, baseRevision) {
+    const currentRevision = Number(currentSnapshot?.revision ?? 0)
+    super(`云端版本已更新：当前是 v${currentRevision}，本机尝试基于 v${baseRevision} 覆盖。请先读取云端或创建本机备份后再处理。`)
+    this.name = 'CloudRevisionConflictError'
+    this.currentRevision = currentRevision
+    this.updatedAt = currentSnapshot?.updatedAt ?? null
+  }
+}
+
 export function getCloudDatabase() {
   if (cloudDatabase) return cloudDatabase
 
@@ -38,6 +48,12 @@ export function getCloudDatabase() {
   return cloudDatabase
 }
 
+export function closeCloudDatabaseForTests() {
+  if (!cloudDatabase) return
+  cloudDatabase.close()
+  cloudDatabase = null
+}
+
 function getCloudDatabasePath() {
   return resolve(process.env.YURI_NEST_DB_PATH || './data/yuri-nest.sqlite')
 }
@@ -54,8 +70,13 @@ export function readSnapshot() {
   return row ?? null
 }
 
-export function saveSnapshot(state) {
+export function saveSnapshot(state, options = {}) {
   const existing = readSnapshot()
+  const baseRevision = normalizeBaseRevision(options.baseRevision)
+  if (baseRevision !== null && Number(existing?.revision ?? 0) !== baseRevision) {
+    throw new CloudRevisionConflictError(existing, baseRevision)
+  }
+
   if (existing) {
     createCloudBackup(`auto-before-save-rev${existing.revision}`)
   }
@@ -75,6 +96,13 @@ export function saveSnapshot(state) {
     .run(snapshotId, payload, updatedAt, nextRevision)
 
   return { payload, updatedAt, revision: nextRevision }
+}
+
+function normalizeBaseRevision(value) {
+  if (value === undefined || value === null || value === '') return null
+  const revision = Number(value)
+  if (!Number.isInteger(revision) || revision < 0) return null
+  return revision
 }
 
 export function createCloudBackup(reason = 'manual') {

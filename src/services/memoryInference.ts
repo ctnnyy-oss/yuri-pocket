@@ -1,5 +1,6 @@
 import type {
   LongTermMemory,
+  MemoryMergeSuggestion,
   MemoryKind,
   MemoryLayer,
   MemoryMentionPolicy,
@@ -149,9 +150,21 @@ export function normalizeMemory(memory: LongTermMemory): LongTermMemory {
     revisions: Array.isArray(memory.revisions) ? memory.revisions : [],
     createdAt: memory.createdAt || nowIso(),
     updatedAt: memory.updatedAt || nowIso(),
+    mergeSuggestion: normalizeMemoryMergeSuggestion(memory.mergeSuggestion),
   }
 }
 
 export function normalizeMemories(memories: LongTermMemory[]): LongTermMemory[] {
   return memories.map(normalizeMemory)
+}
+
+function normalizeMemoryMergeSuggestion(value?: MemoryMergeSuggestion): MemoryMergeSuggestion | undefined {
+  if (!value?.targetMemoryId || !value?.targetTitle || !value?.suggestedBody) return undefined
+  return {
+    targetMemoryId: String(value.targetMemoryId),
+    targetTitle: String(value.targetTitle).slice(0, 80),
+    suggestedBody: String(value.suggestedBody).slice(0, 720),
+    reason: String(value.reason || '候选内容与现有记忆相似，建议确认后再合并。').slice(0, 160),
+    createdAt: value.createdAt || nowIso(),
+  }
 }

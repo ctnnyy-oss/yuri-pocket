@@ -55,6 +55,8 @@ AI_ESCAPE_UNICODE_CONTENT=false
 - `.env.local`
 - 服务器 `/opt/yuri-nest/.env`
 
+本地开发阶段仍然默认免口令直连，方便妹妹调试。生产/公网模式会默认要求 `YURI_NEST_SYNC_TOKEN`，聊天授权开启时 `/api/chat` 也会走同一口令校验；模型保险箱在生产环境需要 `YURI_NEST_MODEL_SECRET` 保护服务器保存的模型密钥。
+
 当前后端服务名：
 
 - `yuri-nest-api.service`
@@ -85,6 +87,7 @@ npm run build
 - `docs/PROJECT_HANDOFF.md`：当前接手项目时最重要的交接文档。
 - `docs/ARCHITECTURE.md`：项目结构、记忆系统和路线说明。
 - `docs/VERSIONING_AND_DEPLOYMENT.md`：版本回溯与部署说明。
+- `docs/SAFETY_AND_MEMORY_GUARDS.md`：公网授权、模型保险箱 secret 和自动记忆候选优先的守护说明。
 - `docs/DEEP_RESEARCH_MEMORY_CLOSURE.md`：记忆系统阶段性收束记录。
 
 ## 开发提醒

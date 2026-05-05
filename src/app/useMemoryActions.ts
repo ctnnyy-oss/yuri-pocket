@@ -10,6 +10,7 @@ import {
   restoreMemoryRevision,
   updateMemoryWithRevision,
 } from '../services/memoryEngine'
+import { mergeMemories } from '../services/memoryCore'
 import { applyMemoryFeedback } from '../services/memoryFeedback'
 import { addMemoryEventToState } from './agentActions'
 
@@ -74,6 +75,36 @@ export function useMemoryActions({
   function handleUpdateMemory(updatedMemory: LongTermMemory) {
     setState((currentState) => {
       const previousMemory = currentState.memories.find((memory) => memory.id === updatedMemory.id)
+      const mergeTargetId = previousMemory?.status === 'candidate' && updatedMemory.status === 'active'
+        ? previousMemory.mergeSuggestion?.targetMemoryId
+        : undefined
+
+      if (mergeTargetId) {
+        const mergeTarget = currentState.memories.find((memory) => memory.id === mergeTargetId && memory.status === 'active')
+        if (mergeTarget) {
+          const mergedMemory = mergeMemories(mergeTarget, { ...updatedMemory, status: 'active' }, '妹妹确认候选合并')
+          return addMemoryEventToState(
+            {
+              ...currentState,
+              memories: currentState.memories.flatMap((memory) => {
+                if (memory.id === mergeTarget.id) return [mergedMemory]
+                if (memory.id === updatedMemory.id) return []
+                return [memory]
+              }),
+            },
+            {
+              type: 'confirmed',
+              actor: 'user',
+              title: mergedMemory.title,
+              detail: `候选记忆已合并到「${mergeTarget.title}」。`,
+              memoryIds: [mergeTarget.id, updatedMemory.id],
+              characterId,
+              conversationId,
+            },
+          )
+        }
+      }
+
       const nextMemories = currentState.memories.map((memory) =>
         memory.id === updatedMemory.id ? updateMemoryWithRevision(memory, updatedMemory, '妹妹手动编辑') : memory,
       )

@@ -1,10 +1,10 @@
-import type { AppState, CharacterCard, LongTermMemory } from '../domain/types'
+import type { AppState, CharacterCard, LongTermMemory, MemoryTombstone } from '../domain/types'
 import { refreshLocalMemoryEmbeddingCache } from '../services/memoryEmbeddingIndex'
 import { normalizeMemories } from '../services/memoryEngine'
 import { normalizeTrashRetentionSettings } from '../services/trashRetention'
 import { agentRooms, createSeedState } from './seed'
 
-const currentStateVersion = 21
+const currentStateVersion = 22
 
 export function migrateAppState(state: AppState): AppState {
   const defaults = createSeedState()
@@ -31,7 +31,9 @@ export function migrateAppState(state: AppState): AppState {
       })),
       worldNodes: state.trash?.worldNodes ?? defaults.trash.worldNodes,
     },
-    memoryTombstones: Array.isArray(state.memoryTombstones) ? state.memoryTombstones : defaults.memoryTombstones,
+    memoryTombstones: normalizeMemoryTombstones(
+      Array.isArray(state.memoryTombstones) ? state.memoryTombstones : defaults.memoryTombstones,
+    ),
     memoryEmbeddings: refreshLocalMemoryEmbeddingCache(
       baseMemories,
       Array.isArray(state.memoryEmbeddings) ? state.memoryEmbeddings : defaults.memoryEmbeddings,
@@ -92,6 +94,24 @@ function mergeMissingSeedMemories(memories: LongTermMemory[], seedMemories: Long
   const existingIds = new Set(memories.map((memory) => memory.id))
   const missingSeeds = normalizeMemories(seedMemories).filter((memory) => !existingIds.has(memory.id))
   return [...missingSeeds, ...memories]
+}
+
+function normalizeMemoryTombstones(tombstones: MemoryTombstone[]): MemoryTombstone[] {
+  return tombstones
+    .filter((tombstone) => tombstone?.id && tombstone.memoryId && tombstone.fingerprint)
+    .map((tombstone) => ({
+      id: String(tombstone.id),
+      memoryId: String(tombstone.memoryId),
+      fingerprint: String(tombstone.fingerprint),
+      semanticSignature: Array.isArray(tombstone.semanticSignature)
+        ? tombstone.semanticSignature.filter((item) => typeof item === 'string').slice(0, 12)
+        : undefined,
+      semanticSignatureVersion: typeof tombstone.semanticSignatureVersion === 'number'
+        ? tombstone.semanticSignatureVersion
+        : undefined,
+      reason: String(tombstone.reason || 'legacy'),
+      createdAt: tombstone.createdAt || new Date(0).toISOString(),
+    }))
 }
 
 function normalizeDefaultModel(model: string | undefined, modelProfileId: string | undefined): string {

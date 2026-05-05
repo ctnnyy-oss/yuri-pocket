@@ -135,7 +135,9 @@ export function useCloudSync({ state, setState, setNotice, characterId, makeLoca
         setCloudStatus(`已自动读取云端 v${snapshot.revision}`)
         setNotice('云端数据已自动同步')
       } else {
-        const result = await pushCloudState(applyTrashRetention(localState), cloudToken)
+        const result = await pushCloudState(applyTrashRetention(localState), cloudToken, {
+          baseRevision: snapshot.revision,
+        })
         setCloudMeta({ hasState: true, revision: result.revision, updatedAt: result.updatedAt })
         setCloudStatus(`已创建云端同步 v${result.revision}`)
       }
@@ -250,7 +252,9 @@ export function useCloudSync({ state, setState, setNotice, characterId, makeLoca
         memoryIds: state.memories.slice(0, 8).map((memory) => memory.id),
         characterId,
       })
-      const result = await pushCloudState(stateToPush, cloudToken)
+      const result = await pushCloudState(stateToPush, cloudToken, {
+        baseRevision: cloudMeta?.revision ?? 0,
+      })
       setState(stateToPush)
       setCloudMeta({
         hasState: true,
@@ -262,6 +266,9 @@ export function useCloudSync({ state, setState, setNotice, characterId, makeLoca
       setNotice('云端数据已保存')
     } catch (error) {
       setCloudStatus(error instanceof Error ? error.message : '保存云端失败')
+      if (error instanceof Error && /版本|409|覆盖/.test(error.message)) {
+        setNotice('云端版本已变化，请先读取云端或创建备份')
+      }
     } finally {
       setCloudBusy((currentTask) => (currentTask === 'pushing' ? null : currentTask))
     }
@@ -423,18 +430,20 @@ export function useCloudSync({ state, setState, setNotice, characterId, makeLoca
     void (async () => {
       try {
         const stateToPush = applyTrashRetention(currentState)
-        const result = await pushCloudState(stateToPush, cloudToken)
+        const result = await pushCloudState(stateToPush, cloudToken, {
+          baseRevision: cloudMeta?.revision ?? 0,
+        })
         setCloudMeta({
           hasState: true,
           revision: result.revision,
           updatedAt: result.updatedAt,
         })
         setCloudStatus(`自动保存 v${result.revision}`)
-      } catch {
-        // 自动推送失败不打扰用户
+      } catch (error) {
+        setCloudStatus(error instanceof Error ? error.message : '自动保存失败，请稍后手动检查云端状态')
       }
     })()
-  }, [cloudBusy, cloudToken])
+  }, [cloudBusy, cloudMeta, cloudToken])
 
   const onSwitchToLocal = useCallback(() => {
     autoCloudReadyRef.current = false
