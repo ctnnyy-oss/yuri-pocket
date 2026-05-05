@@ -1,13 +1,63 @@
-import { SlidersHorizontal } from 'lucide-react'
+import { Activity, AlertCircle, CheckCircle2, CircleDashed, SlidersHorizontal, XCircle } from 'lucide-react'
 import { useState } from 'react'
 import type { AppSettings, ModelProfileInput, ModelProfileSummary } from '../../domain/types'
-import type { ModelCatalogResult } from '../../services/modelProfiles'
+import { checkCloudHealth } from '../../services/cloudSync'
+import { listModelProfiles, testModelProfile, type ModelCatalogResult } from '../../services/modelProfiles'
 import { WorkspaceTitle } from '../memory/atoms'
 import { GenerationSettings } from './GenerationSettings'
 import { ModelCurrentStrip } from './ModelCurrentStrip'
 import { ModelProfileEditor } from './ModelProfileEditor'
 import { SavedModelProfiles } from './SavedModelProfiles'
 import { useModelProfileDraft } from './useModelProfileDraft'
+
+type DiagnosticStatus = 'idle' | 'running' | 'ok' | 'warn' | 'fail'
+
+interface DiagnosticItem {
+  id: 'cloud' | 'profiles' | 'model'
+  label: string
+  status: DiagnosticStatus
+  detail: string
+}
+
+const initialDiagnostics: DiagnosticItem[] = [
+  {
+    id: 'cloud',
+    label: '云端同步',
+    status: 'idle',
+    detail: '还没有检查云端读写入口。',
+  },
+  {
+    id: 'profiles',
+    label: '模型档案',
+    status: 'idle',
+    detail: '还没有读取服务器模型配置。',
+  },
+  {
+    id: 'model',
+    label: '当前模型',
+    status: 'idle',
+    detail: '还没有测试当前模型响应。',
+  },
+]
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback
+}
+
+function summarizeDiagnostics(items: DiagnosticItem[]): string {
+  if (items.some((item) => item.status === 'fail')) return '巡检发现阻断项，按红色提示处理后再试。'
+  if (items.some((item) => item.status === 'warn')) return '巡检基本可用，但有一项需要留意。'
+  if (items.every((item) => item.status === 'ok')) return '巡检通过：云端、模型档案、当前模型都能正常响应。'
+  return '点击巡检后，姐姐会依次检查云端、模型档案和当前模型。'
+}
+
+function getDiagnosticIcon(status: DiagnosticStatus) {
+  if (status === 'ok') return <CheckCircle2 size={18} />
+  if (status === 'warn') return <AlertCircle size={18} />
+  if (status === 'fail') return <XCircle size={18} />
+  if (status === 'running') return <Activity size={18} />
+  return <CircleDashed size={18} />
+}
 
 interface ModelAndDataPanelProps {
   settings: AppSettings
@@ -52,6 +102,9 @@ export function ModelAndDataPanel({
   })
   const modelBackendHint = cloudSyncConfigured ? '云端模型后端' : '本机 /api 模型后端'
   const [cloudTokenDraft, setCloudTokenDraft] = useState(cloudToken)
+  const [diagnostics, setDiagnostics] = useState<DiagnosticItem[]>(initialDiagnostics)
+  const [diagnosticBusy, setDiagnosticBusy] = useState(false)
+  const diagnosticSummary = summarizeDiagnostics(diagnostics)
 
   function handleUseProfile(profile: ModelProfileSummary) {
     onUpdateSettings({
@@ -74,6 +127,89 @@ export function ModelAndDataPanel({
   function handleStoreCloudToken(token: string) {
     setCloudTokenDraft(token)
     onSaveCloudToken(token)
+  }
+
+  async function handleRunDiagnostics() {
+    if (diagnosticBusy) return
+
+    setDiagnosticBusy(true)
+    const token = (cloudTokenDraft || cloudToken).trim()
+    const nextDiagnostics = initialDiagnostics.map((item) => ({ ...item, status: 'running' as DiagnosticStatus }))
+    const publish = (id: DiagnosticItem['id'], status: DiagnosticStatus, detail: string) => {
+      const target = nextDiagnostics.find((item) => item.id === id)
+      if (!target) return
+      target.status = status
+      target.detail = detail
+      setDiagnostics(nextDiagnostics.map((item) => ({ ...item })))
+    }
+
+    setDiagnostics(nextDiagnostics.map((item) => ({ ...item })))
+
+    if (!cloudSyncConfigured) {
+      publish('cloud', 'fail', '当前页面没有连接云端后端。')
+      publish('profiles', 'warn', '云端不可用时，无法读取线上模型档案。')
+      publish('model', 'warn', '云端不可用时，无法测试线上模型。')
+      setDiagnosticBusy(false)
+      return
+    }
+
+    if (!token) {
+      publish('cloud', 'fail', '先填写云端口令，再运行巡检。')
+      publish('profiles', 'warn', '缺少口令，暂时不能读取模型档案。')
+      publish('model', 'warn', '缺少口令，暂时不能测试模型。')
+      setDiagnosticBusy(false)
+      return
+    }
+
+    try {
+      const metadata = await checkCloudHealth(token)
+      publish('cloud', 'ok', metadata.hasState ? `云端可读，当前版本 v${metadata.revision}。` : '云端可访问，但还没有保存过数据。')
+    } catch (error) {
+      publish('cloud', 'fail', getErrorMessage(error, '云端检查失败。'))
+      publish('profiles', 'warn', '云端检查失败，已停止后续模型巡检。')
+      publish('model', 'warn', '云端检查失败，已停止后续模型巡检。')
+      setDiagnosticBusy(false)
+      return
+    }
+
+    let latestProfiles: ModelProfileSummary[]
+    try {
+      latestProfiles = await listModelProfiles(token)
+      publish('profiles', latestProfiles.length > 0 ? 'ok' : 'warn', latestProfiles.length > 0 ? `已读取 ${latestProfiles.length} 个模型档案。` : '服务器还没有可用模型档案。')
+    } catch (error) {
+      publish('profiles', 'fail', getErrorMessage(error, '读取模型档案失败。'))
+      publish('model', 'warn', '模型档案读取失败，已跳过模型测试。')
+      setDiagnosticBusy(false)
+      return
+    }
+
+    const profileForTest =
+      latestProfiles.find((profile) => profile.id === activeProfile?.id) ??
+      latestProfiles.find((profile) => profile.id === settings.modelProfileId) ??
+      latestProfiles.find((profile) => profile.isDefault) ??
+      latestProfiles[0]
+
+    if (!profileForTest) {
+      publish('model', 'fail', '没有可测试的模型档案。')
+      setDiagnosticBusy(false)
+      return
+    }
+
+    if (!profileForTest.hasApiKey) {
+      publish('model', 'warn', `“${profileForTest.name}”还没有可用密钥。`)
+      setDiagnosticBusy(false)
+      return
+    }
+
+    try {
+      const result = await testModelProfile(token, { profileId: profileForTest.id })
+      const latencyText = Number.isFinite(result.latencyMs) ? `，${result.latencyMs}ms` : ''
+      publish('model', 'ok', `${result.model} 已响应${latencyText}。`)
+    } catch (error) {
+      publish('model', 'fail', getErrorMessage(error, '当前模型测试失败。'))
+    } finally {
+      setDiagnosticBusy(false)
+    }
   }
 
   return (
@@ -122,6 +258,32 @@ export function ModelAndDataPanel({
           onFetchCatalog={handleFetchActiveCatalog}
           onTestProfile={handleTestActiveProfile}
         />
+
+        <section className="settings-section model-diagnostics-section">
+          <div className="settings-section-title">
+            <Activity size={18} />
+            <span>一键巡检</span>
+          </div>
+          <p className="section-note">只检查连接状态，不创建角色、不写入聊天记录，也不会展示密钥。</p>
+          <div className="model-diagnostic-list">
+            {diagnostics.map((item) => (
+              <div className={`model-diagnostic-item ${item.status}`} key={item.id}>
+                <span className="model-diagnostic-icon">{getDiagnosticIcon(item.status)}</span>
+                <span>
+                  <strong>{item.label}</strong>
+                  <small>{item.detail}</small>
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="settings-actions">
+            <button disabled={diagnosticBusy || modelProfileBusy} onClick={handleRunDiagnostics} type="button">
+              <Activity size={15} />
+              {diagnosticBusy ? '巡检中' : '开始巡检'}
+            </button>
+          </div>
+          <p className="section-note">{diagnosticSummary}</p>
+        </section>
 
         <div className="model-layout">
           <ModelProfileEditor
