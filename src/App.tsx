@@ -211,6 +211,7 @@ function App() {
           character={character}
           characters={state.characters}
           draft={draft}
+          key={character.id}
           isSending={isSending}
           memories={state.memories}
           memoryUsageLogs={state.memoryUsageLogs}

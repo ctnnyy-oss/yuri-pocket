@@ -39,7 +39,7 @@ export function ChatInfoDrawer({
             <ChevronLeft size={26} />
           </button>
           <strong>聊天信息</strong>
-          <button aria-label="更多" type="button">
+          <button aria-label="更多" onClick={onOpenSettings} type="button">
             <MoreHorizontal size={24} />
           </button>
         </header>
