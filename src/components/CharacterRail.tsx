@@ -32,7 +32,7 @@ interface CharacterRailProps {
 type RailItem = { id: AppView; label: string; description: string; icon: LucideIcon; badge?: string }
 
 const primaryNavigationItems: RailItem[] = [
-  { id: 'chat', label: '聊天', description: '最近聊天', icon: MessageCircle, badge: '1' },
+  { id: 'chat', label: '聊天', description: '最近聊天', icon: MessageCircle },
   { id: 'role', label: '角色', description: '角色管理', icon: UserRound },
   { id: 'model', label: '模型', description: '模型配置', icon: SlidersHorizontal },
   { id: 'memory', label: '记忆', description: '记忆系统', icon: Brain },
@@ -69,6 +69,15 @@ function getLastConversationText(conversation?: ConversationState, fallback = '�
   return lastMessage.content.replace(/\s+/g, ' ').slice(0, 28)
 }
 
+function getUnreadCount(conversation?: ConversationState) {
+  return Math.max(0, conversation?.unreadCount ?? 0)
+}
+
+function formatUnreadBadge(count: number) {
+  if (count <= 0) return ''
+  return count > 99 ? '99+' : String(count)
+}
+
 function isGroupCharacter(character: CharacterCard) {
   return character.relationship === '群聊'
 }
@@ -93,6 +102,17 @@ export function CharacterRail({
   const conversationByCharacterId = useMemo(() => {
     return new Map(conversations.map((conversation) => [conversation.characterId, conversation]))
   }, [conversations])
+  const totalUnreadBadge = useMemo(() => {
+    const totalUnread = conversations.reduce((total, conversation) => total + getUnreadCount(conversation), 0)
+    return formatUnreadBadge(totalUnread)
+  }, [conversations])
+  const navigationItems = useMemo(
+    () =>
+      primaryNavigationItems.map((item) =>
+        item.id === 'chat' ? { ...item, badge: totalUnreadBadge } : item,
+      ),
+    [totalUnreadBadge],
+  )
   const filteredCharacters = useMemo(() => {
     if (!normalizedQuery) return roleCharacters
     return roleCharacters.filter((character) => {
@@ -139,19 +159,23 @@ export function CharacterRail({
     return rows.filter((row) => `${row.title} ${row.text}`.toLowerCase().includes(normalizedQuery))
   }, [conversationByCharacterId, groupCharacters, normalizedQuery])
   const chatThreads = useMemo(() => {
-    const characterThreads = filteredCharacters.map((character, index) => ({
-      id: `character:${character.id}`,
-      type: 'character' as const,
-      rank: index * 2 + 1,
-      name: character.name,
-      avatar: character.avatar,
-      accent: character.accent,
-      preview: getLastConversationText(conversationByCharacterId.get(character.id), character.title),
-      time: formatThreadTime(conversationByCharacterId.get(character.id)?.updatedAt, characterThreadTime(index, character.id === activeCharacterId)),
-      muted: index === 5,
-      characterId: character.id,
-      updatedAt: conversationByCharacterId.get(character.id)?.updatedAt ?? '',
-    }))
+    const characterThreads = filteredCharacters.map((character, index) => {
+      const conversation = conversationByCharacterId.get(character.id)
+      return {
+        id: `character:${character.id}`,
+        type: 'character' as const,
+        rank: index * 2 + 1,
+        name: character.name,
+        avatar: character.avatar,
+        accent: character.accent,
+        preview: getLastConversationText(conversation, character.title),
+        time: formatThreadTime(conversation?.updatedAt, characterThreadTime(index, character.id === activeCharacterId)),
+        muted: index === 5,
+        badge: formatUnreadBadge(getUnreadCount(conversation)),
+        characterId: character.id,
+        updatedAt: conversation?.updatedAt ?? '',
+      }
+    })
     const groupThreads = filteredChannelRows.map((row, index) => ({
       id: row.id,
       type: 'group' as const,
@@ -220,7 +244,7 @@ export function CharacterRail({
         </button>
 
         <nav className="primary-nav" aria-label="主要功能">
-          {primaryNavigationItems.map((item) => {
+          {navigationItems.map((item) => {
             const Icon = item.icon
             const active = activeView === item.id
             return (

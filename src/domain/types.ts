@@ -27,6 +27,7 @@ export interface ConversationState {
   id: string
   characterId: string
   messages: ChatMessage[]
+  unreadCount?: number
   summary: string
   createdAt?: string
   updatedAt: string
